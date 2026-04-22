@@ -1,0 +1,219 @@
+Here is the updated list, consolidated into three main stores: **Nour Handmade & Crafts**, **Tasty Home**, and **Teeba Home & Living**. 
+
+# Products
+
+### 1. Wooden Key Holder
+* **Description:** Simple circular metal keychain with a polished finish and durable ring attachment. Lightweight and sturdy, suitable for everyday use or promotional purposes.
+* **Price:** 375
+* **Store:** Nour Handmade & Crafts
+* **Category:** Woodwork
+* **Image File:** `Wooden Key Holder.png`
+
+---
+
+### 2. Beaded Bracelet
+* **Description:** Polished round metal keychain with a smooth chrome finish. Lightweight, durable, and suitable for daily use or gifting.
+* **Price:** 150
+* **Store:** Nour Handmade & Crafts
+* **Category:** Jewelry
+* **Image File:** `Beaded Bracelet.png`
+
+---
+
+### 3. Simple Necklace
+* **Description:** Simple round metal keychain with glossy finish and strong ring attachment. Minimal design, ideal for accessories or promotional use.
+* **Price:** 225
+* **Store:** Nour Handmade & Crafts
+* **Category:** Jewelry
+* **Image File:** `Simple Necklace.png`
+
+---
+
+### 4. Resin Ring
+* **Description:** Handcrafted ring made from natural wood combined with black epoxy resin. Features a smooth polished finish and unique organic pattern, giving it a modern and elegant handmade look.
+* **Price:** 175
+* **Store:** Nour Handmade & Crafts
+* **Category:** Jewelry
+* **Image File:** `Resin Ring.png`
+
+---
+
+### 5. Handmade Notebook
+* **Description:** A classic-style notebook with a durable natural leather cover and high-quality inner pages. Perfect for daily writing, note-taking, or sketching, and easy to carry for everyday use.
+* **Price:** 200
+* **Store:** Nour Handmade & Crafts
+* **Category:** Stationery
+* **Image File:** `Handmade Notebook.png`
+
+---
+
+### 6. Decorated Journal
+* **Description:** A stylish lined journal page with decorative blue and green border design, clipped on a metal clipboard. Comes with markers, ideal for note-taking, journaling, or creative writing.
+* **Price:** 250
+* **Store:** Nour Handmade & Crafts
+* **Category:** Stationery
+* **Image File:** `Decorated Journal.png`
+
+---
+
+### 7. Custom Planner
+* **Description:** Personalized handmade planner
+* **Price:** 300
+* **Store:** Nour Handmade & Crafts
+* **Category:** Stationery
+* **Image File:** `Custom Planner.png`
+
+---
+
+### 8. Homemade Cookies Box
+* **Description:** Golden brown homemade cookies just out of the oven with soft center and slightly crispy edges. Warm, fresh, and ideal as a dessert or snack.
+* **Price:** 375
+* **Store:** Tasty Home
+* **Category:** Food & Snacks
+* **Image File:** `Homemade Cookies.png`
+
+---
+
+### 9. Stuffed Pastries
+* **Description:** Homemade pastries with different fillings
+* **Price:** 325
+* **Store:** Tasty Home
+* **Category:** Food & Snacks
+* **Image File:** `Stuffed Pastries.png`
+
+---
+
+### 10. Mini Cake
+* **Description:** Small homemade cake with chocolate
+* **Price:** 450
+* **Store:** Tasty Home
+* **Category:** Food & Snacks
+* **Image File:** `Mini Cake.png`
+
+---
+
+### 11. Bianco late
+* **Description:** It smells like a rich mix of caramel, vanilla, and milk, creating a soft, cozy, dessert-like scent.
+* **Price:** 150
+* **Store:** Teeba Home & Living
+* **Category:** fragrances
+* **Image File:** `Bianco late.png`
+
+---
+
+### 12. Sronger with you
+* **Description:** It opens with a spicy kick of pink pepper, then quickly becomes rich and sweet with notes like toffee, cinnamon, and lavender.
+* **Price:** 135
+* **Store:** Teeba Home & Living
+* **Category:** fragrances
+* **Image File:** `Sronger with you.png`
+
+---
+
+### 13. Madawy
+* **Description:** It opens with sweet fruity notes like peach and apple blossom, then becomes more soft and floral with pineapple blossom.
+* **Price:** 250
+* **Store:** Teeba Home & Living
+* **Category:** fragrances
+* **Image File:** `Madawy.png`
+
+---
+
+### 14. Bed Sheets Sets
+* **Description:** Soft and breathable bed sheet sets made from high-quality fabrics for ultimate comfort and a stylish bedroom look.
+* **Price:** 400
+* **Store:** Teeba Home & Living
+* **Category:** Textiles
+* **Image File:** `Bed Sheets Sets.png`
+
+---
+
+### 15. Blankets & Throws
+* **Description:** Warm and cozy blankets designed to keep you comfortable while adding a touch of elegance to your home.
+* **Price:** 1500
+* **Store:** Teeba Home & Living
+* **Category:** Textiles
+* **Image File:** `Blankets & Throws.png`
+
+---
+
+### 16. Towels Sets
+* **Description:** Highly absorbent and ultra-soft towel sets, perfect for everyday use and a luxurious feel after every shower.
+* **Price:** 500
+* **Store:** Teeba Home & Living
+* **Category:** Textiles
+* **Image File:** `Towels Sets.png`
+
+---
+
+### 17. Ceramic Dinner Sets
+* **Description:** Elegant and durable ceramic dinner sets, perfect for everyday dining and special occasions, combining style with long-lasting quality.
+* **Price:** 1200
+* **Store:** Teeba Home & Living
+* **Category:** Porcelain
+* **Image File:** `Ceramic Dinner Sets.png`
+
+---
+
+### 18. Ceramic Mugs
+* **Description:** Stylish and practical ceramic mugs, ideal for hot and cold drinks, with modern designs that add personality to your daily routine.
+* **Price:** 370
+* **Store:** Teeba Home & Living
+* **Category:** Porcelain
+* **Image File:** `Ceramic Mugs.png`
+
+---
+
+### 19. Ceramic Vases & Decor
+* **Description:** Beautiful ceramic vases and decor pieces designed to enhance any space with a touch of artistic elegance and modern charm.
+* **Price:** 480
+* **Store:** Teeba Home & Living
+* **Category:** Porcelain
+* **Image File:** `Ceramic Vases & Decor.png`
+
+---
+
+### 20. Wooden Serving Tray
+* **Description:** Elegant wooden serving tray crafted from high-quality wood, perfect for serving drinks or adding a natural touch to your home decor.
+* **Price:** 540
+* **Store:** Nour Handmade & Crafts
+* **Category:** Woodworking
+* **Image File:** `Wooden Serving Tray.png`
+
+---
+
+### 21. Wooden Wall Shelves
+* **Description:** Stylish wooden wall shelves designed to maximize space while adding a warm and modern decorative look to any room.
+* **Price:** 620
+* **Store:** Nour Handmade & Crafts
+* **Category:** Woodworking
+* **Image File:** `Wooden Wall Shelves.png`
+
+---
+
+# Stores
+
+### 1. Nour Handmade & Crafts
+* **Description:** Your destination for bespoke handcrafted jewelry, premium personalized stationery, and beautifully designed wooden home accessories.
+* **Logo File:** `hand made logo.png`
+
+### 2. Tasty Home
+* **Description:** Comforting, homemade food, baked goods, and sweet snacks made with love.
+* **Logo File:** `tasty home logo.png`
+
+### 3. Teeba Home & Living
+* **Description:** Everything you need to elevate your space, from high-quality textiles and elegant porcelain dinnerware to rich, inviting fragrances.
+* **Logo File:** `teeba.png`
+
+---
+
+# Categories
+
+* Woodwork
+* Woodworking
+* Jewelry
+* Stationery
+* Food & Snacks
+* fragrances
+* Textiles
+* Porcelain

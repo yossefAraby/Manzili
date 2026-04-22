@@ -28,23 +28,14 @@ export const assets = {
 }
 
 export const categories = [
-  "Gift",
-  "Ramadan Collection",
-  "Fashion",
+  "Woodwork",
+  "Woodworking",
   "Jewelry",
-  "Bags",
-  "Fashion Accessories",
-  "Home",
-  "Paintings",
-  "Beauty",
-  "Kids Items",
-  "Gifts",
-  "Seasonal Gifting",
-  "Bridal",
-  "For Him",
   "Stationery",
-  "Entertainment",
-  "Food & Snacks"
+  "Food & Snacks",
+  "fragrances",
+  "Textiles",
+  "Porcelain"
 ];
 
 export const dummyRatingsData = [
