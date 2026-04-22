@@ -9,7 +9,7 @@ export default function RegisterPage() {
             
             <div className="bg-white p-8 sm:p-12 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] w-full max-w-[450px] flex flex-col items-center">
                 
-                {/* اللوجو */}
+                {/* Logo */}
                 <div className="mb-4">
                     <Image 
                         src={assets.logo} 
@@ -23,7 +23,7 @@ export default function RegisterPage() {
 
                 <h2 className="text-2xl font-bold text-slate-800 mb-8 font-sans">Create a New Account</h2>
 
-                {/* نموذج إدخال البيانات */}
+                {/* Data entry form */}
                 <form className="w-full flex flex-col gap-4">
                     <input 
                         type="text" 
@@ -54,7 +54,7 @@ export default function RegisterPage() {
                     </button>
                 </form>
 
-                {/* الفاصل وأيقونات السوشيال ميديا (الجزء المضاف) */}
+                {/* Separator and social media icons (added section) */}
                 <div className="flex items-center w-full my-8 gap-3">
                     <hr className="flex-1 border-slate-200" />
                     <span className="text-sm text-slate-500">Or Sign Up with</span>
@@ -62,7 +62,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="flex gap-5 justify-center mb-6">
-                    {/* تعريف التدرج اللوني */}
+                    {/* Gradient definition */}
                     <svg width="0" height="0" className="absolute">
                         <defs>
                             <linearGradient id="orange-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -83,7 +83,7 @@ export default function RegisterPage() {
                     </button>
                 </div>
 
-                {/* الشروط والأحكام */}
+                {/* Terms and Conditions */}
                 <div className="flex flex-col items-center text-xs text-slate-600">
                     <p>By signing up, you agree to our</p>
                     <div className="flex items-center gap-1.5 mt-1">
@@ -92,9 +92,9 @@ export default function RegisterPage() {
                     </div>
                 </div>
 
-                {/* رابط تسجيل الدخول */}
+                {/* Login link */}
                 <p className="mt-8 text-slate-700 font-medium text-sm text-center">
-                    لديك حساب بالفعل؟ <Link href="/login" className="text-[#d35400] font-bold hover:underline transition-all">تسجيل الدخول</Link>
+                    Already have an account? <Link href="/login" className="text-[#d35400] font-bold hover:underline transition-all">Log In</Link>
                 </p>
 
             </div>

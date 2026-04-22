@@ -1,5 +1,5 @@
 'use client'
-import { Search, ShoppingCart, CircleUserRound } from "lucide-react"; // إضافة CircleUserRound
+import { Search, ShoppingCart, CircleUserRound } from "lucide-react"; // Add CircleUserRound
 import Link from "next/link";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
@@ -26,13 +26,13 @@ const Navbar = () => {
             <div className="mx-6">
                 <div className="flex items-center justify-between max-w-7xl mx-auto py-4 transition-all">
 
-                    {/* اللوجو واسم الموقع (Manzili) */}
+                    {/* Logo and site name (Manzili) */}
                     <Link href="/" className="flex items-center gap-3 relative text-5xl font-bold font-sans">
                         <div className="relative flex items-baseline">
                             <span className="text-[#1c355e]">M</span>
                             <span className="bg-gradient-to-b from-[#e3cda8] to-[#aa804c] text-transparent bg-clip-text">anzili</span>
                         </div>
-                        <Image src={assets.logo} alt="logo" width={50} height={50} className="object-contain" priority />
+                        <Image src={assets.logo} alt="logo" width={50} height={50} className="object-contain" priority suppressHydrationWarning />
                     </Link>
 
                     {/* Desktop Menu */}
@@ -53,11 +53,11 @@ const Navbar = () => {
                             <button className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">{cartCount}</button>
                         </Link>
 
-                        {/* التحكم في ظهور الأزرار أو البروفايل (Desktop) */}
+                        {/* Control button or profile display (Desktop) */}
                         {isLoggedIn ? (
                             <div className="flex items-center gap-2 cursor-pointer group relative">
                                 <CircleUserRound size={35} className="text-[#1c355e] hover:text-[#2582eb] transition-colors" />
-                                {/* قائمة منسدلة بسيطة تظهر عند الهوفر */}
+                                {/* Simple dropdown menu that appears on hover */}
                                 <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
                                     <div className="bg-white border border-slate-100 shadow-lg rounded-xl p-3 w-40 text-sm flex flex-col gap-2">
                                         <p className="hover:text-[#2582eb] cursor-pointer border-b pb-2">My Profile</p>

@@ -1,7 +1,7 @@
 'use client'
 import Link from "next/link";
-import Image from "next/image"; // إضافة استيراد الصور
-import { assets } from "@/assets/assets"; // إضافة استيراد الأصول
+import Image from "next/image"; // Import images
+import { assets } from "@/assets/assets"; // Import assets
 
 export default function LoginPage() {
     return (
@@ -9,7 +9,7 @@ export default function LoginPage() {
             
             <div className="bg-white p-8 sm:p-12 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] w-full max-w-[450px] flex flex-col items-center">
                 
-                {/* تم استبدال الأيقونة السابقة باللوجو الخاص بك هنا */}
+                {/* Previous icon replaced with your logo here */}
                 <div className="mb-4">
                     <Image 
                         src={assets.logo} 
@@ -21,7 +21,7 @@ export default function LoginPage() {
                     />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-800 mb-1 font-sans">تسجيل دخول إلى منزلي</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-1 font-sans">Welcome to Manzili</h2>
                 <h3 className="text-xl font-bold text-slate-800 mb-8 font-sans">Log In to Manzili</h3>
 
                 <form className="w-full flex flex-col gap-4">
@@ -57,7 +57,7 @@ export default function LoginPage() {
                     <hr className="flex-1 border-slate-200" />
                 </div>
 
-                {/* أيقونات السوشيال ميديا مع التدرج اللوني البرتقالي الموحد */}
+                {/* Social media icons with unified orange gradient */}
                 <div className="flex gap-5 justify-center mb-6">
                     <svg width="0" height="0" className="absolute">
                         <defs>
@@ -80,7 +80,7 @@ export default function LoginPage() {
                 </div>
 
                 <p className="mt-4 text-slate-700 font-medium text-sm">
-                    ليس لديك حساب؟ <Link href="/register" className="text-[#d35400] font-bold hover:underline transition-all">إنشاء حساب</Link>
+                    Don't have an account? <Link href="/register" className="text-[#d35400] font-bold hover:underline transition-all">Create account</Link>
                 </p>
 
             </div>
