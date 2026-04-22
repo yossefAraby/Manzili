@@ -13,6 +13,10 @@
 
 ---
 
+
+Manzili is a specialized multi-vendor e-commerce platform and mobile application dedicated exclusively to handmade products in the Egyptian market. It serves as a bridge connecting verified local artisans with customers who value unique, non-mass-produced goods.
+
+
 ## 📖 Table of Contents
 
 - [✨ Features](#-features)
