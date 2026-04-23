@@ -1,7 +1,8 @@
 'use client'
-import { MapPin, Phone, Mail } from "lucide-react"
+import { Clock, Phone, Mail, MessageCircle } from "lucide-react"
 import { useState } from "react"
 import toast from "react-hot-toast"
+import Link from "next/link"
 
 export default function Contact() {
     const [formData, setFormData] = useState({
@@ -67,35 +68,47 @@ export default function Contact() {
                             </div>
                             <div>
                                 <h3 className="font-semibold text-slate-800 mb-2">Email</h3>
-                                <p className="text-slate-600">contact@manzili.com</p>
-                                <p className="text-slate-600">support@manzili.com</p>
+                                <p className="text-slate-600">manziliproject@gmail.com</p>
                             </div>
                         </div>
 
-                        {/* Phone */}
+                        {/* Phone & WhatsApp */}
                         <div className="flex gap-4">
                             <div className="flex-shrink-0">
                                 <Phone className="w-6 h-6 text-[#2582eb]" />
                             </div>
                             <div>
                                 <h3 className="font-semibold text-slate-800 mb-2">Phone</h3>
-                                <p className="text-slate-600">+20 100 123 4567</p>
-                                <p className="text-slate-600">+20 100 987 6543</p>
+                                <p className="text-slate-600">01223755058</p>
                             </div>
                         </div>
 
-                        {/* Address */}
+                        {/* WhatsApp */}
                         <div className="flex gap-4">
                             <div className="flex-shrink-0">
-                                <MapPin className="w-6 h-6 text-[#2582eb]" />
+                                <MessageCircle className="w-6 h-6 text-[#2582eb]" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-slate-800 mb-2">Address</h3>
-                                <p className="text-slate-600">
-                                    Manzili Headquarters
-                                    <br />
-                                    Cairo, Egypt
-                                </p>
+                                <h3 className="font-semibold text-slate-800 mb-2">WhatsApp</h3>
+                                <Link 
+                                    href="https://wa.me/201223755058" 
+                                    target="_blank"
+                                    className="text-[#2582eb] hover:underline"
+                                >
+                                    01223755058
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Working Hours */}
+                        <div className="flex gap-4">
+                            <div className="flex-shrink-0">
+                                <Clock className="w-6 h-6 text-[#2582eb]" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-slate-800 mb-2">Working Hours</h3>
+                                <p className="text-slate-600">Sunday - Thursday</p>
+                                <p className="text-slate-600">9:00 AM - 5:00 PM</p>
                             </div>
                         </div>
                     </div>
