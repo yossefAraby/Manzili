@@ -1,0 +1,30 @@
+H# **About Us – Manzili (منزلي)**
+
+[cite_start]**Manzili is a specialized multi-vendor e-commerce platform dedicated strictly to handmade products[cite: 7].** Developed as an MIS graduation project under the supervision of **Dr. [cite_start]Abeer**, our team built this platform from the ground up—wearing all the hats from software engineering to community management and quality control[cite: 89]. 
+
+### **Our Mission**
+[cite_start]The Egyptian handmade industry is full of talent, but it is highly fragmented[cite: 16]. [cite_start]Local artisans face a "visibility paradox," struggling to compete on general e-commerce platforms designed for mass-produced goods[cite: 16, 17, 18]. Manzili was created to solve this. [cite_start]We serve as a bridge connecting skilled artisans with customers who truly value the quality and uniqueness of handcrafted goods[cite: 8].
+
+### **How We Stand Out**
+[cite_start]We empower makers and buyers through a unique dual-model storefront[cite: 44]:
+* [cite_start]**Ready-to-Buy Gallery:** A curated marketplace for fixed-price, 100% handcrafted items[cite: 44, 104].
+* [cite_start]**Custom Commissions:** A dedicated portal where buyers can request bespoke, tailored pieces and negotiate directly with the makers[cite: 44, 83, 103].
+
+---
+The Project Team
+* **Yossef Elaraby** — Team Leader | *Overall coordination & delivery*
+
+* **Dynamo** — Backend Lead & Developer (Python) | *Architecture & API design*
+* **Mohamed Abd El-Qader** — Backend Developer (.Net)
+* **Ali Elsayed** — Backend Developer (Spring Boot)
+* **Youssef Samak** — Database Design & Implementation
+
+* **Yehiya** — Design & UI/UX
+* **Fares** — Frontend Web Developer
+* **Mahmoud Nagi** — Frontend Web Developer *(Redirected from Mobile/Flutter)*
+* **Marwan** — Frontend Web Developer *(Redirected from Mobile/Flutter)*
+* **Nour** — Frontend Web Developer *(Redirected from Analysis)*
+
+* **Ahmed El-Sayed** — Data Analysis Lead
+* **Mahmod Eid** — Data Analysis & Web QA Tester
+* **Adham** — Data Analyst
