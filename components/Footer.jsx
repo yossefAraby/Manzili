@@ -69,7 +69,7 @@ const Footer = () => {
         className="object-contain" 
     />
 </Link>
-                        <p className="max-w-[410px] mt-6 text-sm">Welcome to Manzili, your ultimate destination for the latest and smartest gadgets. From smartphones and smartwatches to essential accessories, we bring you the best in innovation — all in one place.</p>
+                        <p className="max-w-[410px] mt-6 text-sm">Manzili, where real craft finds its home. We offer a dual-model marketplace: browse our gallery of ready-to-buy artisanal items or collaborate directly with makers to commission a one-of-a-kind bespoke piece. No factory-made commodities—just unique items made with love by verified local artisans.</p>
                         <div className="flex items-center gap-3 mt-5">
                             {socialIcons.map((item, i) => (
                                 <Link href={item.link} key={i} className="flex items-center justify-center w-10 h-10 bg-slate-100 hover:scale-105 hover:border border-slate-300 transition rounded-full">
