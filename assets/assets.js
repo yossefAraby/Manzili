@@ -15,7 +15,7 @@ import product_img9 from "./product_img9.png"
 import product_img10 from "./product_img10.png"
 import product_img11 from "./product_img11.png"
 import product_img12 from "./product_img12.png"
-import { ClockFadingIcon, HeadsetIcon, SendIcon } from "lucide-react";
+import { PenToolIcon, CheckCircleIcon, HeartIcon } from "lucide-react";
 import profile_pic1 from "./profile_pic1.jpg"
 import profile_pic2 from "./profile_pic2.jpg"
 import profile_pic3 from "./profile_pic3.jpg"
@@ -253,9 +253,9 @@ export const productDummyData = [
 ];
 
 export const ourSpecsData = [
-    { title: "Free Shipping", description: "Enjoy fast, free delivery on every order no conditions, just reliable doorstep.", icon: SendIcon, accent: '#2582eb' },
-    { title: "7 Days easy Return", description: "Change your mind? No worries. Return any item within 7 days.", icon: ClockFadingIcon, accent: '#FF8904' },
-    { title: "24/7 Customer Support", description: "We're here for you. Get expert help with our customer support.", icon: HeadsetIcon, accent: '#A684FF' }
+    { title: "Bespoke Creations", description: "Collaborate directly with makers to design custom, one-of-a-kind pieces tailored to your personal vision.", icon: PenToolIcon, accent: '#2582eb' },
+    { title: "Verified Quality", description: "Shop a curated selection of verified handmade goods, free from mass-produced factory clutter.", icon: CheckCircleIcon, accent: '#FF8904' },
+    { title: "Support Local Makers", description: "Empower independent Egyptian talent and own unique products that carry a real story and heritage.", icon: HeartIcon, accent: '#A684FF' }
 ]
 
 export const addressDummyData = {
