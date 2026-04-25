@@ -85,39 +85,31 @@ export default function Contact() {
             {/* Contact Methods & Form */}
             <div className="mx-6">
                 <div className="max-w-7xl mx-auto my-16">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                        {/* Contact Methods - Single Box */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Contact Methods - Minimal Floating */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 justify-items-center">
                             {contactMethods.map((method, index) => {
                                 const Icon = method.icon
                                 const isClickable = method.action !== null
                                 const Component = isClickable ? Link : 'div'
                                 
                                 return (
-                                    <div key={index}>
-                                        <Component
-                                            href={method.action || '#'}
-                                            target={method.action?.startsWith('http') ? '_blank' : undefined}
-                                            className={`p-6 flex items-start gap-4 transition-colors ${
-                                                isClickable 
-                                                    ? 'hover:bg-slate-50 cursor-pointer' 
-                                                    : ''
-                                            }`}
-                                        >
-                                            <div className="flex-shrink-0 pt-1">
-                                                <Icon className="w-6 h-6 text-[#2582eb]" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-bold text-slate-800 text-base mb-1">{method.title}</h3>
-                                                <p className="text-slate-600 text-sm whitespace-pre-line">
-                                                    {method.description}
-                                                </p>
-                                            </div>
-                                        </Component>
-                                        {index < contactMethods.length - 1 && (
-                                            <div className="h-px bg-slate-100"></div>
-                                        )}
-                                    </div>
+                                    <Component
+                                        key={index}
+                                        href={method.action || '#'}
+                                        target={method.action?.startsWith('http') ? '_blank' : undefined}
+                                        className="flex flex-col items-center justify-center gap-3 p-8 bg-slate-50/30 hover:bg-slate-50 rounded-lg transition-colors text-center aspect-square w-full"
+                                    >
+                                        <div className="flex-shrink-0">
+                                            <Icon className="w-8 h-8 text-[#2582eb]" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-slate-800 text-lg mb-2">{method.title}</h3>
+                                            <p className="text-slate-600 text-base whitespace-pre-line">
+                                                {method.description}
+                                            </p>
+                                        </div>
+                                    </Component>
                                 )
                             })}
                         </div>
