@@ -29,7 +29,6 @@ export const assets = {
 
 export const categories = [
   "Woodwork",
-  "Woodworking",
   "Jewelry",
   "Stationery",
   "Food & Snacks",
