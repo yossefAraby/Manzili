@@ -51,7 +51,7 @@ const Navbar = () => {
             <Link href="/shop">Shop</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
-            <Link href="/custom-order">Custom Order</Link>
+            <Link href="/custom-products">Custom Product</Link>
 
             <form
               onSubmit={handleSearch}

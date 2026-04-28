@@ -9,9 +9,11 @@ import {
   Trash2Icon,
   XIcon,
   MinusIcon,
+  ChevronDownIcon, // 👈 تم إضافة الأيقونة هنا
 } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { categories } from "@/assets/assets";
 
 // ==========================================
 // 1. SUB-COMPONENTS
@@ -246,6 +248,7 @@ const AudioRecorder = ({ audioBlob, setAudioBlob }) => {
 
 const INITIAL_STATE = {
   name: "",
+  category: "", // 👈 تم إضافة الـ category هنا
   pinterestLink: "",
   material: "",
   size: { length: "", width: "", height: "" },
@@ -283,6 +286,7 @@ export default function CustomOrderPage() {
   // Validation
   const validateForm = () => {
     if (!formData.name.trim()) return "Project name is required.";
+    if (!formData.category) return "Please select a category."; // 👈 فحص القسم
     if (!formData.material.trim()) return "Material is required.";
     if (!formData.deliveryDate) return "Delivery date is required.";
 
@@ -328,6 +332,7 @@ export default function CustomOrderPage() {
 
       // 2. Append Text & JSON
       submitData.append("name", formData.name);
+      submitData.append("category", formData.category); // 👈 إضافة القسم للإرسال
       submitData.append("pinterestLink", formData.pinterestLink);
       submitData.append("material", formData.material);
       submitData.append("orderType", formData.orderType);
@@ -377,20 +382,50 @@ export default function CustomOrderPage() {
           </p>
         </div>
 
-        {/* Basic Info */}
-        <div className="w-full">
-          <label htmlFor="projectName" className="block mb-2 font-medium">
-            Project Name
-          </label>
-          <input
-            id="projectName"
-            name="name"
-            value={formData.name}
-            onChange={handleInput}
-            type="text"
-            placeholder="e.g. Vintage Oak Table"
-            className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5]"
-          />
+        {/* Basic Info (Name & Category) 👈 تم دمجهم في شبكة (Grid) */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="w-full">
+            <label htmlFor="projectName" className="block mb-2 font-medium">
+              Project Name
+            </label>
+            <input
+              id="projectName"
+              name="name"
+              value={formData.name}
+              onChange={handleInput}
+              type="text"
+              placeholder="e.g. Vintage Oak Table"
+              className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5]"
+            />
+          </div>
+
+          <div className="w-full relative">
+            <label htmlFor="category" className="block mb-2 font-medium">
+              Category
+            </label>
+            <div className="relative">
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleInput}
+                className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 pr-10 rounded-xl bg-[#faf8f5] appearance-none cursor-pointer"
+              >
+                <option value="" disabled>
+                  Select a category
+                </option>
+                {categories.map((cat, idx) => (
+                  <option key={idx} value={cat} className="capitalize">
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                size={20}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Uploads */}
