@@ -49,8 +49,6 @@ const Navbar = () => {
           <div className="hidden sm:flex items-center gap-4 lg:gap-8 text-slate-600">
             <Link href="/">Home</Link>
             <Link href="/shop">Shop</Link>
-            <Link href="/about">About</Link>
-            <Link href="/contact">Contact</Link>
             <Link href="/custom-products">Custom Product</Link>
 
             <form
@@ -92,9 +90,9 @@ const Navbar = () => {
                     <p className="hover:text-[#2582eb] cursor-pointer border-b pb-2">
                       My Profile
                     </p>
-                    <p className="hover:text-[#2582eb] cursor-pointer border-b pb-2">
+                    <Link href="/orders" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
                       Orders
-                    </p>
+                    </Link>
                     <p
                       onClick={() => setIsLoggedIn(false)}
                       className="text-red-500 hover:font-bold cursor-pointer"

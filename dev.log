@@ -1,0 +1,538 @@
+
+> gocart@0.1.0 dev
+> next dev --turbopack
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.2:3000
+- Environments: .env.local
+✓ Ready in 461ms
+
+ GET / 200 in 2.9s (next.js: 2.6s, application-code: 376ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
++                         className="object-contain"
+-                         className="object-contain hb-hide-temp"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="0OBSERVED"
+                        >
+                    ...
+                  ...
+                ...
+ 
+[browser] Image with src "/_next/static/media/hero_product_img1.08w2epd-ml_az.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] Image with src "/_next/static/media/hero_model_img.0.kqujppx31x7.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET / 200 in 86ms (next.js: 5ms, application-code: 81ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
+                          className="object-contain"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="5PROCESSED"
+-                         data--h-bfrom-bx="true"
+-                         data--h-bresult="clear"
+                        >
+                    ...
+                  ...
+                ...
+ 
+ GET /custom-products 200 in 368ms (next.js: 344ms, application-code: 24ms)
+ GET /api/custom-order 200 in 244ms (next.js: 227ms, application-code: 16ms)
+ GET /api/custom-order 200 in 9ms (next.js: 3ms, application-code: 5ms)
+ GET /dummydata/Wooden%20Key%20Holder.png 404 in 298ms (next.js: 253ms, application-code: 44ms)
+ GET /custom-request/req_1 404 in 26ms (next.js: 3ms, application-code: 23ms)
+ GET /custom-request/req_1 404 in 37ms (next.js: 6ms, application-code: 31ms)
+ GET /custom-products 200 in 60ms (next.js: 5ms, application-code: 55ms)
+ GET /api/custom-order 200 in 8ms (next.js: 2ms, application-code: 6ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
++                         className="object-contain"
+-                         className="object-contain hb-hide-temp"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="4PROCESSING"
+                        >
+                    ...
+                  ...
+                ...
+ 
+ GET /dummydata/Wooden%20Key%20Holder.png 404 in 41ms (next.js: 3ms, application-code: 38ms)
+ GET /custom-products 200 in 54ms (next.js: 2ms, application-code: 51ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
++                         className="object-contain"
+-                         className="object-contain hb-hide-temp"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="4PROCESSING"
+                        >
+                    ...
+                  ...
+                ...
+ 
+ GET /api/custom-order 200 in 5ms (next.js: 1824µs, application-code: 3ms)
+ GET /dummydata/Wooden%20Key%20Holder.png 404 in 47ms (next.js: 3ms, application-code: 45ms)
+ GET /custom-order 200 in 374ms (next.js: 354ms, application-code: 20ms)
+ POST /api/custom-order 201 in 16ms (next.js: 4ms, application-code: 12ms)
+ GET /placeholder.png 404 in 78ms (next.js: 6ms, application-code: 72ms)
+ GET /dummydata/Wooden%20Key%20Holder.png 404 in 78ms (next.js: 38ms, application-code: 39ms)
+ GET /custom-request/req_1777783488055 404 in 27ms (next.js: 4ms, application-code: 24ms)
+ GET /custom-request/req_1777783488055 404 in 40ms (next.js: 5ms, application-code: 35ms)
+ GET /custom-products 200 in 64ms (next.js: 4ms, application-code: 60ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
+                          className="object-contain"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="5PROCESSED"
+-                         data--h-bfrom-bx="true"
+-                         data--h-bresult="clear"
+                        >
+                    ...
+                  ...
+                ...
+ 
+ GET /api/custom-order 200 in 6ms (next.js: 1481µs, application-code: 4ms)
+ GET /placeholder.png 404 in 113ms (next.js: 9ms, application-code: 104ms)
+ GET /dummydata/Wooden%20Key%20Holder.png 404 in 112ms (next.js: 50ms, application-code: 62ms)
+ GET /shop 200 in 328ms (next.js: 299ms, application-code: 29ms)
+✓ Compiled in 194ms
+✓ Compiled in 213ms
+ GET /shop 200 in 225ms (next.js: 155ms, application-code: 70ms)
+ GET /shop 200 in 65ms (next.js: 8ms, application-code: 56ms)
+✓ Compiled in 112ms
+ GET /shop 200 in 179ms (next.js: 110ms, application-code: 69ms)
+✓ Compiled in 91ms
+ GET /shop 200 in 114ms (next.js: 75ms, application-code: 38ms)
+✓ Compiled in 83ms
+ GET /shop 200 in 144ms (next.js: 89ms, application-code: 54ms)
+ GET / 200 in 118ms (next.js: 91ms, application-code: 27ms)
+ GET /product/prod_3 200 in 1009ms (next.js: 978ms, application-code: 31ms)
+✓ Compiled in 57ms
+ GET /product/prod_3 200 in 94ms (next.js: 56ms, application-code: 38ms)
+ GET /product/prod_3 200 in 176ms (next.js: 7ms, application-code: 170ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
+                          className="object-contain"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="5PROCESSED"
+-                         data--h-bfrom-bx="true"
+-                         data--h-bresult="clear"
+                        >
+                    ...
+                  ...
+                ...
+ 
+[browser] Image with src "/_next/static/media/product_img3.0rjqo2wk.pa8y.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET / 200 in 98ms (next.js: 69ms, application-code: 28ms)
+ GET /shop 200 in 206ms (next.js: 53ms, application-code: 154ms)
+ GET /shop 200 in 67ms (next.js: 2ms, application-code: 65ms)
+ GET /shop 200 in 20ms (next.js: 1959µs, application-code: 18ms)
+ GET /shop 200 in 17ms (next.js: 1877µs, application-code: 15ms)
+ GET / 200 in 16ms (next.js: 1686µs, application-code: 14ms)
+ GET /shop 200 in 22ms (next.js: 4ms, application-code: 18ms)
+ GET /shop 200 in 64ms (next.js: 1984µs, application-code: 62ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
+                          className="object-contain"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="5PROCESSED"
+-                         data--h-bfrom-bx="true"
+-                         data--h-bresult="clear"
+                        >
+                    ...
+                  ...
+                ...
+ 
+ GET /shop 200 in 7ms (next.js: 2ms, application-code: 4ms)
+ GET /shop 200 in 18ms (next.js: 2ms, application-code: 15ms)
+ GET / 200 in 15ms (next.js: 1867µs, application-code: 13ms)
+ GET /custom-products 200 in 37ms (next.js: 19ms, application-code: 19ms)
+ GET /api/custom-order 200 in 57ms (next.js: 42ms, application-code: 15ms)
+ GET /api/custom-order 200 in 4ms (next.js: 1508µs, application-code: 3ms)
+ GET /dummydata/Wooden%20Key%20Holder.png 404 in 49ms (next.js: 19ms, application-code: 30ms)
+ GET /custom-order 200 in 35ms (next.js: 17ms, application-code: 18ms)
+✓ Compiled in 89ms
+ GET /custom-order 200 in 104ms (next.js: 69ms, application-code: 35ms)
+✓ Compiled in 59ms
+ GET /custom-order 200 in 112ms (next.js: 76ms, application-code: 36ms)
+✓ Compiled in 60ms
+ GET /custom-order 200 in 96ms (next.js: 66ms, application-code: 31ms)
+✓ Compiled in 110ms
+ GET /custom-order 200 in 110ms (next.js: 71ms, application-code: 39ms)
+✓ Compiled in 173ms
+ GET /custom-order 200 in 133ms (next.js: 91ms, application-code: 42ms)
+✓ Compiled in 84ms
+ GET /custom-order 200 in 91ms (next.js: 55ms, application-code: 36ms)
+✓ Compiled in 64ms
+ GET /custom-order 200 in 99ms (next.js: 64ms, application-code: 35ms)
+✓ Compiled in 76ms
+ GET /custom-order 200 in 81ms (next.js: 48ms, application-code: 33ms)
+✓ Compiled in 52ms
+ GET /custom-order 200 in 115ms (next.js: 71ms, application-code: 44ms)
+ GET /shop 200 in 220ms (next.js: 59ms, application-code: 160ms)
+ GET /shop 200 in 63ms (next.js: 2ms, application-code: 61ms)
+ GET /custom-order 200 in 61ms (next.js: 2ms, application-code: 59ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="layout" pagePath="(public)/l...">
+      <SegmentTrieNode>
+      <script>
+      <script>
+      <script>
+      <ClientSegmentRoot Component={function PublicLayout} slots={{children:{...}}} ...>
+        <PublicLayout params={Promise}>
+          <Navbar>
+          <OuterLayoutRouter>
+          <Footer>
+            <footer className="mx-6 bg-white">
+              <div className="max-w-7xl ...">
+                <div className="flex flex-...">
+                  <div>
+                    <LinkComponent href="/" className="flex items...">
+                      <a className="flex items..." ref={function} onClick={function onClick} ...>
+                        <div>
+                        <img
+                          alt="logo"
+                          fetchPriority={undefined}
+                          loading="lazy"
+                          width={50}
+                          height={50}
+                          decoding="async"
+                          data-nimg="1"
+                          className="object-contain"
+                          style={{color:"transparent"}}
+                          sizes={undefined}
+                          srcSet={undefined}
+                          src="/_next/static/media/logo.01e8.ktczeuos.png"
+                          ref={function}
+                          onLoad={function onLoad}
+                          onError={function onError}
+-                         data--h-bstatus="5PROCESSED"
+-                         data--h-bfrom-bx="true"
+-                         data--h-bresult="clear"
+                        >
+                    ...
+                  ...
+                ...
+ 
+ GET /shop 200 in 20ms (next.js: 3ms, application-code: 17ms)
+ GET / 200 in 95ms (next.js: 60ms, application-code: 35ms)
+ GET /privacy-policy 200 in 1051ms (next.js: 1035ms, application-code: 16ms)
+ GET / 200 in 29ms (next.js: 11ms, application-code: 18ms)
+✓ Compiled in 76ms
+ GET / 200 in 103ms (next.js: 63ms, application-code: 41ms)
+✓ Compiled in 50ms
+ GET / 200 in 136ms (next.js: 104ms, application-code: 32ms)
+✓ Compiled in 51ms
+ GET / 200 in 84ms (next.js: 55ms, application-code: 29ms)
+✓ Compiled in 60ms
+ GET / 200 in 95ms (next.js: 61ms, application-code: 34ms)
+✓ Compiled in 53ms
+ GET / 200 in 83ms (next.js: 54ms, application-code: 28ms)
+
+c:\Users\Admin\Desktop\Manzili>

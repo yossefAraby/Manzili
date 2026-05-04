@@ -1,25 +1,37 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useDispatch } from "react-redux";
 import {
   UploadCloudIcon,
-  LinkIcon,
   MicIcon,
   PlusIcon,
   Trash2Icon,
   XIcon,
   MinusIcon,
-  ChevronDownIcon, // 👈 تم إضافة الأيقونة هنا
+  ChevronDownIcon,
+  ChevronUpIcon,
+  StoreIcon,
 } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { categories } from "@/assets/assets";
+import StoreSearch from "@/components/StoreSearch";
+import { addCustomRequest } from "@/lib/features/customRequest/customRequestSlice";
 
 // ==========================================
-// 1. SUB-COMPONENTS
+// 1. SUB-COMPONENTS (Reused with minor modifications)
 // ==========================================
 
-const ImageUploader = ({ images, setImages }) => {
+const ImageUploader = ({ images, setImages, required = false }) => {
+  // Use ref to track current images for cleanup
+  const imagesRef = useRef(images);
+  
+  // Update ref when images change
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
   const handleImageUpload = (e) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
@@ -59,14 +71,14 @@ const ImageUploader = ({ images, setImages }) => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      images.forEach((img) => URL.revokeObjectURL(img.preview));
+      imagesRef.current.forEach((img) => URL.revokeObjectURL(img.preview));
     };
   }, []);
 
   return (
     <div className="w-full">
       <label htmlFor="image-upload" className="block mb-2 font-medium">
-        Visual Inspiration (Max 5)
+        Visual Inspiration (Max 5) {required && <span className="text-red-500">*</span>}
       </label>
       <label
         htmlFor="image-upload"
@@ -108,11 +120,14 @@ const ImageUploader = ({ images, setImages }) => {
           ))}
         </div>
       )}
+      {required && images.length === 0 && (
+        <p className="mt-2 text-sm text-red-500">At least one image is required</p>
+      )}
     </div>
   );
 };
 
-const ColorPalette = ({ colors, setColors }) => {
+const ColorPalette = ({ colors, setColors, disabled = false }) => {
   const handleAdd = () =>
     setColors((prev) => [...prev, { hex: "#000000", description: "" }]);
   const handleUpdate = (index, field, value) => {
@@ -122,6 +137,8 @@ const ColorPalette = ({ colors, setColors }) => {
   };
   const handleRemove = (index) =>
     setColors((prev) => prev.filter((_, i) => i !== index));
+
+  if (disabled) return null;
 
   return (
     <div className="w-full mb-4">
@@ -139,7 +156,7 @@ const ColorPalette = ({ colors, setColors }) => {
             type="text"
             value={c.description}
             onChange={(e) => handleUpdate(i, "description", e.target.value)}
-            placeholder='e.g. "Matte finish" or "Terracotta"'
+            placeholder='e.g., "color of the table legs" or "main body color"'
             aria-label={`Color description ${i + 1}`}
             className="flex-1 border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5]"
           />
@@ -242,40 +259,91 @@ const AudioRecorder = ({ audioBlob, setAudioBlob }) => {
   );
 };
 
+const SizeInput = ({ size, setSize }) => {
+  const handleDimensionChange = (e) => {
+    const val = e.target.value;
+    setSize((prev) => ({
+      ...prev,
+      [e.target.name]: val === "" ? "" : Number(val),
+    }));
+  };
+
+  return (
+    <div className="w-full">
+      <label className="block mb-2 font-medium">Size</label>
+      <div className="flex gap-4">
+        <input
+          aria-label="Length (cm)"
+          name="length"
+          value={size.length}
+          onChange={handleDimensionChange}
+          type="number"
+          min="0"
+          placeholder="Length"
+          className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
+        />
+        <input
+          aria-label="Width (cm)"
+          name="width"
+          value={size.width}
+          onChange={handleDimensionChange}
+          type="number"
+          min="0"
+          placeholder="Width"
+          className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
+        />
+        <input
+          aria-label="Height (cm)"
+          name="height"
+          value={size.height}
+          onChange={handleDimensionChange}
+          type="number"
+          min="0"
+          placeholder="Height"
+          className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
+        />
+      </div>
+    </div>
+  );
+};
+
 // ==========================================
 // 2. MAIN COMPONENT
 // ==========================================
 
 const INITIAL_STATE = {
-  name: "",
-  category: "", // 👈 تم إضافة الـ category هنا
-  pinterestLink: "",
-  material: "",
-  size: { length: "", width: "", height: "" },
-  orderType: "one-piece",
-  quantity: 1,
+  itemName: "",
+  description: "",
   visibility: "open",
-  notes: "",
+  category: "",
+  quantity: 1,
+  size: { length: "", width: "", height: "" },
+  material: "",
   deliveryDate: "",
 };
 
 export default function CustomOrderPage() {
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [images, setImages] = useState([]);
   const [colors, setColors] = useState([{ hex: "#000000", description: "" }]);
   const [audioBlob, setAudioBlob] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [deliveryOption, setDeliveryOption] = useState("flexible"); // "1week", "2weeks", "1month", "flexible", "custom"
 
   // Handlers
-  const handleInput = (e) =>
-    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const handleInput = (e) => {
+    const { name, value } = e.target;
+    if (name === "deliveryDate") {
+      setDeliveryOption("custom");
+    }
+    setFormData((p) => ({ ...p, [name]: value }));
+  };
 
-  const handleSize = (e) => {
-    const val = e.target.value;
-    setFormData((p) => ({
-      ...p,
-      size: { ...p.size, [e.target.name]: val === "" ? "" : Number(val) },
-    }));
+  const handleSize = (newSize) => {
+    setFormData((p) => ({ ...p, size: newSize }));
   };
 
   const handleQuantity = (val) => {
@@ -283,38 +351,68 @@ export default function CustomOrderPage() {
     setFormData((p) => ({ ...p, quantity: Number(val) }));
   };
 
+  // Determine which fields to show based on category
+  const shouldShowSize = ["Woodwork", "Stationery", "Textiles", "Porcelain"].includes(formData.category);
+  const shouldShowMaterial = ["Woodwork", "Accessories", "Stationery", "Textiles"].includes(formData.category);
+  const shouldShowColorPalette = ["Woodwork", "Accessories", "Stationery", "Textiles", "Porcelain"].includes(formData.category);
+
+  // Compute delivery date based on selected option
+  useEffect(() => {
+    if (deliveryOption === "flexible") {
+      setFormData((p) => ({ ...p, deliveryDate: "" }));
+      return;
+    }
+    if (deliveryOption === "custom") {
+      // keep existing date, do nothing
+      return;
+    }
+    // compute date offset
+    const today = new Date();
+    let offsetDays = 0;
+    switch (deliveryOption) {
+      case "1week":
+        offsetDays = 7;
+        break;
+      case "2weeks":
+        offsetDays = 14;
+        break;
+      case "1month":
+        offsetDays = 30;
+        break;
+      default:
+        offsetDays = 0;
+    }
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + offsetDays);
+    const dateString = targetDate.toISOString().split("T")[0];
+    setFormData((p) => ({ ...p, deliveryDate: dateString }));
+  }, [deliveryOption]);
+
   // Validation
   const validateForm = () => {
-    if (!formData.name.trim()) return "Project name is required.";
-    if (!formData.category) return "Please select a category."; // 👈 فحص القسم
-    if (!formData.material.trim()) return "Material is required.";
-    if (!formData.deliveryDate) return "Delivery date is required.";
-
-    // URL Validation
-    if (formData.pinterestLink) {
-      try {
-        new URL(formData.pinterestLink);
-      } catch {
-        return "Invalid URL";
-      }
+    if (!formData.itemName.trim()) return "Item name is required.";
+    if (!formData.description.trim()) return "Description is required.";
+    if (images.length === 0) return "At least one visual inspiration image is required.";
+    if (formData.visibility === "private" && !selectedStore) {
+      return "Please select a store for private requests.";
     }
-
-    // Dimensions Validation
-    const { length, width, height } = formData.size;
-    if (
-      (length !== "" && length <= 0) ||
-      (width !== "" && width <= 0) ||
-      (height !== "" && height <= 0)
-    ) {
-      return "Dimensions must be greater than zero.";
+    if (!formData.category) return "Category is required.";
+    if (formData.deliveryDate) {
+      const today = new Date().toISOString().split("T")[0];
+      if (formData.deliveryDate < today) return "Delivery date must be in the future.";
     }
-
-    // Date Validation
-    const today = new Date().toISOString().split("T")[0];
-    if (formData.deliveryDate < today)
-      return "Delivery date must be in the future.";
-
     return null;
+  };
+
+  // Check if submit button should be enabled
+  const isSubmitEnabled = () => {
+    return (
+      formData.itemName.trim() &&
+      formData.description.trim() &&
+      images.length > 0 &&
+      formData.category &&
+      (formData.visibility !== "private" || selectedStore)
+    );
   };
 
   // Submit (Building the Real FormData)
@@ -331,15 +429,14 @@ export default function CustomOrderPage() {
       const submitData = new FormData();
 
       // 2. Append Text & JSON
-      submitData.append("name", formData.name);
-      submitData.append("category", formData.category); // 👈 إضافة القسم للإرسال
-      submitData.append("pinterestLink", formData.pinterestLink);
-      submitData.append("material", formData.material);
-      submitData.append("orderType", formData.orderType);
-      submitData.append("quantity", String(formData.quantity));
+      submitData.append("itemName", formData.itemName);
+      submitData.append("description", formData.description);
       submitData.append("visibility", formData.visibility);
+      if (selectedStore) submitData.append("storeId", selectedStore.id);
+      if (formData.category) submitData.append("category", formData.category);
+      submitData.append("quantity", String(formData.quantity));
+      submitData.append("material", formData.material);
       submitData.append("deliveryDate", formData.deliveryDate);
-      submitData.append("notes", formData.notes);
 
       // Append complex objects as JSON strings
       submitData.append("size", JSON.stringify(formData.size));
@@ -349,16 +446,30 @@ export default function CustomOrderPage() {
       images.forEach((img, i) => submitData.append(`image_${i}`, img.file));
       if (audioBlob) submitData.append("voiceMemo", audioBlob, "memo.webm");
 
-      // Mock API Call: fetch('/api/custom-order', { method: 'POST', body: submitData })
-      await new Promise((res) => setTimeout(res, 1500));
+      // Real API Call
+      const response = await fetch('/api/custom-order', {
+        method: 'POST',
+        body: submitData,
+      });
 
-      toast.success("Order Submitted Successfully!");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Submission failed');
+      }
+
+      toast.success("Custom Request Submitted Successfully!");
+      
+      // Add to Redux store
+      dispatch(addCustomRequest(result.request));
 
       // Reset
       setFormData(INITIAL_STATE);
       setImages([]);
       setColors([{ hex: "#000000", description: "" }]);
       setAudioBlob(null);
+      setSelectedStore(null);
+      setShowAdditionalDetails(false);
     } catch {
       toast.error("Submission failed.");
     } finally {
@@ -382,16 +493,17 @@ export default function CustomOrderPage() {
           </p>
         </div>
 
-        {/* Basic Info (Name & Category) 👈 تم دمجهم في شبكة (Grid) */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Main Required Fields */}
+        <div className="space-y-6">
+          {/* Item Name */}
           <div className="w-full">
-            <label htmlFor="projectName" className="block mb-2 font-medium">
-              Project Name
+            <label htmlFor="itemName" className="block mb-2 font-medium">
+              Item Name <span className="text-red-500">*</span>
             </label>
             <input
-              id="projectName"
-              name="name"
-              value={formData.name}
+              id="itemName"
+              name="itemName"
+              value={formData.itemName}
               onChange={handleInput}
               type="text"
               placeholder="e.g. Vintage Oak Table"
@@ -399,9 +511,10 @@ export default function CustomOrderPage() {
             />
           </div>
 
-          <div className="w-full relative">
+          {/* Category */}
+          <div className="w-full">
             <label htmlFor="category" className="block mb-2 font-medium">
-              Category
+              Category <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
@@ -411,9 +524,7 @@ export default function CustomOrderPage() {
                 onChange={handleInput}
                 className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 pr-10 rounded-xl bg-[#faf8f5] appearance-none cursor-pointer"
               >
-                <option value="" disabled>
-                  Select a category
-                </option>
+                <option value="">Select a category</option>
                 {categories.map((cat, idx) => (
                   <option key={idx} value={cat} className="capitalize">
                     {cat}
@@ -426,256 +537,200 @@ export default function CustomOrderPage() {
               />
             </div>
           </div>
-        </div>
 
-        {/* Uploads */}
-        <ImageUploader images={images} setImages={setImages} />
+          {/* Visual Inspiration */}
+          <ImageUploader images={images} setImages={setImages} required />
 
-        <div className="w-full flex items-center bg-[#faf8f5] border border-slate-300 rounded-xl px-3 focus-within:ring-2 focus-within:ring-[#e67e22] transition-all">
-          <LinkIcon className="text-slate-400" size={20} aria-hidden="true" />
-          <input
-            aria-label="Pinterest Link"
-            name="pinterestLink"
-            value={formData.pinterestLink}
-            onChange={handleInput}
-            type="url"
-            placeholder="Pinterest Board or Pin URL"
-            className="w-full p-3 outline-none bg-transparent"
-          />
-        </div>
-
-        {/* Material & Colors */}
-        <div className="w-full">
-          <label htmlFor="material" className="block mb-2 font-medium">
-            Material
-          </label>
-          <input
-            id="material"
-            name="material"
-            value={formData.material}
-            onChange={handleInput}
-            type="text"
-            placeholder="e.g., Clay, Wool, Oak"
-            className="border border-slate-300 w-full p-3 rounded-xl mb-4 bg-[#faf8f5] outline-none focus:ring-2 focus:ring-[#e67e22]"
-          />
-          <ColorPalette colors={colors} setColors={setColors} />
-        </div>
-
-        {/* Dimensions */}
-        <fieldset className="w-full">
-          <legend className="block mb-2 font-medium">
-            Specific Dimensions (cm)
-          </legend>
-          <div className="flex gap-4">
-            <input
-              aria-label="Length"
-              name="length"
-              value={formData.size.length}
-              onChange={handleSize}
-              type="number"
-              min="0"
-              placeholder="Length"
-              className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
-            />
-            <input
-              aria-label="Width"
-              name="width"
-              value={formData.size.width}
-              onChange={handleSize}
-              type="number"
-              min="0"
-              placeholder="Width"
-              className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
-            />
-            <input
-              aria-label="Height"
-              name="height"
-              value={formData.size.height}
-              onChange={handleSize}
-              type="number"
-              min="0"
-              placeholder="Height"
-              className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
+          {/* Description */}
+          <div className="w-full">
+            <label htmlFor="description" className="block mb-2 font-medium">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInput}
+              rows={4}
+              placeholder="Describe what you're looking for in detail..."
+              className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl resize-none bg-[#faf8f5]"
             />
           </div>
-        </fieldset>
 
-        {/* Quantity & Order Type */}
-        <fieldset className="w-full py-6 border-y border-slate-200">
-          <legend className="block mb-4 font-bold text-[#1c355e]">
-            Quantity Options
-          </legend>
-          <div className="flex flex-col gap-4">
-            <label
-              htmlFor="opt-one"
-              className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer ${formData.orderType === "one-piece" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-white"}`}
-            >
-              <input
-                id="opt-one"
-                type="radio"
-                name="orderType"
-                checked={formData.orderType === "one-piece"}
-                onChange={() =>
-                  setFormData((p) => ({
-                    ...p,
-                    orderType: "one-piece",
-                    quantity: 1,
-                  }))
-                }
-                className="accent-[#2582eb] w-5 h-5"
-              />
-              <span className="font-medium text-slate-800">One Piece</span>
-            </label>
-
-            <div
-              className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border-2 ${formData.orderType === "multiple" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-white"}`}
-            >
+          {/* Request Visibility */}
+          <fieldset className="w-full">
+            <legend className="block mb-4 font-bold text-[#1c355e]">
+              Request Visibility <span className="text-red-500">*</span>
+            </legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label
-                htmlFor="opt-multi"
-                className="flex items-center gap-3 cursor-pointer"
+                htmlFor="vis-open"
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer ${formData.visibility === "open" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-white"}`}
               >
                 <input
-                  id="opt-multi"
+                  id="vis-open"
                   type="radio"
-                  name="orderType"
-                  checked={formData.orderType === "multiple"}
-                  onChange={() =>
-                    setFormData((p) => ({ ...p, orderType: "multiple" }))
-                  }
+                  name="visibility"
+                  checked={formData.visibility === "open"}
+                  onChange={() => setFormData((p) => ({ ...p, visibility: "open" }))}
                   className="accent-[#2582eb] w-5 h-5"
                 />
-                <span className="font-medium text-slate-800">
-                  Multiple Pieces
-                </span>
+                <div>
+                  <p className="font-medium text-slate-800">Open Request</p>
+                  <p className="text-xs text-slate-500">
+                    Posted to Custom Request Hub (default)
+                  </p>
+                </div>
               </label>
 
-              {formData.orderType === "multiple" && (
-                <div className="flex items-center gap-3 bg-white border border-slate-300 rounded-lg p-1 mt-4 sm:mt-0">
-                  <button
-                    type="button"
-                    onClick={() => handleQuantity(formData.quantity - 1)}
-                    aria-label="Decrease quantity"
-                    className="p-2 hover:bg-slate-100 rounded-md"
-                  >
-                    <MinusIcon size={18} />
-                  </button>
-                  <input
-                    aria-label="Quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) => handleQuantity(e.target.value)}
-                    onBlur={(e) => {
-                      if (!e.target.value) handleQuantity(1);
-                    }}
-                    className="w-12 text-center font-bold outline-none"
-                    min="1"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleQuantity(formData.quantity + 1)}
-                    aria-label="Increase quantity"
-                    className="p-2 hover:bg-slate-100 rounded-md text-[#2582eb]"
-                  >
-                    <PlusIcon size={18} />
-                  </button>
+              <label
+                htmlFor="vis-private"
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer ${formData.visibility === "private" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-white"}`}
+              >
+                <input
+                  id="vis-private"
+                  type="radio"
+                  name="visibility"
+                  checked={formData.visibility === "private"}
+                  onChange={() => setFormData((p) => ({ ...p, visibility: "private" }))}
+                  className="accent-[#2582eb] w-5 h-5"
+                />
+                <div>
+                  <p className="font-medium text-slate-800">Private Request</p>
+                  <p className="text-xs text-slate-500">
+                    Sent to a specific artisan
+                  </p>
                 </div>
-              )}
+              </label>
+            </div>
+          </fieldset>
+
+          {/* Store Search (only for private) */}
+          {formData.visibility === "private" && (
+            <StoreSearch
+              selectedStore={selectedStore}
+              onSelectStore={setSelectedStore}
+            />
+          )}
+        </div>
+
+        {/* Additional Details Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowAdditionalDetails(!showAdditionalDetails)}
+          className="flex items-center justify-between w-full p-4 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <PlusIcon size={20} className="text-[#2582eb]" />
+            <span className="font-medium text-slate-800">Additional Details (Optional)</span>
+          </div>
+          {showAdditionalDetails ? (
+            <ChevronUpIcon size={20} className="text-slate-500" />
+          ) : (
+            <ChevronDownIcon size={20} className="text-slate-500" />
+          )}
+        </button>
+
+        {/* Additional Details Section */}
+        {showAdditionalDetails && (
+          <div className="space-y-6 border-t border-slate-200 pt-6">
+
+
+            {/* Voice Memo */}
+            <AudioRecorder audioBlob={audioBlob} setAudioBlob={setAudioBlob} />
+
+            {/* Quantity */}
+            <div className="w-full">
+              <label className="block mb-2 font-medium">Quantity</label>
+              <div className="flex items-center gap-3 bg-white border border-slate-300 rounded-lg p-1 w-fit">
+                <button
+                  type="button"
+                  onClick={() => handleQuantity(formData.quantity - 1)}
+                  aria-label="Decrease quantity"
+                  className="p-2 hover:bg-slate-100 rounded-md"
+                  disabled={formData.quantity <= 1}
+                >
+                  <MinusIcon size={18} />
+                </button>
+                <input
+                  aria-label="Quantity"
+                  type="number"
+                  value={formData.quantity}
+                  onChange={(e) => handleQuantity(e.target.value)}
+                  onBlur={(e) => {
+                    if (!e.target.value) handleQuantity(1);
+                  }}
+                  className="w-12 text-center font-bold outline-none"
+                  min="1"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleQuantity(formData.quantity + 1)}
+                  aria-label="Increase quantity"
+                  className="p-2 hover:bg-slate-100 rounded-md text-[#2582eb]"
+                >
+                  <PlusIcon size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Size */}
+            {shouldShowSize && <SizeInput size={formData.size} setSize={handleSize} />}
+
+            {/* Material (conditionally shown) */}
+            {shouldShowMaterial && (
+              <div className="w-full">
+                <label htmlFor="material" className="block mb-2 font-medium">
+                  Material
+                </label>
+                <input
+                  id="material"
+                  name="material"
+                  value={formData.material}
+                  onChange={handleInput}
+                  type="text"
+                  placeholder="e.g., Clay, Wool, Oak"
+                  className="border border-slate-300 w-full p-3 rounded-xl bg-[#faf8f5] outline-none focus:ring-2 focus:ring-[#e67e22]"
+                />
+              </div>
+            )}
+
+            {/* Color Palette (conditionally shown) */}
+            <ColorPalette
+              colors={colors}
+              setColors={setColors}
+              disabled={!shouldShowColorPalette}
+            />
+
+            {/* Delivery Date */}
+            <div className="w-full">
+              <label htmlFor="deliveryDate" className="block mb-2 font-medium">
+                Desired Delivery Date
+              </label>
+              <input
+                id="deliveryDate"
+                type="date"
+                name="deliveryDate"
+                value={formData.deliveryDate}
+                onChange={handleInput}
+                className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5]"
+              />
             </div>
           </div>
-        </fieldset>
-
-        {/* Visibility */}
-        <fieldset className="w-full pb-6 border-b border-slate-200">
-          <legend className="block my-4 font-bold text-[#1c355e]">
-            Request Visibility
-          </legend>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label
-              htmlFor="vis-private"
-              className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer ${formData.visibility === "private" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-white"}`}
-            >
-              <input
-                id="vis-private"
-                type="radio"
-                name="visibility"
-                checked={formData.visibility === "private"}
-                onChange={() =>
-                  setFormData((p) => ({ ...p, visibility: "private" }))
-                }
-                className="accent-[#2582eb] w-5 h-5"
-              />
-              <div>
-                <p className="font-medium text-slate-800">Private Request</p>
-                <p className="text-xs text-slate-500">
-                  Sent to a specific artisan
-                </p>
-              </div>
-            </label>
-
-            <label
-              htmlFor="vis-open"
-              className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer ${formData.visibility === "open" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-white"}`}
-            >
-              <input
-                id="vis-open"
-                type="radio"
-                name="visibility"
-                checked={formData.visibility === "open"}
-                onChange={() =>
-                  setFormData((p) => ({ ...p, visibility: "open" }))
-                }
-                className="accent-[#2582eb] w-5 h-5"
-              />
-              <div>
-                <p className="font-medium text-slate-800">Open Request</p>
-                <p className="text-xs text-slate-500">
-                  Posted to Custom Request Hub
-                </p>
-              </div>
-            </label>
-          </div>
-        </fieldset>
-
-        {/* Delivery & Notes */}
-        <div className="w-full">
-          <label htmlFor="deliveryDate" className="block mb-2 font-medium">
-            Desired Delivery Date
-          </label>
-          <input
-            id="deliveryDate"
-            type="date"
-            name="deliveryDate"
-            value={formData.deliveryDate}
-            onChange={handleInput}
-            className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5]"
-          />
-        </div>
-
-        <div className="w-full">
-          <label htmlFor="notes" className="block mb-2 font-medium">
-            Additional Notes
-          </label>
-          <textarea
-            id="notes"
-            name="notes"
-            value={formData.notes}
-            onChange={handleInput}
-            rows={4}
-            className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl resize-none bg-[#faf8f5]"
-          />
-        </div>
-
-        {/* Audio */}
-        <AudioRecorder audioBlob={audioBlob} setAudioBlob={setAudioBlob} />
+        )}
 
         {/* Submit */}
         <button
           type="submit"
-          disabled={loading}
-          className="w-full mt-4 bg-gradient-to-r from-[#e67e22] to-[#d35400] text-white font-bold rounded-full py-4 shadow-md text-lg hover:scale-[1.01] transition-all uppercase disabled:opacity-70 disabled:cursor-not-allowed"
+          disabled={loading || !isSubmitEnabled()}
+          className={`w-full mt-4 bg-gradient-to-r from-[#e67e22] to-[#d35400] text-white font-bold rounded-full py-4 shadow-md text-lg transition-all uppercase ${!isSubmitEnabled() ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01]"}`}
         >
           {loading ? "Submitting..." : "Submit Request"}
         </button>
+
+        <p className="text-sm text-slate-500 text-center">
+          Required fields are marked with <span className="text-red-500">*</span>
+        </p>
       </form>
     </div>
   );

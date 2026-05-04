@@ -22,6 +22,7 @@ model User {
     Address     Address[]
     store       Store?
     buyerOrders Order[]   @relation("BuyerRelation")
+    customRequests CustomRequest[]
 }
 
 // Required for creating a Product: name, description, mrp, price, images, category, storeId
@@ -157,7 +158,32 @@ model Store {
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
-    Product Product[]
-    Order   Order[]
-    user    User      @relation(fields: [userId], references: [id])
+    Product        Product[]
+    Order          Order[]
+    user           User           @relation(fields: [userId], references: [id])
+    customRequests CustomRequest[]
+}
+
+// Required for creating a CustomRequest: userId, itemName, description, images, visibility, category, quantity, size, material, colors, deliveryDate, voiceMemoUrl, storeId (optional)
+model CustomRequest {
+    id           String   @id @default(cuid())
+    userId       String
+    itemName     String
+    description  String
+    images       String[]
+    visibility   String   @default("open") // 'open' or 'private'
+    storeId      String?
+    category     String?
+    quantity     Int?
+    size         Json?    // {length, width, height} or slider value
+    material     String?
+    colors       Json?    // [{hex, description}]
+    deliveryDate DateTime?
+    voiceMemoUrl String?
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relations
+    user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    store Store? @relation(fields: [storeId], references: [id])
 }
