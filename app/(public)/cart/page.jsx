@@ -8,10 +8,11 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export default function Cart() {
 
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    const currency = getCurrencySymbol();
     
     const { cartItems } = useSelector(state => state.cart);
     const products = useSelector(state => state.product.list);

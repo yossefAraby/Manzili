@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getStripeCurrency } from '@/lib/currency';
 
 function computeTotalCents(items, coupon) {
     let subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -34,7 +35,7 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
     }
 
-    const currency = (process.env.NEXT_PUBLIC_STRIPE_CURRENCY || 'egp').toLowerCase();
+    const currency = getStripeCurrency();
     const unitAmount = computeTotalCents(items, coupon);
 
     // Stripe minimum charge amounts (smallest currency unit: cents / piastres)

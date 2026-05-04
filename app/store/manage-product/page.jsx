@@ -4,10 +4,11 @@ import { toast } from "react-hot-toast"
 import Image from "next/image"
 import Loading from "@/components/Loading"
 import { productDummyData } from "@/assets/assets"
+import { getCurrencySymbol } from "@/lib/currency"
 
 export default function StoreManageProducts() {
 
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
+    const currency = getCurrencySymbol()
 
     const [loading, setLoading] = useState(true)
     const [products, setProducts] = useState([])

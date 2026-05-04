@@ -7,11 +7,12 @@ import { useState } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
+import { getCurrencySymbol } from "@/lib/currency";
 
 const ProductDetails = ({ product }) => {
 
     const productId = product.id;
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    const currency = getCurrencySymbol();
 
     const cart = useSelector(state => state.cart.cartItems);
     const dispatch = useDispatch();
