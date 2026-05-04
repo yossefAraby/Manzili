@@ -6,6 +6,7 @@ import { deleteItemFromCart } from "@/lib/features/cart/cartSlice";
 import { Trash2Icon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function Cart() {
@@ -45,6 +46,15 @@ export default function Cart() {
             createCartArray();
         }
     }, [cartItems, products]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('payment') === 'canceled') {
+            toast('Stripe checkout was canceled');
+            window.history.replaceState({}, '', '/cart');
+        }
+    }, []);
 
     return cartArray.length > 0 ? (
         <div className="min-h-screen mx-6 text-slate-800">

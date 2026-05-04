@@ -27,7 +27,42 @@ const OrderSummary = ({ totalPrice, items }) => {
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
 
-        router.push('/orders')
+        if (!selectedAddress) {
+            toast.error('Please select or add a shipping address');
+            return;
+        }
+
+        if (paymentMethod === 'COD') {
+            router.push('/orders');
+            return;
+        }
+
+        const payload = {
+            items: items.map((i) => ({
+                id: i.id,
+                name: i.name,
+                price: i.price,
+                quantity: i.quantity,
+                images: i.images,
+            })),
+            coupon: coupon ? { discount: coupon.discount } : null,
+        };
+
+        const res = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || 'Could not start Stripe Checkout');
+        }
+        if (!data.url) {
+            throw new Error('No checkout URL returned');
+        }
+
+        window.location.assign(data.url);
     }
 
     return (
@@ -35,13 +70,20 @@ const OrderSummary = ({ totalPrice, items }) => {
             <h2 className='text-xl font-medium text-slate-600'>Payment Summary</h2>
             <p className='text-slate-400 text-xs my-4'>Payment Method</p>
             <div className='flex gap-2 items-center'>
-                <input type="radio" id="COD" onChange={() => setPaymentMethod('COD')} checked={paymentMethod === 'COD'} className='accent-gray-500' />
+                <input type="radio" id="COD" name="payment" onChange={() => setPaymentMethod('COD')} checked={paymentMethod === 'COD'} className='accent-gray-500' />
                 <label htmlFor="COD" className='cursor-pointer'>COD</label>
             </div>
             <div className='flex gap-2 items-center mt-1'>
                 <input type="radio" id="STRIPE" name='payment' onChange={() => setPaymentMethod('STRIPE')} checked={paymentMethod === 'STRIPE'} className='accent-gray-500' />
-                <label htmlFor="STRIPE" className='cursor-pointer'>Stripe Payment</label>
+                <label htmlFor="STRIPE" className='cursor-pointer'>Stripe (test / demo checkout)</label>
             </div>
+            {paymentMethod === 'STRIPE' && (
+                <p className='text-xs text-slate-400 mt-2 leading-relaxed'>
+                    Uses Stripe test mode — no real charges. Pay with card{' '}
+                    <span className='font-mono text-slate-500'>4242 4242 4242 4242</span>, any future
+                    expiry and CVC.
+                </p>
+            )}
             <div className='my-4 py-4 border-y border-slate-200 text-slate-400'>
                 <p>Address</p>
                 {
