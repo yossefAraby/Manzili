@@ -13,11 +13,14 @@ function computeTotalCents(items, coupon) {
 
 export async function POST(request) {
     const secret = process.env.STRIPE_SECRET_KEY;
-    if (!secret || !secret.startsWith('sk_')) {
+    const trimmedSecret = typeof secret === 'string' ? secret.trim() : '';
+    const looksLikeSecretKey =
+        trimmedSecret.startsWith('sk_') || trimmedSecret.startsWith('rk_');
+    if (!looksLikeSecretKey) {
         return NextResponse.json(
             {
                 error:
-                    'Missing STRIPE_SECRET_KEY. Use a test key from Stripe Dashboard → Developers → API keys (starts with sk_test_ for demo mode).',
+                    'Missing/invalid STRIPE_SECRET_KEY. Use a Stripe secret or restricted key (sk_... or rk_...).',
             },
             { status: 501 }
         );
@@ -64,7 +67,7 @@ export async function POST(request) {
         return new URL(request.url).origin;
     })();
 
-    const stripe = new Stripe(secret);
+    const stripe = new Stripe(trimmedSecret);
 
     const itemSummary = items.map((i) => `${i.name} × ${i.quantity}`).join('; ');
 
