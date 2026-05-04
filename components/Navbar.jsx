@@ -1,5 +1,5 @@
 "use client";
-import { Search, ShoppingCart, CircleUserRound } from "lucide-react"; // Add CircleUserRound
+import { Search, ShoppingCart, CircleUserRound, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
@@ -11,6 +11,7 @@ const Navbar = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const cartCount = useSelector((state) => state.cart.total);
+  const wishlistCount = useSelector((state) => state.wishlist.total);
 
   const [isLoggedIn, setIsLoggedIn] = useState(true);
 
@@ -77,6 +78,17 @@ const Navbar = () => {
               </button>
             </Link>
 
+            <Link
+              href="/wishlist"
+              className="relative flex items-center gap-2 text-slate-600"
+              aria-label="Wishlist"
+            >
+              <Star size={18} />
+              <button className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
+                {wishlistCount}
+              </button>
+            </Link>
+
             {/* Control button or profile display (Desktop) */}
             {isLoggedIn ? (
               <div className="flex items-center gap-2 cursor-pointer group relative">
@@ -122,6 +134,12 @@ const Navbar = () => {
 
           {/* Mobile Menu */}
           <div className="sm:hidden flex items-center gap-3">
+            <Link href="/wishlist" className="relative text-slate-700" aria-label="Wishlist">
+              <Star size={20} />
+              <span className="absolute -top-1 -right-1 text-[8px] text-white bg-slate-600 size-3.5 rounded-full flex items-center justify-center">
+                {wishlistCount}
+              </span>
+            </Link>
             {isLoggedIn ? (
               <CircleUserRound
                 onClick={() => router.push("/profile")}
