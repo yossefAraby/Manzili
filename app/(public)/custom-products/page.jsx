@@ -24,7 +24,7 @@ function ShopContent() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-6 gap-4">
           <h1
-            // onClick={() => router.push("/shop")} // go back to shop page without search query
+            onClick={() => router.push("/shop")} // go back to shop page without search query
             className="text-2xl text-slate-500 flex items-center gap-2 hover:text-slate-700 transition-colors"
           >
             {search && <MoveLeftIcon size={20} />} Open{" "}

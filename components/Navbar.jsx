@@ -59,6 +59,7 @@ const Navbar = () => {
             >
               <Search size={18} className="text-slate-600" />
               <input
+                suppressHydrationWarning
                 className="w-full bg-transparent outline-none placeholder-slate-600"
                 type="text"
                 placeholder="Search products"
