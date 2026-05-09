@@ -103,6 +103,10 @@
    DATABASE_URL="postgresql://username:password@localhost:5432/manzili_db"
    DIRECT_URL="postgresql://username:password@localhost:5432/manzili_db"
    NEXT_PUBLIC_CURRENCY_SYMBOL="EGP"
+   STRIPE_SECRET_KEY="sk_test_..."
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+   STRIPE_CURRENCY="egp"
+   NEXT_PUBLIC_APP_URL="http://localhost:3000"
    ```
 
 4. **Set up the database**

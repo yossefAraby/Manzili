@@ -4,10 +4,11 @@ import { ArrowRightIcon, ChevronRightIcon } from 'lucide-react'
 import Image from 'next/image'
 import React from 'react'
 import CategoriesMarquee from './CategoriesMarquee'
+import { getCurrencySymbol } from '@/lib/currency'
 
 const Hero = () => {
 
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
+    const currency = getCurrencySymbol()
 
     return (
         <div className='mx-6'>

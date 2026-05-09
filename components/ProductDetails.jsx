@@ -1,19 +1,22 @@
 'use client'
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
+import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
 import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
+import { getCurrencySymbol } from "@/lib/currency";
 
 const ProductDetails = ({ product }) => {
 
     const productId = product.id;
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    const currency = getCurrencySymbol();
 
     const cart = useSelector(state => state.cart.cartItems);
+    const inWishlist = useSelector(state => Boolean(state.wishlist.wishlistItems[productId]));
     const dispatch = useDispatch();
 
     const router = useRouter()
@@ -67,6 +70,12 @@ const ProductDetails = ({ product }) => {
                     }
                     <button onClick={() => !cart[productId] ? addToCartHandler() : router.push('/cart')} className="bg-slate-800 text-white px-10 py-3 text-sm font-medium rounded hover:bg-slate-900 active:scale-95 transition">
                         {!cart[productId] ? 'Add to Cart' : 'View Cart'}
+                    </button>
+                    <button
+                        onClick={() => dispatch(toggleWishlist({ productId }))}
+                        className="border border-slate-300 text-slate-700 px-6 py-3 text-sm font-medium rounded hover:bg-slate-50 transition"
+                    >
+                        {inWishlist ? 'Wishlisted' : 'Wishlist'}
                     </button>
                 </div>
                 <hr className="border-gray-300 my-5" />

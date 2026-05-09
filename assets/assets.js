@@ -46,10 +46,10 @@ export const assets = {
 
 export const categories = [
   "Woodwork",
-  "Jewelry",
+  "Accessories",
   "Stationery",
   "Food & Snacks",
-  "fragrances",
+  "Fragrances",
   "Textiles",
   "Porcelain",
 ];
@@ -75,7 +75,7 @@ export const dummyRatingsData = [
     productId: "prod_2",
     createdAt: "Sat Jul 19 2025 14:51:25 GMT+0530 (India Standard Time)",
     updatedAt: "Sat Jul 19 2025 14:51:25 GMT+0530 (India Standard Time)",
-    product: { name: "Beaded Bracelet", category: "Jewelry", id: "prod_2" },
+    product: { name: "Beaded Bracelet", category: "Accessories", id: "prod_2" },
   },
   {
     id: "rat_3",
@@ -86,7 +86,7 @@ export const dummyRatingsData = [
     productId: "prod_3",
     createdAt: "Sat Jul 19 2025 14:51:25 GMT+0530 (India Standard Time)",
     updatedAt: "Sat Jul 19 2025 14:51:25 GMT+0530 (India Standard Time)",
-    product: { name: "Simple Necklace", category: "Jewelry", id: "prod_3" },
+    product: { name: "Simple Necklace", category: "Accessories", id: "prod_3" },
   },
   {
     id: "rat_4",
@@ -97,7 +97,7 @@ export const dummyRatingsData = [
     productId: "prod_4",
     createdAt: "Sat Jul 19 2025 14:51:25 GMT+0530 (India Standard Time)",
     updatedAt: "Sat Jul 19 2025 14:51:25 GMT+0530 (India Standard Time)",
-    product: { name: "Resin Ring", category: "Jewelry", id: "prod_4" },
+    product: { name: "Resin Ring", category: "Accessories", id: "prod_4" },
   },
   {
     id: "rat_5",
@@ -182,7 +182,7 @@ export const productDummyData = [
     storeId: "store_1",
     inStock: true,
     store: dummyStoreData,
-    category: "Jewelry",
+    category: "Accessories",
     rating: dummyRatingsData,
     createdAt: "Sat Jul 28 2025 14:51:25 GMT+0530 (India Standard Time)",
     updatedAt: "Sat Jul 28 2025 14:51:25 GMT+0530 (India Standard Time)",
@@ -198,7 +198,7 @@ export const productDummyData = [
     storeId: "store_1",
     inStock: true,
     store: dummyStoreData,
-    category: "Jewelry",
+    category: "Accessories",
     rating: dummyRatingsData,
     createdAt: "Sat Jul 27 2025 14:51:25 GMT+0530 (India Standard Time)",
     updatedAt: "Sat Jul 27 2025 14:51:25 GMT+0530 (India Standard Time)",
@@ -214,7 +214,7 @@ export const productDummyData = [
     storeId: "store_1",
     inStock: true,
     store: dummyStoreData,
-    category: "Jewelry",
+    category: "Accessories",
     rating: dummyRatingsData,
     createdAt: "Sat Jul 26 2025 14:51:25 GMT+0530 (India Standard Time)",
     updatedAt: "Sat Jul 26 2025 14:51:25 GMT+0530 (India Standard Time)",

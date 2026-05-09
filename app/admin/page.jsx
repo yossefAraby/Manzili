@@ -4,10 +4,11 @@ import Loading from "@/components/Loading"
 import OrdersAreaChart from "@/components/OrdersAreaChart"
 import { CircleDollarSignIcon, ShoppingBasketIcon, StoreIcon, TagsIcon } from "lucide-react"
 import { useEffect, useState } from "react"
+import { getCurrencySymbol } from "@/lib/currency"
 
 export default function AdminDashboard() {
 
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
+    const currency = getCurrencySymbol()
 
     const [loading, setLoading] = useState(true)
     const [dashboardData, setDashboardData] = useState({

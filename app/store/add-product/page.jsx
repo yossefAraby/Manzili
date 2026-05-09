@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast"
 
 export default function StoreAddProduct() {
 
-    const categories = ['Woodwork', 'Woodworking', 'Jewelry', 'Stationery', 'Food & Snacks', 'fragrances', 'Textiles', 'Porcelain']
+    const categories = ['Woodwork', 'Woodworking', 'Accessories', 'Stationery', 'Food & Snacks', 'fragrances', 'Textiles', 'Porcelain']
 
     const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null })
     const [productInfo, setProductInfo] = useState({
