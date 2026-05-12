@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getStripeCurrency } from '@/lib/currency';
+import { getStripeCurrency, getCurrencySymbol } from '@/lib/currency';
 
 function computeTotalCents(items, coupon) {
     let subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -50,7 +50,7 @@ export async function POST(request) {
     }
     if (currency === 'egp' && unitAmount < 100) {
         return NextResponse.json(
-            { error: 'Order total must be at least E£1.00 for Stripe checkout.' },
+            { error: `Order total must be at least ${getCurrencySymbol()}1.00 for Stripe checkout.` },
             { status: 400 }
         );
     }

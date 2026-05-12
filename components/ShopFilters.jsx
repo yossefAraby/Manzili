@@ -3,13 +3,15 @@
 import { categories } from '@/assets/assets'
 import { FilterIcon } from 'lucide-react'
 import { useState } from 'react'
+import { getCurrencySymbol } from '@/lib/currency'
 
+const currencySym = getCurrencySymbol()
 const priceRanges = [
-    { label: 'Under 200 EGP', min: 0, max: 200 },
-    { label: '200 - 400 EGP', min: 200, max: 400 },
-    { label: '400 - 600 EGP', min: 400, max: 600 },
-    { label: '600 - 1000 EGP', min: 600, max: 1000 },
-    { label: 'Over 1000 EGP', min: 1000, max: Infinity },
+    { label: `Under 200 ${currencySym}`, min: 0, max: 200 },
+    { label: `200 - 400 ${currencySym}`, min: 200, max: 400 },
+    { label: `400 - 600 ${currencySym}`, min: 400, max: 600 },
+    { label: `600 - 1000 ${currencySym}`, min: 600, max: 1000 },
+    { label: `Over 1000 ${currencySym}`, min: 1000, max: Infinity },
 ]
 
 const MIN_PRICE = 0
@@ -101,8 +103,8 @@ export default function ShopFilters({ onCategoryChange, onPriceRangeChange }) {
                 {/* Slider */}
                 <div className="mb-6">
                     <div className="flex justify-between text-sm text-slate-600 mb-2">
-                        <span>Max price: <strong>EGP {sliderMax}</strong></span>
-                        <span>EGP {MIN_PRICE} - EGP {MAX_PRICE}</span>
+                        <span>Max price: <strong>{`${getCurrencySymbol()} ${sliderMax}`}</strong></span>
+                        <span>{`${getCurrencySymbol()} ${MIN_PRICE} - ${getCurrencySymbol()} ${MAX_PRICE}`}</span>
                     </div>
                     <input
                         type="range"

@@ -68,6 +68,7 @@ const Footer = () => {
         width={50} 
         height={50} 
         className="object-contain" 
+        suppressHydrationWarning
     />
 </Link>
                         <p className="max-w-[410px] mt-6 text-sm">Manzili, where real craft finds its home. We offer a dual-model marketplace: browse our gallery of ready-to-buy artisanal items or collaborate directly with makers to commission a one-of-a-kind bespoke piece. No factory-made commodities—just unique items made with love by verified local artisans.</p>
