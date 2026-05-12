@@ -2,8 +2,12 @@
 import { XIcon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
+import { useDispatch } from "react-redux"
+import { addAddress } from "@/lib/features/address/addressSlice"
+import { makeEntityId } from "@/lib/storage/localStorageEnvelope"
 
 const AddressModal = ({ setShowAddressModal }) => {
+    const dispatch = useDispatch()
 
     const [address, setAddress] = useState({
         name: '',
@@ -25,7 +29,12 @@ const AddressModal = ({ setShowAddressModal }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-
+        dispatch(addAddress({
+            id: makeEntityId('addr'),
+            ...address,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }))
         setShowAddressModal(false)
     }
 

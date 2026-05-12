@@ -7,9 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { setCustomRequests } from "@/lib/features/customRequest/customRequestSlice";
 import {
-  getLocalCustomRequests,
-  mergeCustomRequestLists,
-} from "@/lib/customRequestsLocal";
+  listCustomRequests,
+} from "@/lib/services/localCustomRequestService";
 
 function CustomProductsContent() {
   // get query params ?search=abc
@@ -31,20 +30,9 @@ function CustomProductsContent() {
     const load = async () => {
       setLoading(true);
       try {
-        const local = getLocalCustomRequests();
-        let apiList = [];
-        try {
-          const response = await fetch("/api/custom-order");
-          const data = await response.json();
-          if (data.success && Array.isArray(data.requests)) {
-            apiList = data.requests;
-          }
-        } catch (error) {
-          console.error("Error fetching custom requests:", error);
-        }
+        const local = await listCustomRequests();
         if (cancelled) return;
-        const merged = mergeCustomRequestLists(apiList, local);
-        dispatch(setCustomRequests(merged));
+        dispatch(setCustomRequests(local));
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -14,9 +14,9 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
 import {
-  getLocalCustomRequestById,
   mapStoredRequestToCollaborationOrder,
 } from "@/lib/customRequestsLocal";
+import { addOfferToRequest, getCustomRequestById, listOffersByRequestId } from "@/lib/services/localCustomRequestService";
 
 function isDataUrl(src) {
   return typeof src === "string" && src.startsWith("data:");
@@ -53,19 +53,7 @@ export default function CollaborationSpace() {
     const load = async () => {
       setLoading(true);
       try {
-        let raw = getLocalCustomRequestById(orderId);
-
-        if (!raw) {
-          try {
-            const res = await fetch("/api/custom-order");
-            const data = await res.json();
-            if (data.success && Array.isArray(data.requests)) {
-              raw = data.requests.find((r) => r.id === orderId) ?? null;
-            }
-          } catch {
-            /* ignore */
-          }
-        }
+        const raw = await getCustomRequestById(orderId);
 
         if (cancelled) return;
 
@@ -92,6 +80,22 @@ export default function CollaborationSpace() {
             time: introTime,
           },
         ]);
+        const offers = await listOffersByRequestId(orderId);
+        if (offers.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            ...offers.map((offer) => ({
+              id: offer.id,
+              sender: "artisan",
+              type: "text",
+              text: `Offer: ${currency}${offer.price} - Delivery: ${offer.deliveryDate}`,
+              time: new Date(offer.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            })),
+          ]);
+        }
       } catch {
         toast.error("Failed to load negotiation data.");
         setOrderDetails(null);
@@ -183,6 +187,10 @@ export default function CollaborationSpace() {
             */
 
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock delay
+      await addOfferToRequest(orderId, {
+        price: Number(proposedPrice),
+        deliveryDate: finalDate,
+      });
       toast.success(
         `Proposal sent! Price: ${currency}${proposedPrice}, Date: ${finalDate}`,
       );

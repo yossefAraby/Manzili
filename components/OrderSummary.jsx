@@ -1,18 +1,21 @@
 import { PlusIcon, SquarePenIcon, XIcon } from 'lucide-react';
 import React, { useState } from 'react'
 import AddressModal from './AddressModal';
-import { useSelector } from 'react-redux';
+import { clearCart } from '@/lib/features/cart/cartSlice';
+import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { getCurrencySymbol } from '@/lib/currency';
-import { couponDummyData } from '@/assets/assets';
 import { calculateCouponDiscountAmount, normalizeCouponCode, validateCouponForCart } from '@/lib/couponUtils';
+import { createOrderFromCart } from '@/lib/services/localOrderService';
+import { getCouponByCode } from '@/lib/services/localCouponService';
 
 const OrderSummary = ({ totalPrice, items }) => {
 
     const currency = getCurrencySymbol();
 
     const router = useRouter();
+    const dispatch = useDispatch();
 
     const addressList = useSelector(state => state.address.list);
 
@@ -31,7 +34,7 @@ const OrderSummary = ({ totalPrice, items }) => {
             return;
         }
 
-        const matchedCoupon = couponDummyData.find((item) => item.code === normalizedCode);
+        const matchedCoupon = await getCouponByCode(normalizedCode);
         const validation = validateCouponForCart(matchedCoupon, items);
         if (!validation.valid) {
             toast.error(validation.reason);
@@ -51,36 +54,26 @@ const OrderSummary = ({ totalPrice, items }) => {
         }
 
         if (paymentMethod === 'COD') {
+            await createOrderFromCart({
+                items,
+                address: selectedAddress,
+                paymentMethod: 'COD',
+                coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
+                paid: false,
+            });
+            dispatch(clearCart());
             router.push('/orders');
             return;
         }
-
-        const payload = {
-            items: items.map((i) => ({
-                id: i.id,
-                name: i.name,
-                price: i.price,
-                quantity: i.quantity,
-                images: i.images,
-            })),
-            coupon: coupon ? { code: coupon.code, discountAmount: couponDiscountAmount } : null,
-        };
-
-        const res = await fetch('/api/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+        await createOrderFromCart({
+            items,
+            address: selectedAddress,
+            paymentMethod: 'STRIPE',
+            coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
+            paid: true,
         });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            throw new Error(data.error || 'Could not start Stripe Checkout');
-        }
-        if (!data.url) {
-            throw new Error('No checkout URL returned');
-        }
-
-        window.location.assign(data.url);
+        dispatch(clearCart());
+        router.push('/cart/success?mode=local-stripe');
     }
 
     return (

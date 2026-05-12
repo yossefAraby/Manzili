@@ -2,14 +2,21 @@
 import PageTitle from "@/components/PageTitle"
 import { useEffect, useState } from "react";
 import OrderItem from "@/components/OrderItem";
-import { orderDummyData } from "@/assets/assets";
+import { listOrders } from "@/lib/services/localOrderService";
 
 export default function Orders() {
 
     const [orders, setOrders] = useState([]);
 
     useEffect(() => {
-        setOrders(orderDummyData)
+        let cancelled = false;
+        (async () => {
+            const list = await listOrders();
+            if (!cancelled) setOrders(list);
+        })();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     return (

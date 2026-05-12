@@ -3,8 +3,9 @@ import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { DeleteIcon } from "lucide-react"
-import { couponDummyData, productDummyData, storesDummyData } from "@/assets/assets"
+import { productDummyData, storesDummyData } from "@/assets/assets"
 import { COUPON_SCOPES, getCouponTargetLabel, normalizeCouponCode } from "@/lib/couponUtils"
+import { createCoupon, listCoupons, removeCoupon } from "@/lib/services/localCouponService"
 
 export default function AdminCoupons() {
     const [coupons, setCoupons] = useState([])
@@ -20,7 +21,8 @@ export default function AdminCoupons() {
     })
 
     const fetchCoupons = async () => {
-        setCoupons(couponDummyData)
+        const list = await listCoupons();
+        setCoupons(list)
     }
 
     const handleAddCoupon = async (e) => {
@@ -56,6 +58,7 @@ export default function AdminCoupons() {
             createdAt: new Date().toISOString(),
         }
 
+        await createCoupon(createdCoupon)
         setCoupons((prev) => [createdCoupon, ...prev])
         setNewCoupon({
             code: '',
@@ -76,7 +79,8 @@ export default function AdminCoupons() {
     }
 
     const deleteCoupon = async (code) => {
-        setCoupons((prev) => prev.filter((coupon) => coupon.code !== code))
+        const nextCoupons = await removeCoupon(code)
+        setCoupons(nextCoupons)
         toast.success("Coupon deleted")
     }
 

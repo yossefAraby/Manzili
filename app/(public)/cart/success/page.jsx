@@ -9,11 +9,18 @@ import { useDispatch } from 'react-redux';
 function SuccessInner() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get('session_id');
+    const mode = searchParams.get('mode');
     const dispatch = useDispatch();
     const router = useRouter();
     const [status, setStatus] = useState('loading');
 
     useEffect(() => {
+        if (mode === 'local-stripe') {
+            dispatch(clearCart());
+            setStatus('success');
+            return;
+        }
+
         if (!sessionId) {
             setStatus('missing');
             return;
@@ -42,7 +49,7 @@ function SuccessInner() {
         return () => {
             cancelled = true;
         };
-    }, [sessionId, dispatch]);
+    }, [sessionId, mode, dispatch]);
 
     if (status === 'loading') {
         return (
