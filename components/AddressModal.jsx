@@ -99,6 +99,11 @@ const AddressModal = ({ setShowAddressModal }) => {
         loadCities()
     }, [loadCities])
 
+    useEffect(() => {
+        if (session?.name) setName(session.name)
+        if (session?.email) setEmail(session.email)
+    }, [session?.name, session?.email])
+
     const onCityChange = async (e) => {
         const rawId = e.target.value
         const id = String(rawId || '').trim()
@@ -172,6 +177,12 @@ const AddressModal = ({ setShowAddressModal }) => {
             toast.error('Select city, zone, and district')
             return
         }
+        const resolvedName = (name || '').trim() || session?.name?.trim() || ''
+        const resolvedEmail = (email || '').trim() || session?.email?.trim() || ''
+        if (!resolvedName || !resolvedEmail) {
+            toast.error('Please sign in so we can use your name and email on the order')
+            return
+        }
         const userId = session?.userId || 'guest'
         const firstLine = [street, building && `Bldg ${building}`, floor && `Fl ${floor}`, apartment && `Apt ${apartment}`]
             .filter(Boolean)
@@ -181,8 +192,8 @@ const AddressModal = ({ setShowAddressModal }) => {
             addAddress({
                 id: makeEntityId('addr'),
                 userId,
-                name,
-                email,
+                name: resolvedName,
+                email: resolvedEmail,
                 street: firstLine || street,
                 city: cityName,
                 state: districtName,
@@ -222,14 +233,24 @@ const AddressModal = ({ setShowAddressModal }) => {
                 </p>
                 {bostaError && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">{bostaError}</p>}
 
-                <label className="flex flex-col gap-1 text-sm">
-                    Full name
-                    <input value={name} onChange={(e) => setName(e.target.value)} className="p-2 border border-slate-200 rounded" required />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                    Email
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="p-2 border border-slate-200 rounded" required />
-                </label>
+                {session?.userId && session?.name && session?.email ? (
+                    <p className="text-xs text-slate-500 rounded border border-slate-100 bg-slate-50/80 px-3 py-2">
+                        Delivering for <span className="font-medium text-slate-700">{session.name}</span>
+                        <span className="text-slate-400"> · </span>
+                        <span className="text-slate-600">{session.email}</span>
+                    </p>
+                ) : (
+                    <>
+                        <label className="flex flex-col gap-1 text-sm">
+                            Full name
+                            <input value={name} onChange={(e) => setName(e.target.value)} className="p-2 border border-slate-200 rounded" required />
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                            Email
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="p-2 border border-slate-200 rounded" required />
+                        </label>
+                    </>
+                )}
                 <label className="flex flex-col gap-1 text-sm">
                     Phone
                     <input value={phone} onChange={(e) => setPhone(e.target.value)} className="p-2 border border-slate-200 rounded" required />

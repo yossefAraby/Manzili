@@ -83,8 +83,12 @@ export async function POST(request) {
             coupon,
         });
 
+        const payerEmail =
+            typeof address?.email === 'string' && address.email.trim() ? address.email.trim() : undefined;
+
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
+            ...(payerEmail ? { customer_email: payerEmail } : {}),
             line_items: [
                 {
                     price_data: {

@@ -94,6 +94,7 @@ const ProductDetails = ({ product }) => {
                         {inWishlist ? 'Wishlisted' : 'Wishlist'}
                     </button>
                 </div>
+                <hr className="border-gray-300 my-5" />
             </div>
         </div>
     )

@@ -9,6 +9,17 @@ import { getCurrencySymbol } from '@/lib/currency';
 import { calculateCouponDiscountAmount, normalizeCouponCode, validateCouponForCart } from '@/lib/couponUtils';
 import { getCouponByCode } from '@/lib/services/localCouponService';
 
+function formatCartMoney(value) {
+    return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function enrichAddressForCheckout(address, session) {
+    if (!address) return address;
+    const name = String(address.name || '').trim() || String(session?.name || '').trim();
+    const email = String(address.email || '').trim() || String(session?.email || '').trim();
+    return { ...address, name, email };
+}
+
 const OrderSummary = ({ totalPrice, items }) => {
 
     const currency = getCurrencySymbol();
@@ -17,8 +28,9 @@ const OrderSummary = ({ totalPrice, items }) => {
     const dispatch = useDispatch();
 
     const addressList = useSelector(state => state.address.list);
+    const session = useSelector((state) => state.auth.session);
 
-    const [paymentMethod, setPaymentMethod] = useState('COD');
+    const [paymentMethod, setPaymentMethod] = useState('STRIPE');
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [couponCodeInput, setCouponCodeInput] = useState('');
@@ -73,13 +85,19 @@ const OrderSummary = ({ totalPrice, items }) => {
             return;
         }
 
+        const addressPayload = enrichAddressForCheckout(selectedAddress, session);
+        if (!String(addressPayload.name || '').trim() || !String(addressPayload.street || '').trim()) {
+            toast.error('Address needs a name and street — sign in or update your saved address');
+            return;
+        }
+
         if (paymentMethod === 'COD') {
             const res = await fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     items,
-                    address: selectedAddress,
+                    address: addressPayload,
                     paymentMethod: 'COD',
                     coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
                 }),
@@ -95,7 +113,7 @@ const OrderSummary = ({ totalPrice, items }) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 items,
-                address: selectedAddress,
+                address: addressPayload,
                 coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
             }),
         });
@@ -112,9 +130,9 @@ const OrderSummary = ({ totalPrice, items }) => {
         <div className='w-full max-w-lg lg:max-w-[340px] bg-slate-50/30 border border-slate-200 text-slate-500 text-sm rounded-xl p-7'>
             <h2 className='text-xl font-medium text-slate-600'>Payment Summary</h2>
             <p className='text-slate-400 text-xs my-4'>Payment Method</p>
-            <div className='flex gap-2 items-center'>
-                <input type="radio" id="COD" name="payment" onChange={() => setPaymentMethod('COD')} checked={paymentMethod === 'COD'} className='accent-gray-500' />
-                <label htmlFor="COD" className='cursor-pointer'>COD</label>
+            <div className='flex gap-2 items-center opacity-45 pointer-events-none select-none' title="Cash on delivery is not available">
+                <input type="radio" id="COD" name="payment" disabled className='accent-gray-400' aria-checked={false} />
+                <label htmlFor="COD" className='cursor-not-allowed text-slate-400'>COD</label>
             </div>
             <div className='flex gap-2 items-center mt-1'>
                 <input type="radio" id="STRIPE" name='payment' onChange={() => setPaymentMethod('STRIPE')} checked={paymentMethod === 'STRIPE'} className='accent-gray-500' />
@@ -162,7 +180,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                         {coupon && <p>Coupon:</p>}
                     </div>
                     <div className='flex flex-col gap-1 font-medium text-right'>
-                        <p>{currency}{totalPrice.toLocaleString()}</p>
+                        <p>{currency}{formatCartMoney(totalPrice)}</p>
                         <p>
                             {estimatedShipping != null ? (
                                 <span title="Based on package size & bulky profile per product">

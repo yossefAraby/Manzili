@@ -10,6 +10,10 @@ import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrencySymbol } from "@/lib/currency";
 
+function formatLineTotal(value) {
+    return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
 export default function Cart() {
 
     const currency = getCurrencySymbol();
@@ -21,6 +25,11 @@ export default function Cart() {
 
     const [cartArray, setCartArray] = useState([]);
     const [totalPrice, setTotalPrice] = useState(0);
+    const [cartReady, setCartReady] = useState(false);
+
+    useEffect(() => {
+        setCartReady(true);
+    }, []);
 
     const createCartArray = () => {
         setTotalPrice(0);
@@ -57,6 +66,14 @@ export default function Cart() {
         }
     }, []);
 
+    if (!cartReady) {
+        return (
+            <div className="min-h-[50vh] mx-6 flex items-center justify-center text-slate-400 text-sm">
+                Loading cart…
+            </div>
+        );
+    }
+
     return cartArray.length > 0 ? (
         <div className="min-h-screen mx-6 text-slate-800">
 
@@ -92,7 +109,7 @@ export default function Cart() {
                                         <td className="text-center">
                                             <Counter productId={item.id} />
                                         </td>
-                                        <td className="text-center">{currency}{(item.price * item.quantity).toLocaleString()}</td>
+                                        <td className="text-center">{currency}{formatLineTotal(item.price * item.quantity)}</td>
                                         <td className="text-center max-md:hidden">
                                             <button onClick={() => handleDeleteItemFromCart(item.id)} className=" text-red-500 hover:bg-red-50 p-2.5 rounded-full active:scale-95 transition-all">
                                                 <Trash2Icon size={18} />
