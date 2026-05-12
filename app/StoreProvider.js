@@ -6,8 +6,7 @@ import {
   bootstrapLocalStorage,
   loadAddressesForUser,
   persistReduxState,
-  readAuthSession,
-  reconcileAuthSession,
+  resolveAuthSessionFromStorage,
 } from '@/lib/services/localStateBootstrap'
 import { setSession } from '@/lib/features/auth/authSlice'
 import { setAddressList } from '@/lib/features/address/addressSlice'
@@ -17,15 +16,22 @@ export default function StoreProvider({ children }) {
   const storeRef = useRef(undefined)
   if (!storeRef.current) {
     bootstrapLocalStorage()
-    storeRef.current = makeStore()
+    let preload
+    if (typeof window !== 'undefined') {
+      const session = resolveAuthSessionFromStorage()
+      preload = {
+        auth: { session },
+        address: { list: loadAddressesForUser(session?.userId) },
+      }
+    }
+    storeRef.current = makeStore(preload)
   }
 
   useEffect(() => {
     const store = storeRef.current
-    const session = reconcileAuthSession(readAuthSession())
+    const session = resolveAuthSessionFromStorage()
     store.dispatch(setSession(session))
-    const uid = session?.userId || 'guest'
-    store.dispatch(setAddressList(loadAddressesForUser(uid)))
+    store.dispatch(setAddressList(loadAddressesForUser(session?.userId || 'guest')))
     store.dispatch(rehydrateProductsFromStorage())
     const unsubscribe = store.subscribe(() => persistReduxState(store.getState()))
     return unsubscribe

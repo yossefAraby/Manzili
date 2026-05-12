@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { assets } from '@/assets/assets'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { setSession } from '@/lib/features/auth/authSlice'
 import { setAddressList } from '@/lib/features/address/addressSlice'
@@ -15,8 +15,9 @@ import {
     reconcileAuthSession,
 } from '@/lib/services/localStateBootstrap'
 
-export default function LoginPage() {
+function LoginInner() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const dispatch = useDispatch()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -38,7 +39,12 @@ export default function LoginPage() {
         persistAuthSession(session)
         dispatch(setSession(session))
         dispatch(setAddressList(loadAddressesForUser(session.userId)))
-        router.push('/')
+        const next = searchParams.get('next')
+        const dest =
+            next && typeof next === 'string' && next.startsWith('/') && !next.startsWith('//')
+                ? next
+                : '/'
+        router.push(dest)
     }
 
     return (
@@ -86,5 +92,19 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen flex items-center justify-center bg-[#f4efe4] p-4 text-slate-500 text-sm">
+                    Loading…
+                </div>
+            }
+        >
+            <LoginInner />
+        </Suspense>
     )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { SearchIcon, XIcon, StoreIcon } from "lucide-react";
-import { dummyStoreData } from "@/assets/assets";
+import { readStoresList } from "@/lib/services/localStoreRegistry";
 
 const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
   const [query, setQuery] = useState("");
@@ -10,39 +10,30 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Mock fetch stores - in real app, this would be an API call
   const fetchStores = useCallback(async (searchQuery) => {
     setLoading(true);
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    
-    // In a real app, you would fetch from API: `/api/stores?q=${searchQuery}`
-    // For now, use dummy data and filter
-    const mockStores = [
-      dummyStoreData,
-      {
-        ...dummyStoreData,
-        id: "store_2",
-        name: "Tasty Home",
-        username: "tastyhome",
-        description: "Homemade cookies and pastries",
-      },
-      {
-        ...dummyStoreData,
-        id: "store_3",
-        name: "Teeba",
-        username: "teeba",
-        description: "Ceramic dinner sets and home decor",
-      },
-    ];
+    await new Promise((resolve) => setTimeout(resolve, 120));
 
-    const filtered = mockStores.filter(
-      (store) =>
-        store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        store.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        store.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const q = searchQuery.toLowerCase();
+    const catalog = readStoresList().filter(
+      (s) =>
+        String(s.status || "") === "approved" &&
+        s.isActive !== false,
     );
-    
+
+    const filtered = catalog.filter(
+      (store) =>
+        String(store.name || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(store.username || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(store.description || "")
+          .toLowerCase()
+          .includes(q),
+    );
+
     setSuggestions(filtered);
     setLoading(false);
   }, []);

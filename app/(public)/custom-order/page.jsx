@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   UploadCloudIcon,
   MicIcon,
@@ -328,6 +328,7 @@ const INITIAL_STATE = {
 
 export default function CustomOrderPage() {
   const dispatch = useDispatch();
+  const session = useSelector((s) => s.auth.session);
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [images, setImages] = useState([]);
   const [colors, setColors] = useState([{ hex: "#000000", description: "" }]);
@@ -458,7 +459,10 @@ export default function CustomOrderPage() {
             }
           : null,
         createdAt: new Date().toISOString(),
-        user: { name: "You" },
+        ownerUserId: session?.userId ?? null,
+        user: session?.userId
+          ? { name: session.name, email: session.email }
+          : { name: "Guest" },
       };
 
       addLocalCustomRequest(persistedRequest);
