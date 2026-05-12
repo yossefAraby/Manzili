@@ -2,7 +2,7 @@
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
+import { StarIcon, TagIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
@@ -28,6 +28,12 @@ const ProductDetails = ({ product }) => {
     }
 
     const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;
+    const listPrice = Number(product.mrp);
+    const salePrice = Number(product.price);
+    const hasListDiscount = listPrice > salePrice && listPrice > 0;
+    const discountPercent = hasListDiscount
+        ? Math.round(((listPrice - salePrice) / listPrice) * 100)
+        : 0;
     
     return (
         <div className="flex max-lg:flex-col gap-12">
@@ -52,13 +58,23 @@ const ProductDetails = ({ product }) => {
                     <p className="text-sm ml-3 text-slate-500">{product.rating.length} Reviews</p>
                 </div>
                 <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
-                    <p> {currency}{product.price} </p>
-                    <p className="text-xl text-slate-500 line-through">{currency}{product.mrp}</p>
+                    <p>
+                        {currency}
+                        {salePrice}
+                    </p>
+                    {hasListDiscount && (
+                        <p className="text-xl text-slate-500 line-through">
+                            {currency}
+                            {listPrice}
+                        </p>
+                    )}
                 </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                    <TagIcon size={14} />
-                    <p>Save {((product.mrp - product.price) / product.mrp * 100).toFixed(0)}% right now</p>
-                </div>
+                {discountPercent > 0 && (
+                    <div className="flex items-center gap-2 text-slate-500">
+                        <TagIcon size={14} />
+                        <p>Save {discountPercent}% right now</p>
+                    </div>
+                )}
                 <div className="flex items-end gap-5 mt-10">
                     {
                         cart[productId] && (
@@ -78,13 +94,6 @@ const ProductDetails = ({ product }) => {
                         {inWishlist ? 'Wishlisted' : 'Wishlist'}
                     </button>
                 </div>
-                <hr className="border-gray-300 my-5" />
-                <div className="flex flex-col gap-4 text-slate-500">
-                    <p className="flex gap-3"> <EarthIcon className="text-slate-400" /> Free shipping worldwide </p>
-                    <p className="flex gap-3"> <CreditCardIcon className="text-slate-400" /> 100% Secured Payment </p>
-                    <p className="flex gap-3"> <UserIcon className="text-slate-400" /> Trusted by top brands </p>
-                </div>
-
             </div>
         </div>
     )

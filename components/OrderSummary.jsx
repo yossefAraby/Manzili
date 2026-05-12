@@ -118,15 +118,8 @@ const OrderSummary = ({ totalPrice, items }) => {
             </div>
             <div className='flex gap-2 items-center mt-1'>
                 <input type="radio" id="STRIPE" name='payment' onChange={() => setPaymentMethod('STRIPE')} checked={paymentMethod === 'STRIPE'} className='accent-gray-500' />
-                <label htmlFor="STRIPE" className='cursor-pointer'>Stripe (test / demo checkout)</label>
+                <label htmlFor="STRIPE" className='cursor-pointer'>Stripe</label>
             </div>
-            {paymentMethod === 'STRIPE' && (
-                <p className='text-xs text-slate-400 mt-2 leading-relaxed'>
-                    Uses Stripe test mode — no real charges. Pay with card{' '}
-                    <span className='font-mono text-slate-500'>4242 4242 4242 4242</span>, any future
-                    expiry and CVC.
-                </p>
-            )}
             <div className='my-4 py-4 border-y border-slate-200 text-slate-400'>
                 <p>Address</p>
                 {

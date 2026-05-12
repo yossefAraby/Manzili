@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast'
 import { useDispatch, useSelector } from 'react-redux'
 import { addAddress } from '@/lib/features/address/addressSlice'
 import { makeEntityId } from '@/lib/storage/localStorageEnvelope'
+import { normalizeComparableName } from '@/lib/bosta/locations'
 
 const DEFAULT_COUNTRY = 'Egypt'
 const DEFAULT_COUNTRY_CODE = 'EG'
@@ -20,12 +21,34 @@ function uniqueZonesFromDistricts(districtRows) {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** Zones list when district rows do not carry zoneId (fallback to GET …/zones). */
+function zoneOptionsFromZonesApi(zones) {
+    return (zones || [])
+        .map((z) => ({
+            id: String(z?.id || ''),
+            name: String(z?.name || ''),
+        }))
+        .filter((z) => z.id && z.name)
+}
+
+async function readJsonSafe(res) {
+    try {
+        return await res.json()
+    } catch {
+        return {}
+    }
+}
+
 const AddressModal = ({ setShowAddressModal }) => {
     const dispatch = useDispatch()
     const session = useSelector((s) => s.auth.session)
 
     const [cities, setCities] = useState([])
     const [districtRows, setDistrictRows] = useState([])
+    /** Zones returned by our API (includes districtNames for matching orphan districts). */
+    const [zonesDetail, setZonesDetail] = useState([])
+    const [zoneOptions, setZoneOptions] = useState([])
+
     const [loadingCities, setLoadingCities] = useState(true)
     const [loadingDistricts, setLoadingDistricts] = useState(false)
     const [bostaError, setBostaError] = useState(null)
@@ -45,19 +68,23 @@ const AddressModal = ({ setShowAddressModal }) => {
     const [apartment, setApartment] = useState('')
     const [zip, setZip] = useState('')
 
-    const zones = useMemo(() => uniqueZonesFromDistricts(districtRows), [districtRows])
-
     const filteredDistricts = useMemo(() => {
         if (!zoneId) return districtRows
-        return districtRows.filter((d) => d.zoneId === zoneId)
-    }, [districtRows, zoneId])
+        return districtRows.filter((d) => {
+            if (d.zoneId && d.zoneId === zoneId) return true
+            if (d.zoneId) return false
+            const z = zonesDetail.find((x) => x.id === zoneId)
+            const names = Array.isArray(z.districtNames) ? z.districtNames : []
+            return names.some((n) => normalizeComparableName(n) === normalizeComparableName(d.districtName))
+        })
+    }, [districtRows, zoneId, zonesDetail])
 
     const loadCities = useCallback(async () => {
         setLoadingCities(true)
         setBostaError(null)
         try {
             const res = await fetch('/api/bosta/cities')
-            const data = await res.json()
+            const data = await readJsonSafe(res)
             if (!res.ok) throw new Error(data?.error || 'Could not load cities')
             setCities(Array.isArray(data.cities) ? data.cities : [])
         } catch (e) {
@@ -73,7 +100,8 @@ const AddressModal = ({ setShowAddressModal }) => {
     }, [loadCities])
 
     const onCityChange = async (e) => {
-        const id = e.target.value
+        const rawId = e.target.value
+        const id = String(rawId || '').trim()
         setCityId(id)
         const c = cities.find((x) => x.id === id)
         setCityName(c?.name || '')
@@ -81,17 +109,45 @@ const AddressModal = ({ setShowAddressModal }) => {
         setDistrictId('')
         setDistrictName('')
         setDistrictRows([])
+        setZonesDetail([])
+        setZoneOptions([])
         if (!id) return
+
         setLoadingDistricts(true)
         setBostaError(null)
         try {
-            const res = await fetch(`/api/bosta/cities/${encodeURIComponent(id)}/districts`)
-            const data = await res.json()
-            if (!res.ok) throw new Error(data?.error || 'Could not load districts')
-            setDistrictRows(Array.isArray(data.districts) ? data.districts : [])
+            const base = `/api/bosta/cities/${encodeURIComponent(id)}`
+            const [dRes, zRes] = await Promise.all([fetch(`${base}/districts`), fetch(`${base}/zones`)])
+
+            const dData = await readJsonSafe(dRes)
+            const zData = await readJsonSafe(zRes)
+
+            if (!dRes.ok) {
+                throw new Error(dData?.error || 'Could not load districts')
+            }
+
+            const rows = Array.isArray(dData.districts) ? dData.districts : []
+            const zonesFromApi = Array.isArray(zData.zones) ? zData.zones : []
+
+            setDistrictRows(rows)
+            setZonesDetail(zonesFromApi)
+
+            let options = uniqueZonesFromDistricts(rows)
+            if (options.length === 0 && zonesFromApi.length > 0) {
+                options = zoneOptionsFromZonesApi(zonesFromApi)
+            }
+            setZoneOptions(options)
+
+            if (rows.length === 0) {
+                setBostaError('No districts returned for this governorate.')
+            } else if (options.length === 0) {
+                setBostaError('Could not determine zones for this governorate. Try again later.')
+            }
         } catch (err) {
-            setBostaError(err?.message || 'Districts failed')
+            setBostaError(err?.message || 'Could not load location data')
             setDistrictRows([])
+            setZonesDetail([])
+            setZoneOptions([])
         } finally {
             setLoadingDistricts(false)
         }
@@ -138,7 +194,7 @@ const AddressModal = ({ setShowAddressModal }) => {
                 bostaZoneId: zoneId,
                 bostaDistrictId: districtId,
                 bostaCityName: cityName,
-                bostaZoneName: zones.find((z) => z.id === zoneId)?.name || '',
+                bostaZoneName: zoneOptions.find((z) => z.id === zoneId)?.name || '',
                 bostaDistrictName: districtName,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -201,7 +257,7 @@ const AddressModal = ({ setShowAddressModal }) => {
                     Zone
                     <select value={zoneId} onChange={onZoneChange} className="p-2 border border-slate-200 rounded" required disabled={!cityId || loadingDistricts}>
                         <option value="">{loadingDistricts ? 'Loading zones…' : 'Select zone'}</option>
-                        {zones.map((z) => (
+                        {zoneOptions.map((z) => (
                             <option key={z.id} value={z.id}>
                                 {z.name}
                             </option>

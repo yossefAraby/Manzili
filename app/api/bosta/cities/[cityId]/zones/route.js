@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { fetchBostaZones } from '@/lib/bosta/locations';
+import { resolveRouteParams } from '@/lib/server/routeParams';
 
-export async function GET(_request, { params }) {
-    const cityId = params?.cityId;
+export async function GET(_request, context) {
+    const params = await resolveRouteParams(context?.params);
+    const cityId = params?.cityId != null ? String(params.cityId).trim() : '';
     if (!cityId) {
         return NextResponse.json({ error: 'cityId required' }, { status: 400 });
     }
