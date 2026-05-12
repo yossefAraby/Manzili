@@ -118,7 +118,10 @@ const OrderSummary = ({ totalPrice, items }) => {
             }),
         });
         const checkout = await checkoutRes.json();
-        if (!checkoutRes.ok) throw new Error(checkout?.error || 'Could not start checkout');
+        if (!checkoutRes.ok) {
+            const detail = [checkout?.error, checkout?.code].filter(Boolean).join(' — ');
+            throw new Error(detail || 'Could not start checkout');
+        }
         if (checkout?.url) {
             window.location.href = checkout.url;
             return;

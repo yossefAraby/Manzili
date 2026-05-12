@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getStripeCurrency, getCurrencySymbol } from '@/lib/currency';
 import { createMarketplaceOrder } from '@/lib/server/orders/createOrder';
+import {
+    computeCheckoutTotalCents,
+    sanitizeCouponForOrder,
+} from '@/lib/server/checkoutPayload';
 
-function computeTotalCents(items, coupon) {
-    let subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (coupon?.discountAmount != null) {
-        subtotal -= coupon.discountAmount;
-    }
-    const rounded = Math.round(subtotal * 100) / 100;
-    return Math.round(rounded * 100);
+function stripeErrMessage(err) {
+    if (!err || typeof err !== 'object') return 'Could not start Stripe Checkout';
+    const raw = err.raw && typeof err.raw === 'object' ? err.raw.message : null;
+    return raw || err.message || 'Could not start Stripe Checkout';
 }
 
 export async function POST(request) {
@@ -43,7 +44,15 @@ export async function POST(request) {
     }
 
     const currency = getStripeCurrency();
-    const unitAmount = computeTotalCents(items, coupon);
+    const unitAmount = computeCheckoutTotalCents(items, coupon);
+    const couponForDb = sanitizeCouponForOrder(coupon);
+
+    if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
+        return NextResponse.json(
+            { error: 'Order total is too small or invalid after discounts.' },
+            { status: 400 }
+        );
+    }
 
     // Stripe minimum charge amounts (smallest currency unit: cents / piastres)
     if (currency === 'usd' && unitAmount < 50) {
@@ -80,7 +89,7 @@ export async function POST(request) {
             items,
             address,
             paymentMethod: 'STRIPE',
-            coupon,
+            coupon: couponForDb,
         });
 
         const payerEmail =
@@ -95,7 +104,7 @@ export async function POST(request) {
                         currency,
                         unit_amount: unitAmount,
                         product_data: {
-                            name: 'Manzili order (test mode)',
+                            name: 'Manzili order',
                             description: itemSummary.slice(0, 500),
                         },
                     },
@@ -113,10 +122,9 @@ export async function POST(request) {
 
         return NextResponse.json({ url: session.url, id: session.id, orderId: order.id });
     } catch (err) {
-        console.error('Stripe checkout session error:', err);
-        return NextResponse.json(
-            { error: err.message || 'Could not start Stripe Checkout' },
-            { status: 500 }
-        );
+        console.error('Checkout error:', err);
+        const message = stripeErrMessage(err);
+        const code = err?.code || err?.type || undefined;
+        return NextResponse.json({ error: message, ...(code ? { code } : {}) }, { status: 500 });
     }
 }
