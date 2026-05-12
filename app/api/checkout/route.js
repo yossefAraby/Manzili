@@ -4,8 +4,8 @@ import { getStripeCurrency, getCurrencySymbol } from '@/lib/currency';
 
 function computeTotalCents(items, coupon) {
     let subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (coupon?.discount != null) {
-        subtotal -= (coupon.discount / 100) * subtotal;
+    if (coupon?.discountAmount != null) {
+        subtotal -= coupon.discountAmount;
     }
     const rounded = Math.round(subtotal * 100) / 100;
     return Math.round(rounded * 100);

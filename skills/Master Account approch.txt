@@ -1,0 +1,50 @@
+Here is a clean, actionable implementation plan you can hand directly to your software engineer.
+
+---
+
+### 🚀 Bosta Multi-Vendor Integration Plan
+
+**Objective:** Implement Bosta shipping using a "Master Account" architecture to support Manzili’s multi-vendor (artisan) marketplace. We will bypass Bosta's default e-commerce plugins and build a custom integration using their REST API.
+
+#### Phase 1: Account & API Configuration
+
+* **Master Account:** Use a single Manzili Bosta Business Account for all API credentials. Do not create sub-accounts for artisans.
+* **Authentication:** Store the Bosta API keys securely in the backend environment variables.
+* **API Strategy:** Exclusively use Bosta’s Custom REST API to create and track shipments.
+
+#### Phase 2: Cart & Checkout Logic (The "Mixed Cart" Handling)
+
+* **Group by Seller:** When a user checks out, query the cart items and group them by `SellerID`.
+* **Split Shipping Costs:** Calculate the Bosta shipping fee independently for *each* artisan's physical location.
+* **Aggregate UI:** Sum these individual shipping fees into one "Total Shipping Cost" displayed to the buyer on the frontend checkout page.
+
+#### Phase 3: Order Creation & Dispatch
+
+* 
+**Database Mapping:** When an order is placed, generate separate records in the `Shipment` table for each artisan involved in the `Order`.
+
+
+* **Dynamic Pickup Addresses:** Trigger the Bosta "Create Delivery" API endpoint for each shipment. You must dynamically inject the specific artisan’s address into the `pickupAddress` payload (pulled from the `SELLER` or `PERSON_ADDRESS` tables ).
+
+
+* 
+**Multiple AWBs:** Save the distinct Bosta tracking numbers (Airway Bills) back to the respective `Shipment` records in our database.
+
+
+
+#### Phase 4: Financials & Wallet Syncing
+
+* 
+**Prepaid (Stripe):** If the order is prepaid, deduct the Bosta shipping fee from the payout amount, and credit the remainder to the artisan's `Seller_Wallet`.
+
+
+* **Cash on Delivery (COD):** Set the `cod` amount in the Bosta API payload. Bosta will deliver the cash to Manzili's corporate account. Set up a webhook or scheduled job to update the `Seller_Wallet` balance only *after* Bosta marks the COD shipment as "Delivered" and funds are settled.
+
+#### Phase 5: Tracking & Edge Cases
+
+* **Webhooks:** Implement Bosta webhooks to listen for shipment status changes (e.g., "Picked up", "Delivered", "Failed"). Update the `Status` field in our `Shipment` table accordingly.
+
+
+* **Reverse Logistics (Returns):** If a custom or standard order is rejected/returned, ensure the return shipment API call uses the original artisan's address as the `dropOffAddress`, not Manzili's corporate address.
+
+*** **Note for the Dev:** Pay special attention to Phase 2 and Phase 3. The logic that splits a single buyer's `Order` into multiple artisan `Shipments` is the most critical part of making this work for the graduation project!

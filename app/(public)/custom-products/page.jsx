@@ -6,102 +6,10 @@ import { MoveLeftIcon, PlusIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { setCustomRequests } from "@/lib/features/customRequest/customRequestSlice";
-
-// Mock data for custom requests (to be replaced with API)
-const mockCustomRequests = [
-  {
-    id: "req_1",
-    itemName: "Custom Wooden Coffee Table",
-    description:
-      "Looking for a rustic wooden coffee table with metal legs, approximately 120cm x 60cm. Prefer reclaimed wood with a natural finish.",
-    images: ["/dummydata/Wooden Key Holder.png"],
-    visibility: "open",
-    category: "Woodwork",
-    quantity: 1,
-    size: { length: 120, width: 60, height: 45 },
-    material: "Reclaimed wood, metal",
-    deliveryDate: "2026-06-15",
-    createdAt: "2026-04-28T10:30:00Z",
-    user: { name: "Alex Johnson" },
-  },
-  {
-    id: "req_2",
-    itemName: "Handmade Leather Journal",
-    description:
-      "Need a custom leather journal with embossed initials. Size should be A5, with at least 200 pages of high-quality paper.",
-    images: ["/dummydata/Handmade Notebook.png"],
-    visibility: "private",
-    category: "Stationery",
-    quantity: 2,
-    size: { length: 21, width: 15, height: 2 },
-    material: "Genuine leather, cotton paper",
-    deliveryDate: "2026-05-20",
-    createdAt: "2026-04-27T14:20:00Z",
-    user: { name: "Samira Ahmed" },
-    store: { name: "Nour Handmade & Crafts", username: "nourhandmade" },
-  },
-  {
-    id: "req_3",
-    itemName: "Ceramic Dinner Set for 6",
-    description:
-      "Looking for a complete ceramic dinner set for 6 people with a modern minimalist design. Should be dishwasher safe.",
-    images: ["/dummydata/Ceramic Dinner Sets.png"],
-    visibility: "open",
-    category: "Porcelain",
-    quantity: 1,
-    size: { length: 30, width: 30, height: 15 },
-    material: "Ceramic",
-    deliveryDate: "2026-06-01",
-    createdAt: "2026-04-26T09:15:00Z",
-    user: { name: "Michael Chen" },
-  },
-  {
-    id: "req_4",
-    itemName: "Custom Beaded Bracelet Set",
-    description:
-      "Want a set of 3 matching beaded bracelets with gemstones. Colors: turquoise, silver, and black.",
-    images: ["/dummydata/Beaded Bracelet.png"],
-    visibility: "open",
-    category: "Accessories",
-    quantity: 3,
-    size: { length: 18, width: 1, height: 1 },
-    material: "Gemstones, silver beads, elastic cord",
-    deliveryDate: "2026-05-10",
-    createdAt: "2026-04-25T16:45:00Z",
-    user: { name: "Layla Hassan" },
-  },
-  {
-    id: "req_5",
-    itemName: "Homemade Chocolate Chip Cookies",
-    description:
-      "Looking for 2 dozen homemade chocolate chip cookies, preferably with walnuts. Should be delivered fresh.",
-    images: ["/dummydata/Homemade Cookies.png"],
-    visibility: "private",
-    category: "Food & Snacks",
-    quantity: 24,
-    size: { length: 8, width: 8, height: 5 },
-    material: "",
-    deliveryDate: "2026-05-05",
-    createdAt: "2026-04-24T11:10:00Z",
-    user: { name: "David Wilson" },
-    store: { name: "Tasty Home", username: "tastyhome" },
-  },
-  {
-    id: "req_6",
-    itemName: "Embroidered Cotton Towels",
-    description:
-      "Need a set of 4 embroidered cotton bath towels with monogram initials. Colors: white with blue embroidery.",
-    images: ["/dummydata/Towels Sets.png"],
-    visibility: "open",
-    category: "Textiles",
-    quantity: 4,
-    size: { length: 70, width: 140, height: 2 },
-    material: "100% cotton",
-    deliveryDate: "2026-05-30",
-    createdAt: "2026-04-23T13:25:00Z",
-    user: { name: "Sarah Miller" },
-  },
-];
+import {
+  getLocalCustomRequests,
+  mergeCustomRequestLists,
+} from "@/lib/customRequestsLocal";
 
 function CustomProductsContent() {
   // get query params ?search=abc
@@ -117,29 +25,36 @@ function CustomProductsContent() {
   const [selectedVisibility, setSelectedVisibility] = useState("all");
   const [selectedCategories, setSelectedCategories] = useState([]);
 
-  // Fetch custom requests from API
   useEffect(() => {
-    const fetchRequests = async () => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const response = await fetch("/api/custom-order");
-        const data = await response.json();
-        if (data.success) {
-          dispatch(setCustomRequests(data.requests));
+        const local = getLocalCustomRequests();
+        let apiList = [];
+        try {
+          const response = await fetch("/api/custom-order");
+          const data = await response.json();
+          if (data.success && Array.isArray(data.requests)) {
+            apiList = data.requests;
+          }
+        } catch (error) {
+          console.error("Error fetching custom requests:", error);
         }
-      } catch (error) {
-        console.error("Error fetching custom requests:", error);
+        if (cancelled) return;
+        const merged = mergeCustomRequestLists(apiList, local);
+        dispatch(setCustomRequests(merged));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    if (customRequests.length === 0) {
-      fetchRequests();
-    } else {
-      setLoading(false);
-    }
-  }, [customRequests.length, dispatch]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
 
   // Apply filters
   const filteredRequests = useMemo(() => {

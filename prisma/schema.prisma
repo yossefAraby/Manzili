@@ -130,16 +130,30 @@ model Address {
     user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Required for creating a Coupon: code, description, discount, forNewUser, isPublic, expiresAt
+// Required for creating a Coupon: code, description, discount, scope, expiresAt, maxUsers
 model Coupon {
     code        String   @id
     description String
     discount    Float
-    forNewUser  Boolean
-    forMember   Boolean  @default(false)
-    isPublic    Boolean
+    scope       CouponScope
+    storeId     String?
+    productIds  String[] @default([])
+    createdBy   CouponCreator @default(ADMIN)
     expiresAt   DateTime
+    maxUsers    Int
+    usedCount   Int      @default(0)
     createdAt   DateTime @default(now())
+}
+
+enum CouponScope {
+    GLOBAL
+    STORE
+    PRODUCTS
+}
+
+enum CouponCreator {
+    ADMIN
+    STORE
 }
 
 // Required for creating a Store: userId, name, username, email, contact, logo, description, address (optional: , status, isActive)

@@ -27,7 +27,7 @@ const CustomRequestCard = ({ request }) => {
     }
 
     return (
-        <Link href={`/custom-request/${request.id}`} className='group max-xl:mx-auto'>
+        <Link href={`/negotiation/${request.id}`} className='group max-xl:mx-auto'>
             <div className='bg-[#F5F5F5] h-40 sm:w-60 sm:h-68 rounded-lg flex items-center justify-center relative'>
                 {request.images && request.images.length > 0 ? (
                     <Image 
@@ -37,6 +37,7 @@ const CustomRequestCard = ({ request }) => {
                         src={request.images[0]} 
                         alt={request.itemName} 
                         suppressHydrationWarning 
+                        unoptimized={typeof request.images[0] === 'string' && request.images[0].startsWith('data:')}
                     />
                 ) : (
                     <div className='flex flex-col items-center text-slate-400'>

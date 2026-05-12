@@ -5,6 +5,8 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { getCurrencySymbol } from '@/lib/currency';
+import { couponDummyData } from '@/assets/assets';
+import { calculateCouponDiscountAmount, normalizeCouponCode, validateCouponForCart } from '@/lib/couponUtils';
 
 const OrderSummary = ({ totalPrice, items }) => {
 
@@ -19,10 +21,25 @@ const OrderSummary = ({ totalPrice, items }) => {
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [couponCodeInput, setCouponCodeInput] = useState('');
     const [coupon, setCoupon] = useState('');
+    const couponDiscountAmount = coupon ? calculateCouponDiscountAmount(coupon, items) : 0;
 
     const handleCouponCode = async (event) => {
         event.preventDefault();
-        
+        const normalizedCode = normalizeCouponCode(couponCodeInput);
+        if (!normalizedCode) {
+            toast.error('Please enter a coupon code');
+            return;
+        }
+
+        const matchedCoupon = couponDummyData.find((item) => item.code === normalizedCode);
+        const validation = validateCouponForCart(matchedCoupon, items);
+        if (!validation.valid) {
+            toast.error(validation.reason);
+            return;
+        }
+
+        setCoupon(matchedCoupon);
+        toast.success('Coupon applied successfully');
     }
 
     const handlePlaceOrder = async (e) => {
@@ -46,7 +63,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                 quantity: i.quantity,
                 images: i.images,
             })),
-            coupon: coupon ? { discount: coupon.discount } : null,
+            coupon: coupon ? { code: coupon.code, discountAmount: couponDiscountAmount } : null,
         };
 
         const res = await fetch('/api/checkout', {
@@ -122,7 +139,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                     <div className='flex flex-col gap-1 font-medium text-right'>
                         <p>{currency}{totalPrice.toLocaleString()}</p>
                         <p>Free</p>
-                        {coupon && <p>{`-${currency}${(coupon.discount / 100 * totalPrice).toFixed(2)}`}</p>}
+                        {coupon && <p>{`-${currency}${couponDiscountAmount.toFixed(2)}`}</p>}
                     </div>
                 </div>
                 {
@@ -142,7 +159,7 @@ const OrderSummary = ({ totalPrice, items }) => {
             </div>
             <div className='flex justify-between py-4'>
                 <p>Total:</p>
-                <p className='font-medium text-right'>{currency}{coupon ? (totalPrice - (coupon.discount / 100 * totalPrice)).toFixed(2) : totalPrice.toLocaleString()}</p>
+                <p className='font-medium text-right'>{currency}{coupon ? (totalPrice - couponDiscountAmount).toFixed(2) : totalPrice.toLocaleString()}</p>
             </div>
             <button onClick={e => toast.promise(handlePlaceOrder(e), { loading: 'placing Order...' })} className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'>Place Order</button>
 

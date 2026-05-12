@@ -3,37 +3,38 @@ import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { DeleteIcon } from "lucide-react"
-import { couponDummyData, productDummyData, storesDummyData } from "@/assets/assets"
+import { couponDummyData, dummyStoreData, productDummyData } from "@/assets/assets"
 import { COUPON_SCOPES, getCouponTargetLabel, normalizeCouponCode } from "@/lib/couponUtils"
 
-export default function AdminCoupons() {
+export default function StoreCoupons() {
+    const storeId = dummyStoreData.id
+    const storeProducts = productDummyData.filter((product) => product.storeId === storeId)
+
     const [coupons, setCoupons] = useState([])
     const [newCoupon, setNewCoupon] = useState({
         code: '',
         description: '',
         discount: '',
-        scope: COUPON_SCOPES.GLOBAL,
-        storeId: '',
+        scope: COUPON_SCOPES.STORE,
         productIds: [],
         maxUsers: '',
         expiresAt: format(new Date(), 'yyyy-MM-dd')
     })
 
     const fetchCoupons = async () => {
-        setCoupons(couponDummyData)
+        setCoupons(couponDummyData.filter((coupon) => coupon.storeId === storeId))
     }
 
     const handleAddCoupon = async (e) => {
         e.preventDefault()
         const code = normalizeCouponCode(newCoupon.code)
-
         if (coupons.some((coupon) => coupon.code === code)) {
             toast.error("Coupon code already exists")
             return
         }
 
-        if (newCoupon.scope !== COUPON_SCOPES.GLOBAL && !newCoupon.storeId) {
-            toast.error("Please select a store")
+        if (newCoupon.scope === COUPON_SCOPES.GLOBAL) {
+            toast.error("Store coupons cannot be global")
             return
         }
 
@@ -42,14 +43,22 @@ export default function AdminCoupons() {
             return
         }
 
+        const ownsAllProducts = newCoupon.productIds.every((productId) =>
+            storeProducts.some((product) => product.id === productId)
+        )
+        if (!ownsAllProducts) {
+            toast.error("You can only target products owned by your store")
+            return
+        }
+
         const createdCoupon = {
             code,
             description: newCoupon.description,
             discount: Number(newCoupon.discount),
             scope: newCoupon.scope,
-            storeId: newCoupon.scope === COUPON_SCOPES.GLOBAL ? null : newCoupon.storeId,
+            storeId,
             productIds: newCoupon.scope === COUPON_SCOPES.PRODUCTS ? newCoupon.productIds : [],
-            createdBy: "ADMIN",
+            createdBy: "STORE",
             expiresAt: new Date(newCoupon.expiresAt).toISOString(),
             maxUsers: Number(newCoupon.maxUsers),
             usedCount: 0,
@@ -61,8 +70,7 @@ export default function AdminCoupons() {
             code: '',
             description: '',
             discount: '',
-            scope: COUPON_SCOPES.GLOBAL,
-            storeId: '',
+            scope: COUPON_SCOPES.STORE,
             productIds: [],
             maxUsers: '',
             expiresAt: format(new Date(), 'yyyy-MM-dd')
@@ -81,13 +89,13 @@ export default function AdminCoupons() {
     }
 
     useEffect(() => {
-        fetchCoupons();
+        fetchCoupons()
     }, [])
 
     return (
         <div className="text-slate-500 mb-40">
             <form onSubmit={(e) => toast.promise(handleAddCoupon(e), { loading: "Adding coupon..." })} className="max-w-sm text-sm">
-                <h2 className="text-2xl">Add <span className="text-slate-800 font-medium">Coupons</span></h2>
+                <h2 className="text-2xl">Store <span className="text-slate-800 font-medium">Coupons</span></h2>
                 <div className="flex gap-2 max-sm:flex-col mt-2">
                     <input type="text" placeholder="Coupon Code" className="w-full mt-2 p-2 border border-slate-200 outline-slate-400 rounded-md"
                         name="code" value={newCoupon.code} onChange={handleChange} required
@@ -104,27 +112,14 @@ export default function AdminCoupons() {
                     <label className="w-full">
                         <p className="mb-1">Coupon Scope</p>
                         <select className="w-full p-2 border border-slate-200 outline-slate-400 rounded-md" name="scope" value={newCoupon.scope} onChange={handleChange}>
-                            <option value={COUPON_SCOPES.GLOBAL}>Global</option>
-                            <option value={COUPON_SCOPES.STORE}>Store</option>
-                            <option value={COUPON_SCOPES.PRODUCTS}>Products</option>
+                            <option value={COUPON_SCOPES.STORE}>Whole Store</option>
+                            <option value={COUPON_SCOPES.PRODUCTS}>Selected Products</option>
                         </select>
                     </label>
                     <input type="number" placeholder="Max users" min={1} className="w-full mt-6 max-sm:mt-2 p-2 border border-slate-200 outline-slate-400 rounded-md"
                         name="maxUsers" value={newCoupon.maxUsers} onChange={handleChange} required
                     />
                 </div>
-
-                {newCoupon.scope !== COUPON_SCOPES.GLOBAL && (
-                    <label>
-                        <p className="mt-3">Target Store</p>
-                        <select className="w-full mt-1 p-2 border border-slate-200 outline-slate-400 rounded-md" name="storeId" value={newCoupon.storeId} onChange={(e) => setNewCoupon({ ...newCoupon, storeId: e.target.value, productIds: [] })} required>
-                            <option value="">Select store</option>
-                            {storesDummyData.map((store) => (
-                                <option key={store.id} value={store.id}>{store.name}</option>
-                            ))}
-                        </select>
-                    </label>
-                )}
 
                 {newCoupon.scope === COUPON_SCOPES.PRODUCTS && (
                     <label>
@@ -133,7 +128,7 @@ export default function AdminCoupons() {
                             const selectedValues = Array.from(e.target.selectedOptions, (option) => option.value)
                             setNewCoupon({ ...newCoupon, productIds: selectedValues })
                         }}>
-                            {productDummyData.filter((product) => product.storeId === newCoupon.storeId).map((product) => (
+                            {storeProducts.map((product) => (
                                 <option key={product.id} value={product.id}>{product.name}</option>
                             ))}
                         </select>
