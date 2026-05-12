@@ -38,19 +38,26 @@ export interface OrderProvider {
 
 ## 4) Domain-by-Domain Local Completion
 
+## 4.0 Accounts, Stores, and Admin (local-mode rules)
+
+- **Accounts**: Every real session comes from registration or login (`manzili_auth_users_v1` + `manzili_auth_session_v1`). There is no implicit or auto-created “dummy” seller session; guests are not treated as store owners.
+- **Stores**: Each user may own **at most one** store. Store records live in `manzili_stores_v1` with `userId` ownership; the session carries `storeId` only when it matches a store owned by that user (invalid links, e.g. legacy shared demo ids, are reconciled away on boot).
+- **Seller onboarding**: Registering as a seller creates a dedicated store row and links it to the new user. Buyers without a store can open a store once via the seller dashboard (same one-store rule).
+- **Admin**: Admin UI stays **account-less**; access is gated by a short **passkey** (default `admin`, overridable via `NEXT_PUBLIC_ADMIN_PASSKEY`) stored in `sessionStorage` after unlock — suitable for local/demo only.
+
 ## 4.1 Auth and Session
 Local requirements:
 - login/logout/me lifecycle;
-- role-aware fake users (`BUYER`, `SELLER`, `ADMIN`);
-- persisted session with expiry metadata.
+- buyer vs seller derived from `storeId` on the user session (not from separate role enums unless added later);
+- persisted session; optional future: expiry metadata.
 
 Storage keys:
 - `manzili_auth_session_v1`
-- `manzili_auth_users_v1` (seeded fake users for demo mode)
+- `manzili_auth_users_v1` (no seeded fake users required for core flows; demo catalog data may remain separate)
 
 ## 4.2 Stores and Products
 Local requirements:
-- seller can create/edit products;
+- seller can create/edit products **scoped to their store** (`storeId` on session);
 - buyer can browse/filter/search products;
 - stock and availability update locally.
 

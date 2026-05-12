@@ -9,6 +9,7 @@ import { useDispatch } from 'react-redux';
 function SuccessInner() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get('session_id');
+    const orderId = searchParams.get('order_id');
     const mode = searchParams.get('mode');
     const dispatch = useDispatch();
     const router = useRouter();
@@ -92,6 +93,11 @@ function SuccessInner() {
                 This was a Stripe test checkout — no real money was charged. Your cart has been
                 cleared.
             </p>
+            {orderId && (
+                <p className="text-xs text-slate-500">
+                    Order reference: <span className="font-mono">{orderId}</span>
+                </p>
+            )}
             <div className="flex gap-3 flex-wrap justify-center">
                 <Link
                     href="/shop"

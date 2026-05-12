@@ -1,5 +1,5 @@
 import { PlusIcon, SquarePenIcon, XIcon } from 'lucide-react';
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import AddressModal from './AddressModal';
 import { clearCart } from '@/lib/features/cart/cartSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { getCurrencySymbol } from '@/lib/currency';
 import { calculateCouponDiscountAmount, normalizeCouponCode, validateCouponForCart } from '@/lib/couponUtils';
-import { createOrderFromCart } from '@/lib/services/localOrderService';
 import { getCouponByCode } from '@/lib/services/localCouponService';
 
 const OrderSummary = ({ totalPrice, items }) => {
@@ -25,6 +24,27 @@ const OrderSummary = ({ totalPrice, items }) => {
     const [couponCodeInput, setCouponCodeInput] = useState('');
     const [coupon, setCoupon] = useState('');
     const couponDiscountAmount = coupon ? calculateCouponDiscountAmount(coupon, items) : 0;
+    const [estimatedShipping, setEstimatedShipping] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch('/api/shipping/estimate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items }),
+                });
+                const data = await res.json();
+                if (!cancelled && res.ok) setEstimatedShipping(data.estimatedShipping ?? 0);
+            } catch {
+                if (!cancelled) setEstimatedShipping(null);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [items]);
 
     const handleCouponCode = async (event) => {
         event.preventDefault();
@@ -54,26 +74,38 @@ const OrderSummary = ({ totalPrice, items }) => {
         }
 
         if (paymentMethod === 'COD') {
-            await createOrderFromCart({
-                items,
-                address: selectedAddress,
-                paymentMethod: 'COD',
-                coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
-                paid: false,
+            const res = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items,
+                    address: selectedAddress,
+                    paymentMethod: 'COD',
+                    coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
+                }),
             });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Could not place order');
             dispatch(clearCart());
             router.push('/orders');
             return;
         }
-        await createOrderFromCart({
-            items,
-            address: selectedAddress,
-            paymentMethod: 'STRIPE',
-            coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
-            paid: true,
+        const checkoutRes = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                items,
+                address: selectedAddress,
+                coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
+            }),
         });
-        dispatch(clearCart());
-        router.push('/cart/success?mode=local-stripe');
+        const checkout = await checkoutRes.json();
+        if (!checkoutRes.ok) throw new Error(checkout?.error || 'Could not start checkout');
+        if (checkout?.url) {
+            window.location.href = checkout.url;
+            return;
+        }
+        throw new Error('Checkout URL missing');
     }
 
     return (
@@ -100,7 +132,11 @@ const OrderSummary = ({ totalPrice, items }) => {
                 {
                     selectedAddress ? (
                         <div className='flex gap-2 items-center'>
-                            <p>{selectedAddress.name}, {selectedAddress.city}, {selectedAddress.state}, {selectedAddress.zip}</p>
+                            <p className="text-xs text-slate-600">
+                                {selectedAddress.name} · {selectedAddress.bostaDistrictName || selectedAddress.state},{' '}
+                                {selectedAddress.bostaCityName || selectedAddress.city}
+                                {selectedAddress.zip ? ` · ${selectedAddress.zip}` : ''}
+                            </p>
                             <SquarePenIcon onClick={() => setSelectedAddress(null)} className='cursor-pointer' size={18} />
                         </div>
                     ) : (
@@ -111,7 +147,10 @@ const OrderSummary = ({ totalPrice, items }) => {
                                         <option value="">Select Address</option>
                                         {
                                             addressList.map((address, index) => (
-                                                <option key={index} value={index}>{address.name}, {address.city}, {address.state}, {address.zip}</option>
+                                                <option key={index} value={index}>
+                                                    {address.name} — {address.bostaDistrictName || address.state},{' '}
+                                                    {address.bostaCityName || address.city}
+                                                </option>
                                             ))
                                         }
                                     </select>
@@ -131,10 +170,22 @@ const OrderSummary = ({ totalPrice, items }) => {
                     </div>
                     <div className='flex flex-col gap-1 font-medium text-right'>
                         <p>{currency}{totalPrice.toLocaleString()}</p>
-                        <p>Free</p>
+                        <p>
+                            {estimatedShipping != null ? (
+                                <span title="Based on package size & bulky profile per product">
+                                    ~{currency}
+                                    {Number(estimatedShipping).toFixed(2)}
+                                </span>
+                            ) : (
+                                '…'
+                            )}
+                        </p>
                         {coupon && <p>{`-${currency}${couponDiscountAmount.toFixed(2)}`}</p>}
                     </div>
                 </div>
+                <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                    Estimated delivery fee (Bosta sizing). Final carrier charge may differ.
+                </p>
                 {
                     !coupon ? (
                         <form onSubmit={e => toast.promise(handleCouponCode(e), { loading: 'Checking Coupon...' })} className='flex justify-center gap-3 mt-3'>
@@ -151,8 +202,14 @@ const OrderSummary = ({ totalPrice, items }) => {
                 }
             </div>
             <div className='flex justify-between py-4'>
-                <p>Total:</p>
-                <p className='font-medium text-right'>{currency}{coupon ? (totalPrice - couponDiscountAmount).toFixed(2) : totalPrice.toLocaleString()}</p>
+                <p>Total (incl. est. shipping):</p>
+                <p className="font-medium text-right">
+                    {currency}
+                    {(
+                        (coupon ? totalPrice - couponDiscountAmount : totalPrice) +
+                        (estimatedShipping != null ? Number(estimatedShipping) : 0)
+                    ).toFixed(2)}
+                </p>
             </div>
             <button onClick={e => toast.promise(handlePlaceOrder(e), { loading: 'placing Order...' })} className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'>Place Order</button>
 

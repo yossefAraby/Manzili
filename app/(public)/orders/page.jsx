@@ -2,7 +2,6 @@
 import PageTitle from "@/components/PageTitle"
 import { useEffect, useState } from "react";
 import OrderItem from "@/components/OrderItem";
-import { listOrders } from "@/lib/services/localOrderService";
 
 export default function Orders() {
 
@@ -11,8 +10,9 @@ export default function Orders() {
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            const list = await listOrders();
-            if (!cancelled) setOrders(list);
+            const res = await fetch('/api/orders');
+            const data = await res.json();
+            if (!cancelled) setOrders(Array.isArray(data?.orders) ? data.orders : []);
         })();
         return () => {
             cancelled = true;
@@ -36,9 +36,29 @@ export default function Orders() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {orders.map((order) => (
-                                    <OrderItem order={order} key={order.id} />
-                                ))}
+                                {orders.map((order) =>
+                                    (order.storeOrders || []).map((storeOrder) => (
+                                        <OrderItem
+                                            order={{
+                                                id: storeOrder.id,
+                                                total: storeOrder.total,
+                                                status: storeOrder.status,
+                                                paymentMethod: storeOrder.paymentMethod,
+                                                isPaid: storeOrder.isPaid,
+                                                createdAt: storeOrder.createdAt,
+                                                updatedAt: storeOrder.updatedAt,
+                                                isCouponUsed: order.isCouponUsed,
+                                                coupon: order.coupon,
+                                                orderItems: storeOrder.orderItems,
+                                                address: order.address,
+                                                user: { name: 'You', email: '' },
+                                                shipment: storeOrder.shipment,
+                                                store: storeOrder.store,
+                                            }}
+                                            key={storeOrder.id}
+                                        />
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

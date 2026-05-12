@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getStripeCurrency, getCurrencySymbol } from '@/lib/currency';
+import { createMarketplaceOrder } from '@/lib/server/orders/createOrder';
 
 function computeTotalCents(items, coupon) {
     let subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -33,9 +34,12 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { items, coupon } = body;
+    const { items, coupon, address } = body;
     if (!Array.isArray(items) || items.length === 0) {
         return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    }
+    if (!address?.name || !address?.street) {
+        return NextResponse.json({ error: 'Shipping address required' }, { status: 400 });
     }
 
     const currency = getStripeCurrency();
@@ -72,6 +76,13 @@ export async function POST(request) {
     const itemSummary = items.map((i) => `${i.name} × ${i.quantity}`).join('; ');
 
     try {
+        const { order } = await createMarketplaceOrder({
+            items,
+            address,
+            paymentMethod: 'STRIPE',
+            coupon,
+        });
+
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             line_items: [
@@ -87,15 +98,16 @@ export async function POST(request) {
                     quantity: 1,
                 },
             ],
-            success_url: `${baseUrl.replace(/\/$/, '')}/cart/success?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${baseUrl.replace(/\/$/, '')}/cart/success?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(order.id)}`,
             cancel_url: `${baseUrl.replace(/\/$/, '')}/cart?payment=canceled`,
             metadata: {
                 payment_mode: 'stripe_test',
                 item_count: String(items.length),
+                order_id: order.id,
             },
         });
 
-        return NextResponse.json({ url: session.url, id: session.id });
+        return NextResponse.json({ url: session.url, id: session.id, orderId: order.id });
     } catch (err) {
         console.error('Stripe checkout session error:', err);
         return NextResponse.json(

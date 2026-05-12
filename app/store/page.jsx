@@ -5,13 +5,17 @@ import { CircleDollarSignIcon, ShoppingBasketIcon, StarIcon, TagsIcon } from "lu
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useSelector } from "react-redux"
 import { getCurrencySymbol } from "@/lib/currency"
 
 export default function Dashboard() {
 
     const currency = getCurrencySymbol()
-
     const router = useRouter()
+    const session = useSelector((s) => s.auth.session)
+    const productList = useSelector((s) => s.product.list)
+
+    const storeId = session?.storeId
 
     const [loading, setLoading] = useState(true)
     const [dashboardData, setDashboardData] = useState({
@@ -28,14 +32,52 @@ export default function Dashboard() {
         { title: 'Total Ratings', value: dashboardData.ratings.length, icon: StarIcon },
     ]
 
-    const fetchDashboardData = async () => {
-        setDashboardData(dummyStoreDashboardData)
-        setLoading(false)
-    }
-
     useEffect(() => {
-        fetchDashboardData()
-    }, [])
+        let cancelled = false
+        const run = async () => {
+            if (!storeId) {
+                setDashboardData({
+                    totalProducts: 0,
+                    totalEarnings: 0,
+                    totalOrders: 0,
+                    ratings: [],
+                })
+                setLoading(false)
+                return
+            }
+            const products = productList.filter((p) => p.storeId === storeId)
+            const totalProducts = products.length
+            const ids = new Set(products.map((p) => p.id))
+            const ratings = dummyStoreDashboardData.ratings.filter((r) => ids.has(r.productId))
+
+            let totalOrders = 0
+            let totalEarnings = 0
+            try {
+                const res = await fetch(`/api/store/orders?storeId=${encodeURIComponent(storeId)}`)
+                const data = await res.json()
+                const orders = Array.isArray(data?.storeOrders) ? data.storeOrders : []
+                totalOrders = orders.length
+                totalEarnings = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+            } catch {
+                totalOrders = 0
+                totalEarnings = 0
+            }
+
+            if (!cancelled) {
+                setDashboardData({
+                    totalProducts,
+                    totalEarnings: Number(totalEarnings.toFixed(2)),
+                    totalOrders,
+                    ratings,
+                })
+                setLoading(false)
+            }
+        }
+        run()
+        return () => {
+            cancelled = true
+        }
+    }, [storeId, productList])
 
     if (loading) return <Loading />
 
@@ -60,7 +102,9 @@ export default function Dashboard() {
             <h2>Total Reviews</h2>
 
             <div className="mt-5">
-                {
+                {dashboardData.ratings.length === 0 ? (
+                    <p className="text-slate-500 text-sm">No reviews yet for products in this store.</p>
+                ) : (
                     dashboardData.ratings.map((review, index) => (
                         <div key={index} className="flex max-sm:flex-col gap-5 sm:items-center justify-between py-6 border-b border-slate-200 text-sm text-slate-600 max-w-4xl">
                             <div>
@@ -78,16 +122,16 @@ export default function Dashboard() {
                                     <p className="text-slate-400">{review.product?.category}</p>
                                     <p className="font-medium">{review.product?.name}</p>
                                     <div className='flex items-center'>
-                                        {Array(5).fill('').map((_, index) => (
-                                            <StarIcon key={index} size={17} className='text-transparent mt-0.5' fill={review.rating >= index + 1 ? "#2582eb" : "#D1D5DB"} />
+                                        {Array(5).fill('').map((_, starIndex) => (
+                                            <StarIcon key={starIndex} size={17} className='text-transparent mt-0.5' fill={review.rating >= starIndex + 1 ? "#2582eb" : "#D1D5DB"} />
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={() => router.push(`/product/${review.product.id}`)} className="bg-slate-100 px-5 py-2 hover:bg-slate-200 rounded transition-all">View Product</button>
+                                <button type="button" onClick={() => router.push(`/product/${review.product.id}`)} className="bg-slate-100 px-5 py-2 hover:bg-slate-200 rounded transition-all">View Product</button>
                             </div>
                         </div>
                     ))
-                }
+                )}
             </div>
         </div>
     )

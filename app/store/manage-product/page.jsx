@@ -1,18 +1,33 @@
 'use client'
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
 import Loading from "@/components/Loading"
-import { productDummyData } from "@/assets/assets"
 import { getCurrencySymbol } from "@/lib/currency"
 import { XIcon } from "lucide-react"
+import { useDispatch, useSelector } from "react-redux"
+import { updateProduct } from "@/lib/features/product/productSlice"
+
+function imageSrc(img) {
+    if (!img) return '/favicon.ico'
+    return typeof img === 'string' ? img : img?.src || '/favicon.ico'
+}
 
 export default function StoreManageProducts() {
 
     const currency = getCurrencySymbol()
+    const dispatch = useDispatch()
+    const session = useSelector((s) => s.auth.session)
+    const productList = useSelector((s) => s.product.list)
+
+    const storeId = session?.storeId
+
+    const products = useMemo(
+        () => (storeId ? productList.filter((p) => p.storeId === storeId) : []),
+        [productList, storeId],
+    )
 
     const [loading, setLoading] = useState(true)
-    const [products, setProducts] = useState([])
     const [editingProduct, setEditingProduct] = useState(null)
     const [editForm, setEditForm] = useState({
         name: "",
@@ -22,19 +37,15 @@ export default function StoreManageProducts() {
         category: "",
     })
 
-    const fetchProducts = async () => {
-        setProducts(productDummyData)
-        setLoading(false)
-    }
+    useEffect(() => {
+        const t = setTimeout(() => setLoading(false), 0)
+        return () => clearTimeout(t)
+    }, [])
 
     const toggleStock = async (productId) => {
-        setProducts((prev) =>
-            prev.map((product) =>
-                product.id === productId
-                    ? { ...product, inStock: !product.inStock }
-                    : product
-            )
-        )
+        const product = products.find((p) => p.id === productId)
+        if (!product) return
+        dispatch(updateProduct({ id: productId, inStock: !product.inStock }))
         return Promise.resolve()
     }
 
@@ -77,34 +88,29 @@ export default function StoreManageProducts() {
         if (Number.isNaN(parsedPrice) || parsedPrice <= 0) return toast.error("Price must be greater than 0.")
         if (parsedPrice > parsedMrp) return toast.error("Price cannot be greater than MRP.")
 
-        setProducts((prev) =>
-            prev.map((product) =>
-                product.id === editingProduct.id
-                    ? {
-                        ...product,
-                        name: trimmedName,
-                        description: trimmedDescription,
-                        category: trimmedCategory,
-                        mrp: parsedMrp,
-                        price: parsedPrice,
-                    }
-                    : product
-            )
+        dispatch(
+            updateProduct({
+                id: editingProduct.id,
+                name: trimmedName,
+                description: trimmedDescription,
+                category: trimmedCategory,
+                mrp: parsedMrp,
+                price: parsedPrice,
+            }),
         )
 
         toast.success("Product updated successfully.")
         closeEditModal()
     }
 
-    useEffect(() => {
-            fetchProducts()
-    }, [])
-
     if (loading) return <Loading />
 
     return (
         <>
             <h1 className="text-2xl text-slate-500 mb-5">Manage <span className="text-slate-800 font-medium">Products</span></h1>
+            {products.length === 0 ? (
+                <p className="text-slate-600">No products for this store yet. Add products from the Add Product page.</p>
+            ) : (
             <table className="w-full max-w-4xl text-left  ring ring-slate-200  rounded overflow-hidden text-sm">
                 <thead className="bg-slate-50 text-gray-700 uppercase tracking-wider">
                     <tr>
@@ -120,7 +126,7 @@ export default function StoreManageProducts() {
                         <tr key={product.id} className="border-t border-gray-200 hover:bg-gray-50">
                             <td className="px-4 py-3">
                                 <div className="flex gap-2 items-center">
-                                    <Image width={40} height={40} className='p-1 shadow rounded cursor-pointer' src={product.images[0]} alt="" />
+                                    <Image width={40} height={40} className='p-1 shadow rounded cursor-pointer' src={imageSrc(product.images?.[0])} alt="" />
                                     {product.name}
                                 </div>
                             </td>
@@ -146,6 +152,7 @@ export default function StoreManageProducts() {
                     ))}
                 </tbody>
             </table>
+            )}
 
             {editingProduct && (
                 <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">

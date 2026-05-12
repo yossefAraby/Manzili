@@ -1,14 +1,21 @@
 'use client'
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { DeleteIcon } from "lucide-react"
-import { couponDummyData, dummyStoreData, productDummyData } from "@/assets/assets"
+import { useSelector } from "react-redux"
 import { COUPON_SCOPES, getCouponTargetLabel, normalizeCouponCode } from "@/lib/couponUtils"
+import { STORAGE_KEYS, readStorageItems, writeStorageEnvelope } from "@/lib/storage/localStorageEnvelope"
 
 export default function StoreCoupons() {
-    const storeId = dummyStoreData.id
-    const storeProducts = productDummyData.filter((product) => product.storeId === storeId)
+    const session = useSelector((s) => s.auth.session)
+    const storeId = session?.storeId
+    const productList = useSelector((s) => s.product.list)
+
+    const storeProducts = useMemo(
+        () => (storeId ? productList.filter((product) => product.storeId === storeId) : []),
+        [productList, storeId],
+    )
 
     const [coupons, setCoupons] = useState([])
     const [newCoupon, setNewCoupon] = useState({
@@ -21,14 +28,30 @@ export default function StoreCoupons() {
         expiresAt: format(new Date(), 'yyyy-MM-dd')
     })
 
-    const fetchCoupons = async () => {
-        setCoupons(couponDummyData.filter((coupon) => coupon.storeId === storeId))
+    const loadCouponsFromStorage = () => {
+        if (!storeId) {
+            setCoupons([])
+            return
+        }
+        const all = readStorageItems(STORAGE_KEYS.COUPONS)
+        setCoupons(all.filter((c) => c.storeId === storeId && c.createdBy === 'STORE'))
+    }
+
+    const persistCouponList = (nextStoreCoupons) => {
+        if (!storeId) return
+        const all = readStorageItems(STORAGE_KEYS.COUPONS)
+        const others = all.filter((c) => !(c.storeId === storeId && c.createdBy === 'STORE'))
+        writeStorageEnvelope(STORAGE_KEYS.COUPONS, [...others, ...nextStoreCoupons])
     }
 
     const handleAddCoupon = async (e) => {
         e.preventDefault()
+        if (!storeId) return
         const code = normalizeCouponCode(newCoupon.code)
-        if (coupons.some((coupon) => coupon.code === code)) {
+        const allForStore = readStorageItems(STORAGE_KEYS.COUPONS).filter(
+            (c) => c.storeId === storeId && c.createdBy === 'STORE',
+        )
+        if (allForStore.some((coupon) => coupon.code === code) || coupons.some((coupon) => coupon.code === code)) {
             toast.error("Coupon code already exists")
             return
         }
@@ -65,7 +88,9 @@ export default function StoreCoupons() {
             createdAt: new Date().toISOString(),
         }
 
-        setCoupons((prev) => [createdCoupon, ...prev])
+        const next = [createdCoupon, ...coupons]
+        setCoupons(next)
+        persistCouponList(next)
         setNewCoupon({
             code: '',
             description: '',
@@ -84,13 +109,24 @@ export default function StoreCoupons() {
     }
 
     const deleteCoupon = async (code) => {
-        setCoupons((prev) => prev.filter((coupon) => coupon.code !== code))
+        if (!storeId) return
+        const next = coupons.filter((coupon) => coupon.code !== code)
+        setCoupons(next)
+        persistCouponList(next)
         toast.success("Coupon deleted")
     }
 
     useEffect(() => {
-        fetchCoupons()
-    }, [])
+        loadCouponsFromStorage()
+    }, [storeId])
+
+    if (!storeId) {
+        return (
+            <div className="text-slate-600 mb-40">
+                <p>Open or select your store to manage coupons.</p>
+            </div>
+        )
+    }
 
     return (
         <div className="text-slate-500 mb-40">

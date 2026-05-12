@@ -7,6 +7,19 @@ import { useState } from "react";
 import RatingModal from "./RatingModal";
 import { getCurrencySymbol } from "@/lib/currency";
 
+function getItemImage(item) {
+    const fromProduct =
+        item?.product?.images?.[0]?.src ||
+        item?.product?.images?.[0] ||
+        item?.image ||
+        null;
+    return fromProduct || "/favicon.ico";
+}
+
+function formatStatus(status) {
+    return String(status || "").replace(/_/g, " ").toLowerCase();
+}
+
 const OrderItem = ({ order }) => {
 
     const currency = getCurrencySymbol();
@@ -24,20 +37,22 @@ const OrderItem = ({ order }) => {
                                 <div className="w-20 aspect-square bg-slate-100 flex items-center justify-center rounded-md">
                                     <Image
                                         className="h-14 w-auto"
-                                        src={item.product.images[0]}
+                                        src={getItemImage(item)}
                                         alt="product_img"
                                         width={50}
                                         height={50}
                                     />
                                 </div>
                                 <div className="flex flex-col justify-center text-sm">
-                                    <p className="font-medium text-slate-600 text-base">{item.product.name}</p>
+                                    <p className="font-medium text-slate-600 text-base">{item.product?.name || item.name}</p>
                                     <p>{currency}{item.price} Qty : {item.quantity} </p>
                                     <p className="mb-1">{new Date(order.createdAt).toDateString()}</p>
                                     <div>
-                                        {ratings.find(rating => order.id === rating.orderId && item.product.id === rating.productId)
+                                        {item?.product?.id && ratings.find(rating => order.id === rating.orderId && item.product.id === rating.productId)
                                             ? <Rating value={ratings.find(rating => order.id === rating.orderId && item.product.id === rating.productId).rating} />
-                                            : <button onClick={() => setRatingModal({ orderId: order.id, productId: item.product.id })} className={`text-[#2582eb] hover:bg-[#2582eb]/10 transition ${order.status !== "DELIVERED" && 'hidden'}`}>Rate Product</button>
+                                            : item?.product?.id ? (
+                                                <button onClick={() => setRatingModal({ orderId: order.id, productId: item.product.id })} className={`text-[#2582eb] hover:bg-[#2582eb]/10 transition ${order.status !== "DELIVERED" && 'hidden'}`}>Rate Product</button>
+                                            ) : null
                                         }</div>
                                     {ratingModal && <RatingModal ratingModal={ratingModal} setRatingModal={setRatingModal} />}
                                 </div>
@@ -56,16 +71,19 @@ const OrderItem = ({ order }) => {
 
                 <td className="text-left space-y-2 text-sm max-md:hidden">
                     <div
-                        className={`flex items-center justify-center gap-1 rounded-full p-1 ${order.status === 'confirmed'
-                            ? 'text-yellow-500 bg-yellow-100'
-                            : order.status === 'delivered'
-                                ? 'text-[#2582eb] bg-[#2582eb]/10'
-                                : 'text-slate-500 bg-slate-100'
+                        className={`flex items-center justify-center gap-1 rounded-full p-1 ${order.status === 'DELIVERED'
+                            ? 'text-[#2582eb] bg-[#2582eb]/10'
+                            : 'text-slate-500 bg-slate-100'
                             }`}
                     >
                         <DotIcon size={10} className="scale-250" />
-                        {order.status.split('_').join(' ').toLowerCase()}
+                        {formatStatus(order.status)}
                     </div>
+                    {order?.shipment?.trackingNumber && (
+                        <div className="text-xs text-slate-500">
+                            Tracking: <span className="font-mono">{order.shipment.trackingNumber}</span>
+                        </div>
+                    )}
                 </td>
             </tr>
             {/* Mobile */}
@@ -77,7 +95,7 @@ const OrderItem = ({ order }) => {
                     <br />
                     <div className="flex items-center">
                         <span className='text-center mx-auto px-6 py-1.5 rounded bg-[#2582eb]/10 text-[#2582eb]' >
-                            {order.status.replace(/_/g, ' ').toLowerCase()}
+                            {formatStatus(order.status)}
                         </span>
                     </div>
                 </td>

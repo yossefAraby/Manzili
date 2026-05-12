@@ -1,24 +1,42 @@
 'use client'
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Loading from "@/components/Loading"
-import { orderDummyData } from "@/assets/assets"
+import { useSelector } from "react-redux"
 
 export default function StoreOrders() {
+    const session = useSelector((s) => s.auth.session)
+    const storeId = session?.storeId
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [selectedOrder, setSelectedOrder] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
 
-
-    const fetchOrders = async () => {
-       setOrders(orderDummyData)
-       setLoading(false)
-    }
+    const fetchOrders = useCallback(async () => {
+        if (!storeId) {
+            setOrders([])
+            setLoading(false)
+            return
+        }
+        setLoading(true)
+        try {
+            const res = await fetch(`/api/store/orders?storeId=${encodeURIComponent(storeId)}`);
+            const data = await res.json();
+            setOrders(Array.isArray(data?.storeOrders) ? data.storeOrders : []);
+        } catch {
+            setOrders([])
+        } finally {
+            setLoading(false)
+        }
+    }, [storeId])
 
     const updateOrderStatus = async (orderId, status) => {
-        // Logic to update the status of an order
-
-
+        const res = await fetch('/api/store/orders/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storeOrderId: orderId, status }),
+        });
+        if (!res.ok) return;
+        await fetchOrders();
     }
 
     const openModal = (order) => {
@@ -33,7 +51,7 @@ export default function StoreOrders() {
 
     useEffect(() => {
         fetchOrders()
-    }, [])
+    }, [fetchOrders])
 
     if (loading) return <Loading />
 
@@ -62,13 +80,13 @@ export default function StoreOrders() {
                                     <td className="pl-6 text-[#2582eb]" >
                                         {index + 1}
                                     </td>
-                                    <td className="px-4 py-3">{order.user?.name}</td>
+                                    <td className="px-4 py-3">{order.order?.address?.name || 'Customer'}</td>
                                     <td className="px-4 py-3 font-medium text-slate-800">${order.total}</td>
                                     <td className="px-4 py-3">{order.paymentMethod}</td>
                                     <td className="px-4 py-3">
-                                        {order.isCouponUsed ? (
+                                        {order.order?.isCouponUsed ? (
                                             <span className="bg-[#2582eb]/10 text-[#2582eb] text-xs px-2 py-1 rounded-full">
-                                                {order.coupon?.code}
+                                                {order.order?.coupon?.code}
                                             </span>
                                         ) : (
                                             "—"
@@ -80,10 +98,12 @@ export default function StoreOrders() {
                                             onChange={e => updateOrderStatus(order.id, e.target.value)}
                                             className="border-gray-300 rounded-md text-sm focus:ring focus:ring-blue-200"
                                         >
+                                            <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
                                             <option value="ORDER_PLACED">ORDER_PLACED</option>
                                             <option value="PROCESSING">PROCESSING</option>
                                             <option value="SHIPPED">SHIPPED</option>
                                             <option value="DELIVERED">DELIVERED</option>
+                                            <option value="CANCELED">CANCELED</option>
                                         </select>
                                     </td>
                                     <td className="px-4 py-3 text-gray-500">
@@ -107,10 +127,10 @@ export default function StoreOrders() {
                         {/* Customer Details */}
                         <div className="mb-4">
                             <h3 className="font-semibold mb-2">Customer Details</h3>
-                            <p><span className="text-[#2582eb]">Name:</span> {selectedOrder.user?.name}</p>
-                            <p><span className="text-[#2582eb]">Email:</span> {selectedOrder.user?.email}</p>
-                            <p><span className="text-[#2582eb]">Phone:</span> {selectedOrder.address?.phone}</p>
-                            <p><span className="text-[#2582eb]">Address:</span> {`${selectedOrder.address?.street}, ${selectedOrder.address?.city}, ${selectedOrder.address?.state}, ${selectedOrder.address?.zip}, ${selectedOrder.address?.country}`}</p>
+                            <p><span className="text-[#2582eb]">Name:</span> {selectedOrder.order?.address?.name}</p>
+                            <p><span className="text-[#2582eb]">Email:</span> {selectedOrder.order?.address?.email}</p>
+                            <p><span className="text-[#2582eb]">Phone:</span> {selectedOrder.order?.address?.phone}</p>
+                            <p><span className="text-[#2582eb]">Address:</span> {`${selectedOrder.order?.address?.street}, ${selectedOrder.order?.address?.city}, ${selectedOrder.order?.address?.state}, ${selectedOrder.order?.address?.zip}, ${selectedOrder.order?.address?.country}`}</p>
                         </div>
 
                         {/* Products */}
@@ -120,12 +140,12 @@ export default function StoreOrders() {
                                 {selectedOrder.orderItems.map((item, i) => (
                                     <div key={i} className="flex items-center gap-4 border border-slate-100 shadow rounded p-2">
                                         <img
-                                            src={item.product.images?.[0].src || item.product.images?.[0]}
-                                            alt={item.product?.name}
+                                            src={item.product?.images?.[0]?.src || item.product?.images?.[0] || item.image || '/favicon.ico'}
+                                            alt={item.product?.name || item.name}
                                             className="w-16 h-16 object-cover rounded"
                                         />
                                         <div className="flex-1">
-                                            <p className="text-slate-800">{item.product?.name}</p>
+                                            <p className="text-slate-800">{item.product?.name || item.name}</p>
                                             <p>Qty: {item.quantity}</p>
                                             <p>Price: ${item.price}</p>
                                         </div>
@@ -138,11 +158,14 @@ export default function StoreOrders() {
                         <div className="mb-4">
                             <p><span className="text-[#2582eb]">Payment Method:</span> {selectedOrder.paymentMethod}</p>
                             <p><span className="text-[#2582eb]">Paid:</span> {selectedOrder.isPaid ? "Yes" : "No"}</p>
-                            {selectedOrder.isCouponUsed && (
-                                <p><span className="text-[#2582eb]">Coupon:</span> {selectedOrder.coupon.code} ({selectedOrder.coupon.discount}% off)</p>
+                            {selectedOrder.order?.isCouponUsed && (
+                                <p><span className="text-[#2582eb]">Coupon:</span> {selectedOrder.order?.coupon?.code}</p>
                             )}
                             <p><span className="text-[#2582eb]">Status:</span> {selectedOrder.status}</p>
                             <p><span className="text-[#2582eb]">Order Date:</span> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                            {selectedOrder.shipment?.trackingNumber && (
+                                <p><span className="text-[#2582eb]">Tracking:</span> <span className="font-mono">{selectedOrder.shipment.trackingNumber}</span></p>
+                            )}
                         </div>
 
                         {/* Actions */}

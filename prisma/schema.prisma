@@ -36,6 +36,8 @@ model Product {
     category    String
     inStock     Boolean  @default(true)
     storeId     String
+    shippingSize            ShippingSize         @default(MEDIUM)
+    shippingBulkyCategory   ShippingBulkyCategory @default(NORMAL)
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
@@ -52,18 +54,65 @@ enum OrderStatus {
     DELIVERED
 }
 
+enum StoreOrderStatus {
+    PENDING_PAYMENT
+    ORDER_PLACED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELED
+}
+
 enum PaymentMethod {
     COD
     STRIPE
 }
 
-// Required for creating an Order: total, userId, storeId, addressId, isPaid, paymentMethod, isCouponUsed, coupon (JSON), orderItems (nested)
+enum ShipmentCarrier {
+    BOSTA
+}
+
+enum ShipmentStatus {
+    CREATED
+    PICKED_UP
+    IN_TRANSIT
+    DELIVERED
+    FAILED
+    CANCELED
+    UNKNOWN
+}
+
+enum WalletTransactionType {
+    SALE_CREDIT
+    SHIPPING_DEBIT
+    COD_PENDING_CREDIT
+    COD_RELEASE
+    ADJUSTMENT
+}
+
+enum WalletBalanceBucket {
+    PENDING
+    AVAILABLE
+}
+
+enum ShippingSize {
+    SMALL
+    MEDIUM
+    LARGE
+}
+
+enum ShippingBulkyCategory {
+    NORMAL
+    LIGHT_BULKY
+    HEAVY_BULKY
+}
+
+// Buyer checkout container (one per checkout). Split per-seller in StoreOrder.
 model Order {
     id            String        @id @default(cuid())
     total         Float
     status        OrderStatus   @default(ORDER_PLACED)
     userId        String
-    storeId       String
     addressId     String
     isPaid        Boolean       @default(false)
     paymentMethod PaymentMethod
@@ -71,26 +120,60 @@ model Order {
     updatedAt     DateTime      @updatedAt
     isCouponUsed  Boolean       @default(false)
     coupon        Json          @default("{}")
-    orderItems    OrderItem[]
+    storeOrders   StoreOrder[]
 
     // Relations
     user    User    @relation("BuyerRelation", fields: [userId], references: [id])
-    store   Store   @relation(fields: [storeId], references: [id])
     address Address @relation(fields: [addressId], references: [id])
+
+    @@index([userId, createdAt])
 }
 
-// Required for creating an OrderItem: orderId, productId, quantity, price
+model StoreOrder {
+    id            String          @id @default(cuid())
+    orderId       String
+    storeId       String
+    subtotal      Float
+    discountTotal Float           @default(0)
+    shippingTotal Float           @default(0)
+    total         Float
+    status        StoreOrderStatus @default(PENDING_PAYMENT)
+    isPaid        Boolean         @default(false)
+    paymentMethod PaymentMethod
+    createdAt     DateTime        @default(now())
+    updatedAt     DateTime        @updatedAt
+    orderItems    OrderItem[]
+    shipment      Shipment?
+
+    // Relations
+    order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    store Store @relation(fields: [storeId], references: [id])
+
+    @@index([orderId])
+    @@index([storeId, createdAt])
+}
+
+// Snapshot line items at checkout time.
 model OrderItem {
-    orderId   String
+    id        String @id @default(cuid())
+    storeOrderId String
     productId String
     quantity  Int
     price     Float
+    name      String
+    image     String?
+    storeId   String
+    shippingSize          ShippingSize          @default(MEDIUM)
+    shippingBulkyCategory ShippingBulkyCategory @default(NORMAL)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     // Relations
-    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    storeOrder StoreOrder @relation(fields: [storeOrderId], references: [id], onDelete: Cascade)
     product Product @relation(fields: [productId], references: [id])
 
-    @@id([orderId, productId])
+    @@index([storeOrderId])
+    @@index([productId])
 }
 
 // Required for creating a Rating: rating, review, userId, productId
@@ -123,6 +206,10 @@ model Address {
     zip       String
     country   String
     phone     String
+    // Bosta normalized identifiers (optional until checkout UI resolves them)
+    bostaCityId String?
+    bostaZoneId String?
+    bostaDistrictId String?
     createdAt DateTime @default(now())
 
     // Relations
@@ -169,13 +256,114 @@ model Store {
     logo        String
     email       String
     contact     String
+    bostaPickupLocationId String?
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
     Product        Product[]
-    Order          Order[]
+    StoreOrder     StoreOrder[]
+    pickupAddress  StorePickupAddress?
+    wallet         SellerWallet?
     user           User           @relation(fields: [userId], references: [id])
     customRequests CustomRequest[]
+}
+
+model Shipment {
+    id            String         @id @default(cuid())
+    storeOrderId  String         @unique
+    carrier       ShipmentCarrier
+    status        ShipmentStatus @default(CREATED)
+    bostaDeliveryId String?
+    trackingNumber String?
+    awbUrl        String?
+    shippingCost  Float?         // carrier fee charged to master account
+    codAmount     Float?         // cash to collect, if COD
+    size          ShippingSize   @default(MEDIUM)
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    events        ShipmentEvent[]
+
+    storeOrder StoreOrder @relation(fields: [storeOrderId], references: [id], onDelete: Cascade)
+
+    @@index([trackingNumber])
+}
+
+model ShipmentEvent {
+    id            String   @id @default(cuid())
+    shipmentId    String
+    eventType     String
+    occurredAt    DateTime @default(now())
+    payloadHash   String
+    rawPayload    Json
+    createdAt     DateTime @default(now())
+
+    shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+    @@unique([shipmentId, payloadHash])
+    @@index([shipmentId, occurredAt])
+}
+
+model StorePickupAddress {
+    id          String @id @default(cuid())
+    storeId     String @unique
+    firstLine   String
+    city        String
+    bostaCityId String?
+    bostaZoneId String?
+    bostaDistrictId String?
+    phone       String?
+    contactName String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model BostaAddressMapping {
+    id            String @id @default(cuid())
+    country       String
+    cityName      String
+    zoneName      String?
+    districtName  String?
+    cityId        String?
+    zoneId        String?
+    districtId    String?
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    @@index([country, cityName])
+}
+
+model SellerWallet {
+    id              String @id @default(cuid())
+    storeId          String @unique
+    pendingBalance   Float  @default(0)
+    availableBalance Float  @default(0)
+    currency         String @default("EGP")
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+    transactions     WalletTransaction[]
+
+    store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model WalletTransaction {
+    id             String @id @default(cuid())
+    walletId       String
+    type           WalletTransactionType
+    bucket         WalletBalanceBucket
+    amount         Float
+    currency       String
+    idempotencyKey String
+    orderId        String?
+    storeOrderId   String?
+    shipmentId     String?
+    createdAt      DateTime @default(now())
+
+    wallet SellerWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+    @@unique([walletId, idempotencyKey])
+    @@index([walletId, createdAt])
 }
 
 // Required for creating a CustomRequest: userId, itemName, description, images, visibility, category, quantity, size, material, colors, deliveryDate, voiceMemoUrl, storeId (optional)
