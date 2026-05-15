@@ -2,13 +2,16 @@
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { StarIcon, TagIcon } from "lucide-react";
+import { SparklesIcon, StarIcon, TagIcon, WandSparklesIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrencySymbol } from "@/lib/currency";
+
+/** sessionStorage key the customize CTA writes to; /custom-order reads + clears it. */
+const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
 
 const ProductDetails = ({ product }) => {
 
@@ -25,6 +28,35 @@ const ProductDetails = ({ product }) => {
 
     const addToCartHandler = () => {
         dispatch(addToCart({ productId }))
+    }
+
+    const customizeThisItem = () => {
+        // Stash a lightweight seed object — image data URLs can be large so we
+        // only forward the URLs (the /custom-order page will fetch + convert
+        // them to its expected {file, preview} shape itself).
+        const seed = {
+            productId: product.id,
+            itemName: product.name,
+            description: product.description,
+            category: product.category,
+            material: product.material || '',
+            imageUrls: Array.isArray(product.images) ? product.images.slice(0, 5) : [],
+            store: product.store
+                ? {
+                      id: product.store.id || product.storeId,
+                      name: product.store.name,
+                      username: product.store.username,
+                      logo: product.store.logo,
+                      description: product.store.description,
+                  }
+                : null,
+        }
+        try {
+            sessionStorage.setItem(CUSTOMIZE_SEED_KEY, JSON.stringify(seed))
+        } catch {
+            /* ignore quota / private-mode failures — page will just render empty */
+        }
+        router.push(`/custom-order?customize=${encodeURIComponent(product.id)}`)
     }
 
     const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;
@@ -94,6 +126,26 @@ const ProductDetails = ({ product }) => {
                         {inWishlist ? 'Wishlisted' : 'Wishlist'}
                     </button>
                 </div>
+
+                {/* Customize-this-item CTA — sends the artisan a private request
+                    seeded with this product so the buyer can ask for tweaks. */}
+                <div className="mt-6 flex flex-col gap-2 max-w-md">
+                    <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
+                        <SparklesIcon size={14} className="text-[#e67e22]" />
+                        Love this but want a tweak? The maker can craft your version.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={customizeThisItem}
+                        className="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white shadow-md overflow-hidden bg-gradient-to-r from-[#e67e22] via-[#d35400] to-[#b64b2b] hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+                    >
+                        {/* Shimmer sweep */}
+                        <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:translate-x-full transition-transform duration-700" />
+                        <WandSparklesIcon size={16} className="relative z-10" />
+                        <span className="relative z-10">Customize this for me</span>
+                    </button>
+                </div>
+
                 <hr className="border-gray-300 my-5" />
             </div>
         </div>

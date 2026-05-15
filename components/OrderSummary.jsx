@@ -170,7 +170,17 @@ const OrderSummary = ({ totalPrice, items }) => {
                                     </select>
                                 )
                             }
-                            <button className='flex items-center gap-1 text-slate-600 mt-1' onClick={() => setShowAddressModal(true)} >Add Address <PlusIcon size={18} /></button>
+                            <button
+                                className='flex items-center gap-1 text-slate-600 mt-1'
+                                onClick={() => {
+                                    if (!session?.userId) {
+                                        toast.error('Create an account to save a delivery address');
+                                        router.push('/register');
+                                        return;
+                                    }
+                                    setShowAddressModal(true);
+                                }}
+                            >Add Address <PlusIcon size={18} /></button>
                         </div>
                     )
                 }

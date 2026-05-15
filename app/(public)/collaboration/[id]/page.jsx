@@ -231,7 +231,7 @@ export default function CollaborationSpace() {
           className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors"
         >
           <ChevronLeftIcon size={20} />
-          <span className="font-medium">Back to Negotiations</span>
+          <span className="font-medium">Back to Requests</span>
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

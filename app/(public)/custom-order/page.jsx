@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import {
   UploadCloudIcon,
@@ -22,6 +23,34 @@ import {
   blobToDataURL,
   fileToDataURL,
 } from "@/lib/customRequestsLocal";
+
+const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
+
+/**
+ * Fetch each seed image URL and turn it into a {file, preview} entry the
+ * existing ImageUploader expects. Skips anything that fails to load so a
+ * broken URL doesn't sink the whole prefill.
+ */
+async function hydrateSeedImages(urls) {
+  if (!Array.isArray(urls) || urls.length === 0) return [];
+  const results = await Promise.all(
+    urls.map(async (url, idx) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        const ext = blob.type.split("/")[1] || "jpg";
+        const file = new File([blob], `customize-source-${idx}.${ext}`, {
+          type: blob.type || "image/jpeg",
+        });
+        return { file, preview: URL.createObjectURL(file) };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return results.filter(Boolean);
+}
 
 // ==========================================
 // 1. SUB-COMPONENTS (Reused with minor modifications)
@@ -263,7 +292,23 @@ const AudioRecorder = ({ audioBlob, setAudioBlob }) => {
   );
 };
 
-const SizeInput = ({ size, setSize }) => {
+/**
+ * Two-tab size picker:
+ *   - "dimensions":    length/width/height numeric inputs (cm).
+ *   - "shipping-size": Bosta's `specs.size` enum — five buckets the carrier
+ *                     understands (see skills/Bosta Server APIs.yaml line 1143).
+ * The tab strip is styled to match the existing tab patterns in this app
+ * (border-b underline on the active tab, muted color on the inactive one).
+ */
+const PACKAGE_OPTIONS = [
+  { value: "SMALL", label: "Small", hint: "Fits in one hand" },
+  { value: "MEDIUM", label: "Medium", hint: "Carried with two hands" },
+  { value: "LARGE", label: "Large", hint: "Bigger than a shoebox" },
+  { value: "Light Bulky", label: "Light Bulky", hint: "Oversized but lightweight" },
+  { value: "Heavy Bulky", label: "Heavy Bulky", hint: "Oversized and heavy" },
+];
+
+const SizeInput = ({ size, setSize, mode, setMode, packageSize, setPackageSize }) => {
   const handleDimensionChange = (e) => {
     const val = e.target.value;
     setSize((prev) => ({
@@ -272,40 +317,229 @@ const SizeInput = ({ size, setSize }) => {
     }));
   };
 
+  const tabs = [
+    { id: "dimensions", label: "Dimensions" },
+    { id: "package", label: "Shipping size" },
+  ];
+
   return (
     <div className="w-full">
       <label className="block mb-2 font-medium">Size</label>
-      <div className="flex gap-4">
-        <input
-          aria-label="Length (cm)"
-          name="length"
-          value={size.length}
-          onChange={handleDimensionChange}
-          type="number"
-          min="0"
-          placeholder="Length"
-          className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
-        />
-        <input
-          aria-label="Width (cm)"
-          name="width"
-          value={size.width}
-          onChange={handleDimensionChange}
-          type="number"
-          min="0"
-          placeholder="Width"
-          className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
-        />
-        <input
-          aria-label="Height (cm)"
-          name="height"
-          value={size.height}
-          onChange={handleDimensionChange}
-          type="number"
-          min="0"
-          placeholder="Height"
-          className="flex-1 border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-[#e67e22] rounded-xl bg-[#faf8f5]"
-        />
+
+      {/* Tab switch */}
+      <div className="flex border-b border-slate-200 mb-4">
+        {tabs.map((t) => {
+          const active = mode === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setMode(t.id)}
+              aria-pressed={active}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? "border-b-[1.5px] border-[#e67e22] text-[#1c355e]"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {mode === "dimensions" ? (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { name: "length", placeholder: "Length", aria: "Length (cm)" },
+            { name: "width", placeholder: "Width", aria: "Width (cm)" },
+            { name: "height", placeholder: "Height", aria: "Height (cm)" },
+          ].map((f) => (
+            <div key={f.name} className="relative">
+              <input
+                aria-label={f.aria}
+                name={f.name}
+                value={size[f.name]}
+                onChange={handleDimensionChange}
+                type="number"
+                min="0"
+                placeholder={f.placeholder}
+                className="w-full border border-slate-300 rounded-xl bg-[#faf8f5] outline-none focus:ring-2 focus:ring-[#e67e22] px-3 py-2.5 pr-10 text-sm"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                cm
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {PACKAGE_OPTIONS.map((opt) => {
+            const active = packageSize === opt.value;
+            return (
+              <button
+                type="button"
+                key={opt.value}
+                onClick={() => setPackageSize(opt.value)}
+                aria-pressed={active}
+                className={`text-left rounded-xl border-2 p-3 transition-colors ${
+                  active
+                    ? "border-[#2582eb] bg-blue-50"
+                    : "border-slate-200 bg-[#fcfbf9] hover:border-slate-300"
+                }`}
+              >
+                <p className="font-medium text-slate-800 text-sm">{opt.label}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{opt.hint}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Days-based delivery window picker. The single piece of state is `days` —
+ *   `null` means "flexible / no deadline"
+ *   anything else is days from today
+ *
+ * UX surface:
+ *   - quick-pick chips (Flexible, 1w, 2w, 1mo, 2mo) for one-click choices,
+ *   - a slider for fine-tuning (1–120 days), with a number box on the side,
+ *   - a live preview of the absolute date so users know what they're picking,
+ *   - a "no deadline" toggle that maps back to days = null.
+ */
+const DELIVERY_PRESETS = [
+  { label: "Flexible", days: null },
+  { label: "1 week", days: 7 },
+  { label: "2 weeks", days: 14 },
+  { label: "1 month", days: 30 },
+  { label: "2 months", days: 60 },
+];
+const DELIVERY_MIN_DAYS = 1;
+const DELIVERY_MAX_DAYS = 120;
+
+function formatRelativeDays(days) {
+  if (days == null) return "";
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days < 7) return `In ${days} days`;
+  if (days % 7 === 0 && days < 30) {
+    const w = days / 7;
+    return `In ${w} week${w > 1 ? "s" : ""}`;
+  }
+  if (days % 30 === 0) {
+    const m = days / 30;
+    return `In ${m} month${m > 1 ? "s" : ""}`;
+  }
+  return `In ${days} days`;
+}
+
+function formatTargetDate(days) {
+  if (days == null) return "";
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days));
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+const DeliveryWindowPicker = ({ days, setDays }) => {
+  const sliderValue = days ?? 7;
+  const targetLabel = formatTargetDate(days);
+  const relativeLabel = formatRelativeDays(days);
+
+  const onSliderChange = (e) => {
+    const v = Math.max(
+      DELIVERY_MIN_DAYS,
+      Math.min(DELIVERY_MAX_DAYS, Number(e.target.value) || DELIVERY_MIN_DAYS),
+    );
+    setDays(v);
+  };
+
+  const onNumberChange = (e) => {
+    const raw = e.target.value;
+    if (raw === "") {
+      setDays(null);
+      return;
+    }
+    const n = Math.max(
+      DELIVERY_MIN_DAYS,
+      Math.min(DELIVERY_MAX_DAYS, Number(raw) || DELIVERY_MIN_DAYS),
+    );
+    setDays(n);
+  };
+
+  return (
+    <div className="w-full">
+      <label className="block mb-2 font-medium">Delivery window</label>
+
+      {/* Presets */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {DELIVERY_PRESETS.map((p) => {
+          const active = days === p.days;
+          return (
+            <button
+              type="button"
+              key={p.label}
+              onClick={() => setDays(p.days)}
+              aria-pressed={active}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                active
+                  ? "bg-[#1c355e] text-white border-[#1c355e]"
+                  : "bg-[#faf8f5] text-slate-600 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Slider + numeric input */}
+      <div
+        className={`rounded-xl border border-slate-300 bg-[#faf8f5] p-3 transition-opacity ${
+          days == null ? "opacity-60" : ""
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <input
+            type="range"
+            min={DELIVERY_MIN_DAYS}
+            max={DELIVERY_MAX_DAYS}
+            step={1}
+            value={sliderValue}
+            onChange={onSliderChange}
+            aria-label="Days from today"
+            className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#e67e22]"
+          />
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              type="number"
+              min={DELIVERY_MIN_DAYS}
+              max={DELIVERY_MAX_DAYS}
+              value={days ?? ""}
+              onChange={onNumberChange}
+              placeholder="–"
+              className="w-16 text-center px-2 py-1 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#e67e22]"
+              aria-label="Days from today (numeric)"
+            />
+            <span className="text-xs text-slate-500">days</span>
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <span className="font-medium text-[#1c355e]">
+            {days == null ? "No deadline — flexible" : relativeLabel}
+          </span>
+          <span className="text-slate-500">
+            {targetLabel ? `Target · ${targetLabel}` : "Pick a preset or drag the slider"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -322,13 +556,21 @@ const INITIAL_STATE = {
   category: "",
   quantity: 1,
   size: { length: "", width: "", height: "" },
+  // Two-mode size: "dimensions" uses `size`, "package" uses `packageSize` and
+  // matches the SMALL/MEDIUM/LARGE buckets on /store/add-product so an artisan
+  // can quote shipping the same way priced products do.
+  sizeMode: "dimensions",
+  packageSize: "MEDIUM",
   material: "",
   deliveryDate: "",
 };
 
-export default function CustomOrderPage() {
+function CustomOrderPageInner() {
   const dispatch = useDispatch();
   const session = useSelector((s) => s.auth.session);
+  const searchParams = useSearchParams();
+  const customizeId = searchParams.get("customize");
+
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [images, setImages] = useState([]);
   const [colors, setColors] = useState([{ hex: "#000000", description: "" }]);
@@ -336,19 +578,64 @@ export default function CustomOrderPage() {
   const [loading, setLoading] = useState(false);
   const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
-  const [deliveryOption, setDeliveryOption] = useState("flexible"); // "1week", "2weeks", "1month", "flexible", "custom"
+  // null = flexible (no specific date); otherwise an integer "days from today".
+  // We keep this as the single source of truth and derive the absolute date
+  // only when submitting / displaying — much friendlier than two coupled states.
+  const [deliveryDays, setDeliveryDays] = useState(null);
+
+  // Prefill from the /product "Customize this for me" CTA: read the seed out
+  // of sessionStorage, populate the form, default visibility to private and
+  // pre-select the source product's store as the recipient artisan.
+  useEffect(() => {
+    if (!customizeId) return;
+    let cancelled = false;
+    try {
+      const raw = sessionStorage.getItem(CUSTOMIZE_SEED_KEY);
+      if (!raw) return;
+      const seed = JSON.parse(raw);
+      if (!seed || seed.productId !== customizeId) return;
+      sessionStorage.removeItem(CUSTOMIZE_SEED_KEY);
+
+      setFormData((p) => ({
+        ...p,
+        itemName: seed.itemName ? `Custom ${seed.itemName}` : p.itemName,
+        description: seed.description
+          ? `Inspired by "${seed.itemName}". Please tweak the following: \n\n${seed.description}`
+          : p.description,
+        category: seed.category || p.category,
+        material: seed.material || p.material,
+        visibility: seed.store?.id ? "private" : p.visibility,
+      }));
+      if (seed.store?.id) setSelectedStore(seed.store);
+      setShowAdditionalDetails(true);
+
+      hydrateSeedImages(seed.imageUrls).then((mapped) => {
+        if (!cancelled && mapped.length > 0) setImages(mapped);
+      });
+      toast.success("Prefilled from the original item — tweak anything you like");
+    } catch {
+      /* ignore — leave the form blank */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [customizeId]);
 
   // Handlers
   const handleInput = (e) => {
     const { name, value } = e.target;
-    if (name === "deliveryDate") {
-      setDeliveryOption("custom");
-    }
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
-  const handleSize = (newSize) => {
-    setFormData((p) => ({ ...p, size: newSize }));
+  // `setSize` is consumed inside SizeInput as a React-style setter — callers
+  // pass either a next object or an updater fn. Forwarding both shapes keeps
+  // the inputs controlled (otherwise the updater fn gets stored as `size`,
+  // making `size[name]` undefined and flipping the inputs to uncontrolled).
+  const handleSize = (next) => {
+    setFormData((p) => ({
+      ...p,
+      size: typeof next === "function" ? next(p.size) : next,
+    }));
   };
 
   const handleQuantity = (val) => {
@@ -361,37 +648,21 @@ export default function CustomOrderPage() {
   const shouldShowMaterial = ["Woodwork", "Accessories", "Stationery", "Textiles"].includes(formData.category);
   const shouldShowColorPalette = ["Woodwork", "Accessories", "Stationery", "Textiles", "Porcelain"].includes(formData.category);
 
-  // Compute delivery date based on selected option
+  // Derive the absolute delivery date from `deliveryDays` (null = flexible).
+  // Kept as a derived value so the days slider and date stay in sync without
+  // a useEffect ping-pong.
+  const computedDeliveryDate = (() => {
+    if (deliveryDays == null) return "";
+    const t = new Date();
+    t.setDate(t.getDate() + Number(deliveryDays));
+    return t.toISOString().split("T")[0];
+  })();
+
+  // Mirror the derived value into formData so the existing validation /
+  // submission / persistence code keeps reading `formData.deliveryDate`.
   useEffect(() => {
-    if (deliveryOption === "flexible") {
-      setFormData((p) => ({ ...p, deliveryDate: "" }));
-      return;
-    }
-    if (deliveryOption === "custom") {
-      // keep existing date, do nothing
-      return;
-    }
-    // compute date offset
-    const today = new Date();
-    let offsetDays = 0;
-    switch (deliveryOption) {
-      case "1week":
-        offsetDays = 7;
-        break;
-      case "2weeks":
-        offsetDays = 14;
-        break;
-      case "1month":
-        offsetDays = 30;
-        break;
-      default:
-        offsetDays = 0;
-    }
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + offsetDays);
-    const dateString = targetDate.toISOString().split("T")[0];
-    setFormData((p) => ({ ...p, deliveryDate: dateString }));
-  }, [deliveryOption]);
+    setFormData((p) => ({ ...p, deliveryDate: computedDeliveryDate }));
+  }, [computedDeliveryDate]);
 
   // Validation
   const validateForm = () => {
@@ -448,6 +719,8 @@ export default function CustomOrderPage() {
         material: formData.material || "",
         deliveryDate: formData.deliveryDate || "",
         size: formData.size,
+        sizeMode: formData.sizeMode,
+        packageSize: formData.packageSize,
         colors,
         images: imageDataUrls,
         voiceMemoDataUrl,
@@ -478,6 +751,8 @@ export default function CustomOrderPage() {
       submitData.append("material", formData.material);
       submitData.append("deliveryDate", formData.deliveryDate);
       submitData.append("size", JSON.stringify(formData.size));
+      submitData.append("sizeMode", formData.sizeMode);
+      submitData.append("packageSize", formData.packageSize);
       submitData.append("colors", JSON.stringify(colors));
       submitData.append("clientRequestId", id);
       images.forEach((img, i) => submitData.append(`image_${i}`, img.file));
@@ -500,6 +775,7 @@ export default function CustomOrderPage() {
       setAudioBlob(null);
       setSelectedStore(null);
       setShowAdditionalDetails(false);
+      setDeliveryDays(null);
     } catch {
       toast.error("Submission failed.");
     } finally {
@@ -650,7 +926,18 @@ export default function CustomOrderPage() {
                   </div>
 
                   {shouldShowSize && (
-                    <SizeInput size={formData.size} setSize={handleSize} />
+                    <SizeInput
+                      size={formData.size}
+                      setSize={handleSize}
+                      mode={formData.sizeMode}
+                      setMode={(mode) =>
+                        setFormData((p) => ({ ...p, sizeMode: mode }))
+                      }
+                      packageSize={formData.packageSize}
+                      setPackageSize={(value) =>
+                        setFormData((p) => ({ ...p, packageSize: value }))
+                      }
+                    />
                   )}
 
                   {shouldShowMaterial && (
@@ -676,19 +963,10 @@ export default function CustomOrderPage() {
                     disabled={!shouldShowColorPalette}
                   />
 
-                  <div className="w-full">
-                    <label htmlFor="deliveryDate" className="block mb-2 font-medium">
-                      Desired Delivery Date
-                    </label>
-                    <input
-                      id="deliveryDate"
-                      type="date"
-                      name="deliveryDate"
-                      value={formData.deliveryDate}
-                      onChange={handleInput}
-                      className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5]"
-                    />
-                  </div>
+                  <DeliveryWindowPicker
+                    days={deliveryDays}
+                    setDays={setDeliveryDays}
+                  />
                 </div>
               )}
             </div>
@@ -778,5 +1056,15 @@ export default function CustomOrderPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CustomOrderPage() {
+  // useSearchParams reads from the URL; wrapping in Suspense lets Next pre-render
+  // the static shell without bailing the whole route.
+  return (
+    <Suspense fallback={null}>
+      <CustomOrderPageInner />
+    </Suspense>
   );
 }

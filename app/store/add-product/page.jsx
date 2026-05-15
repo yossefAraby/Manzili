@@ -27,6 +27,7 @@ export default function StoreAddProduct() {
     const [productInfo, setProductInfo] = useState({
         name: '',
         description: '',
+        material: '',
         mrp: 0,
         price: 0,
         category: '',
@@ -68,6 +69,7 @@ export default function StoreAddProduct() {
                 id: makeEntityId('prod'),
                 name: productInfo.name,
                 description: productInfo.description,
+                material: productInfo.material.trim(),
                 mrp: Number(productInfo.mrp) || 0,
                 price: Number(productInfo.price) || 0,
                 images: imageUrls.length ? imageUrls : [primary],
@@ -84,6 +86,7 @@ export default function StoreAddProduct() {
             setProductInfo({
                 name: '',
                 description: '',
+                material: '',
                 mrp: 0,
                 price: 0,
                 category: '',
@@ -159,6 +162,19 @@ export default function StoreAddProduct() {
                     className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded resize-none"
                     required
                 />
+            </label>
+
+            <label className="flex flex-col gap-2 my-6 ">
+                Material
+                <input
+                    type="text"
+                    name="material"
+                    onChange={onChangeHandler}
+                    value={productInfo.material}
+                    placeholder="e.g. Oak wood, cotton, ceramic"
+                    className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded"
+                />
+                <span className="text-xs text-slate-400">Shown on the product page under the description.</span>
             </label>
 
             <div className="flex gap-5 flex-wrap">

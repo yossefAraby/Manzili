@@ -19,6 +19,10 @@ import {
     reconcileAuthSession,
     setUserStoreId,
 } from '@/lib/services/localStateBootstrap'
+import StoreAddressFields, {
+    EMPTY_STORE_ADDRESS,
+    formatStoreAddress,
+} from '@/components/store/StoreAddressFields'
 
 const MAX_LOGO_DATA_URL_CHARS = 450_000
 
@@ -62,9 +66,9 @@ export default function CreateStore() {
         description: '',
         email: '',
         contact: '',
-        address: '',
         image: null,
     })
+    const [address, setAddress] = useState(EMPTY_STORE_ADDRESS)
 
     const onChangeHandler = (e) => {
         setStoreInfo({ ...storeInfo, [e.target.name]: e.target.value })
@@ -112,11 +116,15 @@ export default function CreateStore() {
         const usernameRaw = sanitizeUsername(storeInfo.username)
         const email = storeInfo.email.trim()
         const contact = storeInfo.contact.trim()
-        const address = storeInfo.address.trim()
 
-        if (!name || !usernameRaw || !email || !contact || !address) {
-            toast.error('Fill in store name, username, email, contact, and address')
+        if (!name || !usernameRaw || !email || !contact) {
+            toast.error('Fill in store name, username, email, and contact')
             throw new Error('Incomplete form')
+        }
+
+        if (!address.bostaCityId || !address.bostaZoneId || !address.bostaDistrictId || !address.street.trim()) {
+            toast.error('Pick a city, zone, district and enter a street for the store address')
+            throw new Error('Incomplete address')
         }
 
         let logoDataUrl = null
@@ -153,7 +161,8 @@ export default function CreateStore() {
             description: storeInfo.description.trim(),
             email,
             contact,
-            address,
+            address: formatStoreAddress(address),
+            addressDetails: { ...address },
             logo: logoDataUrl || base.logo,
             updatedAt: new Date().toISOString(),
             user: {
@@ -293,16 +302,12 @@ export default function CreateStore() {
                             required
                         />
 
-                        <p>Address</p>
-                        <textarea
-                            name="address"
-                            onChange={onChangeHandler}
-                            value={storeInfo.address}
-                            rows={5}
-                            placeholder="Enter your store address"
-                            className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded resize-none"
-                            required
-                        />
+                        <p className="mt-2">Address</p>
+                        <p className="text-xs text-slate-400 -mt-2 max-w-lg">
+                            Pick governorate, zone and district from Bosta so shipments validate — same flow as the
+                            checkout address.
+                        </p>
+                        <StoreAddressFields value={address} onChange={setAddress} />
 
                         <button
                             type="submit"

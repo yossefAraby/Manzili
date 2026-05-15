@@ -4,9 +4,19 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 
+const SHIPPING_SIZE_LABELS = {
+    SMALL: 'Small package',
+    MEDIUM: 'Medium package',
+    LARGE: 'Large package',
+}
+
 const ProductDescription = ({ product }) => {
 
     const [selectedTab, setSelectedTab] = useState('Description')
+
+    const material = String(product.material || '').trim()
+    const sizeLabel = SHIPPING_SIZE_LABELS[product.shippingSize] || ''
+    const hasMaterialOrSize = Boolean(material || sizeLabel)
 
     return (
         <div className="my-18 text-sm text-slate-600">
@@ -22,7 +32,28 @@ const ProductDescription = ({ product }) => {
 
             {/* Description */}
             {selectedTab === "Description" && (
-                <p className="max-w-xl">{product.description}</p>
+                <div className="max-w-xl">
+                    <p>{product.description}</p>
+                    {hasMaterialOrSize && (
+                        <div className="mt-5 border-t border-slate-100 pt-4">
+                            <p className="font-semibold text-slate-700 mb-2">Material &amp; Size</p>
+                            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-slate-600">
+                                {material && (
+                                    <>
+                                        <dt className="text-slate-400">Material</dt>
+                                        <dd>{material}</dd>
+                                    </>
+                                )}
+                                {sizeLabel && (
+                                    <>
+                                        <dt className="text-slate-400">Size</dt>
+                                        <dd>{sizeLabel}</dd>
+                                    </>
+                                )}
+                            </dl>
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Reviews */}

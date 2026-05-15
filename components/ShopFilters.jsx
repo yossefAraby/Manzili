@@ -17,8 +17,8 @@ const priceRanges = [
 const MIN_PRICE = 0
 const MAX_PRICE = 1500
 
-export default function ShopFilters({ onCategoryChange, onPriceRangeChange }) {
-    const [selectedCategories, setSelectedCategories] = useState([])
+export default function ShopFilters({ onCategoryChange, onPriceRangeChange, initialCategories = [] }) {
+    const [selectedCategories, setSelectedCategories] = useState(initialCategories)
     const [selectedPriceRange, setSelectedPriceRange] = useState(null)
     const [sliderMax, setSliderMax] = useState(MAX_PRICE)
 

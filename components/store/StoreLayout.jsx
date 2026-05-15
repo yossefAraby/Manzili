@@ -5,7 +5,6 @@ import Link from "next/link"
 import { ArrowRightIcon } from "lucide-react"
 import SellerNavbar from "./StoreNavbar"
 import SellerSidebar from "./StoreSidebar"
-import CreateStorePanel from "./CreateStorePanel"
 import { useSelector } from "react-redux"
 import { findStoreById } from "@/lib/services/localStoreRegistry"
 
@@ -40,10 +39,6 @@ const StoreLayout = ({ children }) => {
     const hasAccount = Boolean(session?.userId)
     const hasStore = Boolean(session?.storeId && storeInfo)
 
-    const onStoreCreated = (store) => {
-        setStoreInfo(store)
-    }
-
     return loading ? (
         <Loading />
     ) : !hasAccount ? (
@@ -65,11 +60,26 @@ const StoreLayout = ({ children }) => {
             </Link>
         </div>
     ) : !hasStore ? (
-        <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#faf8f5] py-16">
-            <CreateStorePanel onCreated={onStoreCreated} />
-            <Link href="/" className="mt-10 text-[#2582eb] hover:underline inline-flex items-center gap-2">
-                Back to home <ArrowRightIcon size={18} />
-            </Link>
+        <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 bg-[#faf8f5]">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-700">Open your store on Manzili</h1>
+            <p className="mt-3 text-slate-600 max-w-md">
+                You haven&apos;t registered a store yet. Head over to the seller form to add your logo, contact info and
+                address — each account can own one store.
+            </p>
+            <div className="flex gap-4 mt-8">
+                <Link
+                    href="/create-store"
+                    className="bg-slate-800 text-white px-6 py-2.5 rounded-full hover:bg-slate-900 transition-colors"
+                >
+                    Create your store
+                </Link>
+                <Link
+                    href="/"
+                    className="border border-slate-300 text-slate-800 px-6 py-2.5 rounded-full hover:bg-slate-50 transition-colors"
+                >
+                    Back to home
+                </Link>
+            </div>
         </div>
     ) : (
         <div className="flex flex-col h-screen">

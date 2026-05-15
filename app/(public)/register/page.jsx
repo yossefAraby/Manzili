@@ -13,10 +13,8 @@ import {
     persistAuthSession,
     readAuthUsers,
     reconcileAuthSession,
-    setUserStoreId,
     writeAuthUsers,
 } from '@/lib/services/localStateBootstrap'
-import { createStoreForUser } from '@/lib/services/localStoreRegistry'
 import { makeEntityId } from '@/lib/storage/localStorageEnvelope'
 
 export default function RegisterPage() {
@@ -26,12 +24,16 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [confirm, setConfirm] = useState('')
-    const [isSeller, setIsSeller] = useState(false)
+    const [acceptTerms, setAcceptTerms] = useState(false)
 
     const onRegister = (e) => {
         e.preventDefault()
         if (password !== confirm) {
             alert('Passwords do not match')
+            return
+        }
+        if (!acceptTerms) {
+            alert('Please accept the Terms & Conditions to continue')
             return
         }
         const users = readAuthUsers()
@@ -56,19 +58,6 @@ export default function RegisterPage() {
             name: newUser.name,
             email: newUser.email,
             storeId: null,
-        }
-
-        if (isSeller) {
-            const created = createStoreForUser({
-                userId,
-                ownerName: trimmedName,
-                ownerEmail: trimmedEmail,
-                storeName: `${trimmedName}'s Shop`,
-            })
-            if (created.ok) {
-                setUserStoreId(userId, created.store.id)
-                session = { ...session, storeId: created.store.id }
-            }
         }
 
         session = reconcileAuthSession(session)
@@ -120,10 +109,31 @@ export default function RegisterPage() {
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
                     />
-                    <label className="flex items-center gap-2 text-sm text-slate-600">
-                        <input type="checkbox" checked={isSeller} onChange={(e) => setIsSeller(e.target.checked)} className="accent-[#e67e22]" />
-                        I sell on Manzili (creates your store — one store per account)
+
+                    <label className="flex items-start gap-2 text-sm text-slate-600 px-1">
+                        <input
+                            type="checkbox"
+                            checked={acceptTerms}
+                            onChange={(e) => setAcceptTerms(e.target.checked)}
+                            className="accent-[#e67e22] mt-0.5"
+                            required
+                        />
+                        <span>
+                            I agree to Manzili&apos;s{' '}
+                            <Link href="/privacy-policy" className="text-[#d35400] hover:underline font-medium">
+                                Terms &amp; Conditions and Privacy Policy
+                            </Link>
+                            .
+                        </span>
                     </label>
+
+                    <p className="text-xs text-slate-500 px-1 -mt-1">
+                        Are you an artisan? You can apply to open a store any time from{' '}
+                        <Link href="/create-store" className="text-[#d35400] hover:underline font-medium">
+                            Create your store
+                        </Link>{' '}
+                        after signing up — one store per account.
+                    </p>
 
                     <button
                         type="submit"

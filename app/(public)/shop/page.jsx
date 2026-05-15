@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useMemo } from "react"
+import { Suspense, useState, useMemo, useEffect } from "react"
 import ProductCard from "@/components/ProductCard"
 import ShopFilters from "@/components/ShopFilters"
 import { MoveLeftIcon } from "lucide-react"
@@ -7,16 +7,29 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useSelector } from "react-redux"
 
 function ShopContent() {
-    // get query params ?search=abc
+    // get query params ?search=abc&category=Woodwork
     const searchParams = useSearchParams()
     const search = searchParams.get('search')
+    const categoryParam = searchParams.get('category')
     const router = useRouter()
 
     const products = useSelector(state => state.product.list)
 
+    // Seed category filter from the URL so links like /shop?category=Woodwork
+    // (from CategoriesMarquee) land on a pre-filtered grid. We keep this
+    // controllable from ShopFilters via a key reset whenever the param changes.
+    const initialCategories = useMemo(
+        () => (categoryParam ? [categoryParam] : []),
+        [categoryParam]
+    )
+
     // Filter states
-    const [selectedCategories, setSelectedCategories] = useState([])
+    const [selectedCategories, setSelectedCategories] = useState(initialCategories)
     const [selectedPriceRange, setSelectedPriceRange] = useState(null)
+
+    useEffect(() => {
+        setSelectedCategories(initialCategories)
+    }, [initialCategories])
 
     // Apply filters
     const filteredProducts = useMemo(() => {
@@ -86,6 +99,10 @@ function ShopContent() {
                     {/* Filters sidebar - right side */}
                     <div className="lg:w-72 xl:w-80">
                         <ShopFilters
+                            // Re-mount when the URL category changes so the internal
+                            // checkbox state in ShopFilters re-seeds from initialCategories.
+                            key={initialCategories.join('|')}
+                            initialCategories={initialCategories}
                             onCategoryChange={handleCategoryChange}
                             onPriceRangeChange={handlePriceRangeChange}
                         />
