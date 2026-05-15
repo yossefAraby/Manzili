@@ -81,14 +81,12 @@ const OrderSummary = ({ totalPrice, items }) => {
         e.preventDefault();
 
         if (!selectedAddress) {
-            toast.error('Please select or add a shipping address');
-            return;
+            throw new Error('Please select or add a shipping address');
         }
 
         const addressPayload = enrichAddressForCheckout(selectedAddress, session);
         if (!String(addressPayload.name || '').trim() || !String(addressPayload.street || '').trim()) {
-            toast.error('Address needs a name and street — sign in or update your saved address');
-            return;
+            throw new Error('Address needs a name and street — sign in or update your saved address');
         }
 
         if (paymentMethod === 'COD') {
@@ -102,11 +100,11 @@ const OrderSummary = ({ totalPrice, items }) => {
                     coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
                 }),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.error || 'Could not place order');
             dispatch(clearCart());
             router.push('/orders');
-            return;
+            return { toastMessage: 'Order placed' };
         }
         const checkoutRes = await fetch('/api/checkout', {
             method: 'POST',
@@ -117,16 +115,16 @@ const OrderSummary = ({ totalPrice, items }) => {
                 coupon: coupon ? { ...coupon, discountAmount: couponDiscountAmount } : null,
             }),
         });
-        const checkout = await checkoutRes.json();
+        const checkout = await checkoutRes.json().catch(() => ({}));
         if (!checkoutRes.ok) {
             const detail = [checkout?.error, checkout?.code].filter(Boolean).join(' — ');
             throw new Error(detail || 'Could not start checkout');
         }
-        if (checkout?.url) {
-            window.location.href = checkout.url;
-            return;
+        if (!checkout?.url) {
+            throw new Error('Checkout URL missing');
         }
-        throw new Error('Checkout URL missing');
+        window.location.href = checkout.url;
+        return { toastMessage: 'Redirecting to Stripe…' };
     }
 
     return (
@@ -235,7 +233,16 @@ const OrderSummary = ({ totalPrice, items }) => {
                     ).toFixed(2)}
                 </p>
             </div>
-            <button onClick={e => toast.promise(handlePlaceOrder(e), { loading: 'placing Order...' })} className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'>Place Order</button>
+            <button
+                onClick={(e) =>
+                    toast.promise(handlePlaceOrder(e), {
+                        loading: 'Placing order…',
+                        success: (result) => result?.toastMessage || 'Order placed',
+                        error: (err) => err?.message || 'Could not place order',
+                    })
+                }
+                className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'
+            >Place Order</button>
 
             {showAddressModal && <AddressModal setShowAddressModal={setShowAddressModal} />}
 
