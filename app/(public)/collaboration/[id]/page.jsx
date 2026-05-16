@@ -9,8 +9,10 @@ import {
   PlayIcon,
   CalendarIcon,
   ChevronLeftIcon,
+  ArrowUpRightIcon,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
 import {
@@ -214,7 +216,7 @@ export default function CollaborationSpace() {
         </p>
         <button
           type="button"
-          onClick={() => router.push("/custom-products")}
+          onClick={() => router.push("/custom")}
           className="mt-6 text-[#2582eb] font-medium hover:underline"
         >
           Go to Custom Requests
@@ -385,6 +387,21 @@ export default function CollaborationSpace() {
           <div className="flex flex-col gap-6 h-[750px] pb-2">
             {/* ORDER DETAILS CARD */}
             <div className="card-scrollbar bg-white rounded-3xl p-6 shadow-sm border border-slate-50 flex-1 min-h-0 overflow-y-auto">
+              {/* Card header: title on the left, "Show more" → /request-view
+                  on the right. Sellers land here from a card click; this link
+                  lets them open the buyer's read view for the full spec. */}
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Order details
+                </p>
+                <Link
+                  href={`/custom/request-view/${orderId}`}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[#2582eb] hover:text-[#1c355e] transition-colors"
+                >
+                  Show more
+                  <ArrowUpRightIcon size={14} />
+                </Link>
+              </div>
               <div className="flex gap-4">
                 <div className="w-32 h-40 bg-slate-100 rounded-xl overflow-hidden shrink-0">
                   <Image

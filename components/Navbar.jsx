@@ -6,9 +6,10 @@ import { assets } from "@/assets/assets";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { clearSession } from "@/lib/features/auth/authSlice";
+import { clearSession, selectIsLoggedIn, selectIsSeller } from "@/lib/features/auth/authSlice";
 import { setAddressList } from "@/lib/features/address/addressSlice";
 import { persistAuthSession } from "@/lib/services/localStateBootstrap";
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const router = useRouter();
@@ -16,8 +17,8 @@ const Navbar = () => {
   const [search, setSearch] = useState("");
   const cartCount = useSelector((state) => state.cart.total);
   const wishlistCount = useSelector((state) => state.wishlist.total);
-  const session = useSelector((state) => state.auth.session);
-  const isLoggedIn = Boolean(session?.userId);
+  const isLoggedIn = useSelector(selectIsLoggedIn);
+  const isSeller = useSelector(selectIsSeller);
 
   const handleLogout = () => {
     persistAuthSession(null);
@@ -61,7 +62,7 @@ const Navbar = () => {
           <div className="hidden sm:flex items-center gap-4 lg:gap-8 text-slate-600">
             <Link href="/">Home</Link>
             <Link href="/shop">Shop</Link>
-            <Link href="/custom-products">Custom Product</Link>
+            <Link href="/custom">Custom Product</Link>
 
             <form
               onSubmit={handleSearch}
@@ -101,6 +102,8 @@ const Navbar = () => {
               </button>
             </Link>
 
+            <NotificationBell />
+
             {/* Control button or profile display (Desktop) */}
             {isLoggedIn ? (
               <div className="flex items-center gap-2 cursor-pointer group relative">
@@ -114,9 +117,15 @@ const Navbar = () => {
                     <Link href="/profile" className="hover:text-[#2582eb] border-b pb-2 block">
                       Profile
                     </Link>
-                    <Link href="/orders" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
-                      Orders
-                    </Link>
+                    {isSeller ? (
+                      <Link href="/store" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
+                        My Store
+                      </Link>
+                    ) : (
+                      <Link href="/orders" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
+                        Orders
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -153,6 +162,7 @@ const Navbar = () => {
                 {wishlistCount}
               </span>
             </Link>
+            <NotificationBell compact />
             {isLoggedIn ? (
               <CircleUserRound
                 onClick={() => router.push("/profile")}

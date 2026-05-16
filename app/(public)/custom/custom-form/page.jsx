@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import {
   UploadCloudIcon,
@@ -566,6 +566,7 @@ const INITIAL_STATE = {
 };
 
 function CustomOrderPageInner() {
+  const router = useRouter();
   const dispatch = useDispatch();
   const session = useSelector((s) => s.auth.session);
   const searchParams = useSearchParams();
@@ -769,6 +770,8 @@ function CustomOrderPageInner() {
 
       toast.success("Custom Request Submitted Successfully!");
 
+      // Reset state then send the buyer to their newly-created request page.
+      // Resetting before navigating keeps a clean form if they hit Back.
       setFormData(INITIAL_STATE);
       setImages([]);
       setColors([{ hex: "#000000", description: "" }]);
@@ -776,6 +779,8 @@ function CustomOrderPageInner() {
       setSelectedStore(null);
       setShowAdditionalDetails(false);
       setDeliveryDays(null);
+
+      router.push(`/custom/request-view/${id}`);
     } catch {
       toast.error("Submission failed.");
     } finally {

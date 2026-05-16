@@ -9,6 +9,109 @@
             transform: translateX(-50%);
         }
     }
+
+    /*
+     * One-shot diagonal shine for the "Edit" button on the request-view page.
+     * The band starts fully off the left edge and travels in a straight line
+     * to fully off the right edge. We deliberately keep opacity at 1 across
+     * the whole keyframe — the band's own transparent-to-white-to-transparent
+     * gradient already fades it in and out as it crosses, so a separate
+     * opacity ramp at 0%/100% just produces a "nothing happens, then it
+     * starts" stutter. No animation-delay for the same reason.
+     */
+    @keyframes shineSweep {
+        from {
+            transform: translateX(-200%) skewX(-20deg);
+        }
+        to {
+            transform: translateX(300%) skewX(-20deg);
+        }
+    }
+
+    .shine-once {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .shine-once::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.75) 50%,
+            transparent 100%
+        );
+        animation: shineSweep 1.2s linear 1 forwards;
+        pointer-events: none;
+    }
+
+    /*
+     * Card mount/unmount + layout resizing.
+     *
+     * The negotiation flow has cards that appear and disappear based on
+     * offer state (chat appears on accept, payment card on ready-to-ship,
+     * proposals collapse on accept). Without an animation the layout
+     * snaps; .card-enter gives every newly-mounted card a single
+     * "settle in" pass that animates height from 0, fades in, and lifts
+     * slightly. Combined with `transition-all` on the grid containers it
+     * lets the page breathe as state changes.
+     */
+    @keyframes cardEnter {
+        from {
+            opacity: 0;
+            transform: translateY(8px) scale(0.98);
+            max-height: 0;
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            max-height: 2000px;
+        }
+    }
+
+    .card-enter {
+        animation: cardEnter 0.45s ease-out 1 both;
+        overflow: hidden;
+    }
+
+    /*
+     * Pulsing dot used by the "Pending response" button state to make
+     * the wait feel alive — paired with a static label so screen readers
+     * still get a stable string.
+     */
+    @keyframes softPulse {
+        0%, 100% {
+            opacity: 0.4;
+            transform: scale(0.9);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+    }
+
+    .pulse-dot {
+        animation: softPulse 1.4s ease-in-out infinite;
+    }
+
+    /*
+     * Big CTA button on the seller side morphs through several states
+     * (Send → Pending → Resend → Ready to ship → Done). Smooth color
+     * + scale transitions keep the button feeling like one continuous
+     * object rather than discrete buttons stacked on top of each other.
+     */
+    .cta-morph {
+        transition:
+            background-color 0.3s ease,
+            color 0.3s ease,
+            box-shadow 0.3s ease,
+            transform 0.15s ease;
+    }
 }
 
 @layer base {

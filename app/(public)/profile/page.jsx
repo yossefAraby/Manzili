@@ -210,7 +210,7 @@ export default function ProfilePage() {
                   ))}
                 </ul>
               )}
-              <Link href="/custom-order" className="inline-block mt-6 text-sm text-[#2582eb]">
+              <Link href="/custom/custom-form" className="inline-block mt-6 text-sm text-[#2582eb]">
                 Submit a custom order
               </Link>
             </div>

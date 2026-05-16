@@ -3,8 +3,18 @@ import { CalendarIcon, ImageIcon, StoreIcon, UserIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
+import { useSelector } from 'react-redux'
+import { selectIsSeller } from '@/lib/features/auth/authSlice'
 
 const CustomRequestCard = ({ request }) => {
+    // Sellers click into the negotiation surface (they want to make an offer);
+    // buyers and guests click into the read view. The negotiation page itself
+    // exposes a "Show more" link back to the read view for sellers who want
+    // the full spec sheet.
+    const isSeller = useSelector(selectIsSeller)
+    const href = isSeller
+        ? `/custom/negotiation/${request.id}`
+        : `/custom/request-view/${request.id}`
     // Format date
     const formatDate = (dateString) => {
         if (!dateString) return 'No date'
@@ -27,7 +37,7 @@ const CustomRequestCard = ({ request }) => {
     }
 
     return (
-        <Link href={`/negotiation/${request.id}`} className='group max-xl:mx-auto'>
+        <Link href={href} className='group max-xl:mx-auto'>
             <div className='bg-[#F5F5F5] h-40 sm:w-60 sm:h-68 rounded-lg flex items-center justify-center relative'>
                 {request.images && request.images.length > 0 ? (
                     <Image 

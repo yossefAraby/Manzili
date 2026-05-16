@@ -18,10 +18,12 @@ function CustomProductsContent() {
   const dispatch = useDispatch();
 
   const customRequests = useSelector((state) => state.customRequest.list);
+  const session = useSelector((state) => state.auth.session);
+  const currentUserId = session?.userId || null;
   const [loading, setLoading] = useState(true);
 
   // Filter states
-  const [selectedVisibility, setSelectedVisibility] = useState("all");
+  const [selectedOwnership, setSelectedOwnership] = useState("all");
   const [selectedCategories, setSelectedCategories] = useState([]);
 
   useEffect(() => {
@@ -57,11 +59,11 @@ function CustomProductsContent() {
       );
     }
 
-    // Visibility filter
-    if (selectedVisibility !== "all") {
-      filtered = filtered.filter(
-        (request) => request.visibility === selectedVisibility,
-      );
+    // Ownership filter
+    if (selectedOwnership === "mine") {
+      filtered = currentUserId
+        ? filtered.filter((request) => request.ownerUserId === currentUserId)
+        : [];
     }
 
     // Category filter
@@ -73,10 +75,10 @@ function CustomProductsContent() {
     }
 
     return filtered;
-  }, [customRequests, search, selectedVisibility, selectedCategories]);
+  }, [customRequests, search, selectedOwnership, selectedCategories, currentUserId]);
 
-  const handleVisibilityChange = (visibility) => {
-    setSelectedVisibility(visibility);
+  const handleOwnershipChange = (ownership) => {
+    setSelectedOwnership(ownership);
   };
 
   const handleCategoryChange = (categories) => {
@@ -84,7 +86,7 @@ function CustomProductsContent() {
   };
 
   const handleClearFilters = () => {
-    setSelectedVisibility("all");
+    setSelectedOwnership("all");
     setSelectedCategories([]);
   };
 
@@ -101,7 +103,7 @@ function CustomProductsContent() {
           </h1>
 
           <button
-            onClick={() => router.push("/custom-order")}
+            onClick={() => router.push("/custom/custom-form")}
             className="bg-[#1c355e] hover:bg-[#2582eb] text-white px-6 py-2.5 rounded-full font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2 shrink-0"
           >
             <PlusIcon size={20} />
@@ -133,7 +135,7 @@ function CustomProductsContent() {
                     : "Be the first to create a custom request!"}
                 </p>
                 <button
-                  onClick={() => router.push("/custom-order")}
+                  onClick={() => router.push("/custom/custom-form")}
                   className="mt-6 bg-[#1c355e] hover:bg-[#2582eb] text-white px-6 py-2.5 rounded-full font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2 mx-auto"
                 >
                   <PlusIcon size={20} />
@@ -146,7 +148,7 @@ function CustomProductsContent() {
           {/* Filters sidebar - right side */}
           <div className="lg:w-72 xl:w-80">
             <CustomFilters
-              onVisibilityChange={handleVisibilityChange}
+              onOwnershipChange={handleOwnershipChange}
               onCategoryChange={handleCategoryChange}
               onClearFilters={handleClearFilters}
             />

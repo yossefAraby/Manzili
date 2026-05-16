@@ -31,7 +31,7 @@ const Footer = () => {
             links: [
                 { text: "Home", path: '/', icon: null },
                 { text: "Privacy Policy", path: '/privacy-policy', icon: null },
-                { text: "Request Bespoke Item", path: '/custom-products', icon: null },
+                { text: "Request Bespoke Item", path: '/custom', icon: null },
                 { text: "Create Your Store", path: '/create-store', icon: null },
             ]
         },

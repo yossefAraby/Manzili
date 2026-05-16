@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p custom/negotiation/\\\\[id\\\\])",
+      "Bash(cp negotiation/\\\\[id\\\\]/page.jsx custom/negotiation/\\\\[id\\\\]/page.jsx)",
+      "Bash(rmdir custom-products *)",
+      "Bash(rm -rf custom-products)",
+      "Bash(npx next *)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

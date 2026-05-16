@@ -11,6 +11,8 @@ import {
 import { setSession } from '@/lib/features/auth/authSlice'
 import { setAddressList } from '@/lib/features/address/addressSlice'
 import { rehydrateProductsFromStorage } from '@/lib/features/product/productSlice'
+import { setNotifications } from '@/lib/features/notification/notificationSlice'
+import { listNotificationsForUser } from '@/lib/services/localNotificationService'
 
 export default function StoreProvider({ children }) {
   const storeRef = useRef(undefined)
@@ -22,6 +24,7 @@ export default function StoreProvider({ children }) {
       preload = {
         auth: { session },
         address: { list: loadAddressesForUser(session?.userId) },
+        notification: { list: listNotificationsForUser(session?.userId) },
       }
     }
     storeRef.current = makeStore(preload)
@@ -32,6 +35,7 @@ export default function StoreProvider({ children }) {
     const session = resolveAuthSessionFromStorage()
     store.dispatch(setSession(session))
     store.dispatch(setAddressList(loadAddressesForUser(session?.userId || 'guest')))
+    store.dispatch(setNotifications(listNotificationsForUser(session?.userId || 'guest')))
     store.dispatch(rehydrateProductsFromStorage())
     const unsubscribe = store.subscribe(() => persistReduxState(store.getState()))
     return unsubscribe
