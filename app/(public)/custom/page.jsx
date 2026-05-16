@@ -5,10 +5,30 @@ import CustomFilters from "@/components/CustomFilters";
 import { MoveLeftIcon, PlusIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
+import { selectIsSeller } from "@/lib/features/auth/authSlice";
 import { setCustomRequests } from "@/lib/features/customRequest/customRequestSlice";
 import {
+  OFFER_STATUS,
   listCustomRequests,
+  listOffersBySellerId,
 } from "@/lib/services/localCustomRequestService";
+
+// Statuses that count as "this seller is actively engaged" → pin the
+// request. Terminal lost statuses (declined / blocked / superseded) are
+// excluded; they're still visible via the regular listing but don't
+// deserve special placement.
+const SELLER_PINNED_STATUSES = new Set([
+  OFFER_STATUS.PENDING,
+  OFFER_STATUS.ACCEPTED,
+  OFFER_STATUS.READY_TO_SHIP,
+  OFFER_STATUS.PAID,
+]);
+// Accepted-and-onwards → highlighted with a ring + "Accepted" pill.
+const SELLER_ACCEPTED_STATUSES = new Set([
+  OFFER_STATUS.ACCEPTED,
+  OFFER_STATUS.READY_TO_SHIP,
+  OFFER_STATUS.PAID,
+]);
 
 function CustomProductsContent() {
   // get query params ?search=abc
@@ -20,7 +40,12 @@ function CustomProductsContent() {
   const customRequests = useSelector((state) => state.customRequest.list);
   const session = useSelector((state) => state.auth.session);
   const currentUserId = session?.userId || null;
+  const isSeller = useSelector(selectIsSeller);
   const [loading, setLoading] = useState(true);
+  // Map: requestId → { pinned, accepted }. Built once per seller account
+  // change. Buyers / guests get an empty map and the card flags become
+  // no-ops, preserving the existing experience for non-sellers.
+  const [sellerMarks, setSellerMarks] = useState({});
 
   // Filter states
   const [selectedOwnership, setSelectedOwnership] = useState("all");
@@ -45,6 +70,32 @@ function CustomProductsContent() {
       cancelled = true;
     };
   }, [dispatch]);
+
+  // Seller-only side effect: figure out which requests this seller has
+  // sent a proposal on, and which of those proposals are accepted. The
+  // result is keyed by requestId so the render path is a cheap lookup.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSeller || !currentUserId) {
+      setSellerMarks({});
+      return undefined;
+    }
+    (async () => {
+      const offers = await listOffersBySellerId(currentUserId);
+      if (cancelled) return;
+      const marks = {};
+      for (const offer of offers) {
+        const current = marks[offer.requestId] || { pinned: false, accepted: false };
+        if (SELLER_PINNED_STATUSES.has(offer.status)) current.pinned = true;
+        if (SELLER_ACCEPTED_STATUSES.has(offer.status)) current.accepted = true;
+        marks[offer.requestId] = current;
+      }
+      setSellerMarks(marks);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSeller, currentUserId, customRequests]);
 
   // Apply filters
   const filteredRequests = useMemo(() => {
@@ -74,8 +125,22 @@ function CustomProductsContent() {
       );
     }
 
+    // Seller view: accepted-on requests bubble to the top, then merely
+    // pinned (= pending / paid / ready-to-ship), then everything else.
+    // Within each bucket the existing date order from
+    // listCustomRequests is preserved.
+    if (isSeller && Object.keys(sellerMarks).length > 0) {
+      const rank = (req) => {
+        const m = sellerMarks[req.id];
+        if (m?.accepted) return 0;
+        if (m?.pinned) return 1;
+        return 2;
+      };
+      filtered = [...filtered].sort((a, b) => rank(a) - rank(b));
+    }
+
     return filtered;
-  }, [customRequests, search, selectedOwnership, selectedCategories, currentUserId]);
+  }, [customRequests, search, selectedOwnership, selectedCategories, currentUserId, isSeller, sellerMarks]);
 
   const handleOwnershipChange = (ownership) => {
     setSelectedOwnership(ownership);
@@ -111,18 +176,40 @@ function CustomProductsContent() {
           </button>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
+          {/* Filters: source-order first so its mobile pill (and any open
+              drawer) sit above the grid on small screens. On lg+ we
+              reorder so the panel becomes a right sidebar — matches the
+              previous layout. CustomFilters internally renders a pill
+              (mobile only) and a panel (desktop only) from one instance,
+              keeping state in sync. */}
+          <div className="lg:order-2 lg:w-72 xl:w-80">
+            <CustomFilters
+              onOwnershipChange={handleOwnershipChange}
+              onCategoryChange={handleCategoryChange}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
+
           {/* Requests grid - left side */}
-          <div className="lg:flex-1">
+          <div className="lg:flex-1 lg:order-1">
             {loading ? (
               <div className="text-center py-12">
                 <p className="text-slate-500">Loading custom requests...</p>
               </div>
             ) : filteredRequests.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 xl:gap-8 mb-32">
-                {filteredRequests.map((request) => (
-                  <CustomRequestCard key={request.id} request={request} />
-                ))}
+                {filteredRequests.map((request) => {
+                  const mark = sellerMarks[request.id];
+                  return (
+                    <CustomRequestCard
+                      key={request.id}
+                      request={request}
+                      pinned={Boolean(mark?.pinned || mark?.accepted)}
+                      accepted={Boolean(mark?.accepted)}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="col-span-full text-center py-12">
@@ -145,14 +232,6 @@ function CustomProductsContent() {
             )}
           </div>
 
-          {/* Filters sidebar - right side */}
-          <div className="lg:w-72 xl:w-80">
-            <CustomFilters
-              onOwnershipChange={handleOwnershipChange}
-              onCategoryChange={handleCategoryChange}
-              onClearFilters={handleClearFilters}
-            />
-          </div>
         </div>
       </div>
     </div>

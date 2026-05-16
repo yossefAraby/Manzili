@@ -1136,6 +1136,13 @@ function ProposalCard({
   // the first click sets blockTaps=1, so two more are needed → "Tap
   // twice more to confirm". With 1 prior tap, one more → "Tap once more".
   const tapsRemaining = 3 - blockTaps - 1;
+  const sellerLabel = (proposal.sellerName || "this seller").trim();
+  // Armed label always names the seller so the buyer can't mis-block on a
+  // busy page with multiple proposals open: "Block Ahmed — tap twice more
+  // to confirm".
+  const armedLabel = `Block ${sellerLabel} — ${
+    tapsRemaining === 0 ? "tap once more to confirm" : "tap twice more to confirm"
+  }`;
 
   return (
     <div
@@ -1267,31 +1274,17 @@ function ProposalCard({
         {!isBlocked && (
           <button
             onClick={onBlock}
-            aria-label={
-              blockArmed
-                ? tapsRemaining === 0
-                  ? "Tap once more to block"
-                  : "Tap twice more to block"
-                : "Block this seller"
-            }
+            aria-label={blockArmed ? armedLabel : `Block ${sellerLabel}`}
             className={`cta-morph relative inline-flex items-center justify-center gap-1.5 rounded-full active:scale-95 font-medium transition-all duration-200 ${
               blockArmed
                 ? "bg-rose-600 text-white shadow-lg ring-4 ring-rose-200 px-4 py-2.5 text-xs"
                 : "bg-white text-slate-500 border border-slate-300 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 w-11 h-11 shrink-0 self-center"
             }`}
-            title={
-              blockArmed
-                ? tapsRemaining === 0
-                  ? "Tap once more to confirm"
-                  : "Tap twice more to confirm"
-                : "Block this seller"
-            }
+            title={blockArmed ? armedLabel : `Block ${sellerLabel}`}
           >
             <ShieldOffIcon size={16} className="shrink-0" />
             {blockArmed && (
-              <span className="whitespace-nowrap">
-                {tapsRemaining === 0 ? "Tap once more to confirm" : "Tap twice more to confirm"}
-              </span>
+              <span className="whitespace-nowrap">{armedLabel}</span>
             )}
           </button>
         )}

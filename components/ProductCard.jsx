@@ -19,7 +19,7 @@ const ProductCard = ({ product }) => {
 
     return (
         <Link href={`/product/${product.id}`} className=' group max-xl:mx-auto'>
-            <div className='relative bg-[#F5F5F5] h-40  sm:w-60 sm:h-68 rounded-lg flex items-center justify-center'>
+            <div className='relative bg-[#F5F5F5] aspect-square w-full sm:w-60 sm:aspect-auto sm:h-68 rounded-lg flex items-center justify-center overflow-hidden'>
                 <button
                     onClick={(e) => {
                         e.preventDefault()
@@ -30,7 +30,7 @@ const ProductCard = ({ product }) => {
                 >
                     <Star size={14} className={inWishlist ? 'text-[#2582eb] fill-[#2582eb]' : 'text-slate-500'} />
                 </button>
-                <Image width={500} height={500} className='max-h-30 sm:max-h-40 w-auto group-hover:scale-115 transition duration-300' src={product.images[0]} alt="" suppressHydrationWarning />
+                <Image width={500} height={500} className='max-w-full max-h-full sm:max-h-40 sm:w-auto object-contain group-hover:scale-110 transition duration-300' src={product.images[0]} alt="" suppressHydrationWarning />
             </div>
             <div className='flex justify-between gap-3 text-sm text-slate-800 pt-2 max-w-60'>
                 <div>

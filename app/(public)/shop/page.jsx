@@ -79,9 +79,24 @@ function ShopContent() {
                     All <span className="text-slate-700 font-medium">Products</span>
                 </h1>
 
-                <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
+                    {/* Filters: rendered first so its mobile trigger pill
+                        (and any open drawer) appear above the grid on
+                        small screens. lg:order-2 swaps it back to a right
+                        sidebar at desktop widths. */}
+                    <div className="lg:order-2 lg:w-72 xl:w-80">
+                        <ShopFilters
+                            // Re-mount when the URL category changes so the internal
+                            // checkbox state in ShopFilters re-seeds from initialCategories.
+                            key={initialCategories.join('|')}
+                            initialCategories={initialCategories}
+                            onCategoryChange={handleCategoryChange}
+                            onPriceRangeChange={handlePriceRangeChange}
+                        />
+                    </div>
+
                     {/* Products grid - left side */}
-                    <div className="lg:flex-1">
+                    <div className="lg:flex-1 lg:order-1">
                         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 xl:gap-8 mb-32">
                             {filteredProducts.length > 0 ? (
                                 filteredProducts.map((product) => (
@@ -94,18 +109,6 @@ function ShopContent() {
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* Filters sidebar - right side */}
-                    <div className="lg:w-72 xl:w-80">
-                        <ShopFilters
-                            // Re-mount when the URL category changes so the internal
-                            // checkbox state in ShopFilters re-seeds from initialCategories.
-                            key={initialCategories.join('|')}
-                            initialCategories={initialCategories}
-                            onCategoryChange={handleCategoryChange}
-                            onPriceRangeChange={handlePriceRangeChange}
-                        />
                     </div>
                 </div>
             </div>

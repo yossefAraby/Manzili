@@ -1,12 +1,18 @@
 'use client'
-import { CalendarIcon, ImageIcon, StoreIcon, UserIcon } from 'lucide-react'
+import { CalendarIcon, CheckCircle2Icon, ImageIcon, PinIcon, StoreIcon, UserIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 import { useSelector } from 'react-redux'
 import { selectIsSeller } from '@/lib/features/auth/authSlice'
 
-const CustomRequestCard = ({ request }) => {
+/**
+ * Optional flags (used on /custom when the seller is viewing):
+ *   - `pinned`     → small "Pinned" badge in the corner so the seller can
+ *                    spot requests they've already engaged with at a glance.
+ *   - `accepted`   → adds a ring + "Accepted" pill. Implies pinned.
+ */
+const CustomRequestCard = ({ request, pinned = false, accepted = false }) => {
     // Sellers click into the negotiation surface (they want to make an offer);
     // buyers and guests click into the read view. The negotiation page itself
     // exposes a "Show more" link back to the read view for sellers who want
@@ -38,21 +44,46 @@ const CustomRequestCard = ({ request }) => {
 
     return (
         <Link href={href} className='group max-xl:mx-auto'>
-            <div className='bg-[#F5F5F5] h-40 sm:w-60 sm:h-68 rounded-lg flex items-center justify-center relative'>
+            <div
+                className={`bg-[#F5F5F5] aspect-square w-full sm:w-60 sm:aspect-auto sm:h-68 rounded-lg flex items-center justify-center relative overflow-hidden transition-all ${
+                    accepted
+                        ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-white shadow-md'
+                        : pinned
+                            ? 'ring-1 ring-[#e67e22]/40 shadow-sm'
+                            : ''
+                }`}
+            >
                 {request.images && request.images.length > 0 ? (
-                    <Image 
-                        width={500} 
-                        height={500} 
-                        className='max-h-30 sm:max-h-40 w-auto group-hover:scale-115 transition duration-300' 
-                        src={request.images[0]} 
-                        alt={request.itemName} 
-                        suppressHydrationWarning 
+                    <Image
+                        width={500}
+                        height={500}
+                        className='max-w-full max-h-full sm:max-h-40 sm:w-auto object-contain group-hover:scale-110 transition duration-300'
+                        src={request.images[0]}
+                        alt={request.itemName}
+                        suppressHydrationWarning
                         unoptimized={typeof request.images[0] === 'string' && request.images[0].startsWith('data:')}
                     />
                 ) : (
                     <div className='flex flex-col items-center text-slate-400'>
                         <ImageIcon size={48} />
                         <p className='mt-2 text-sm'>No images</p>
+                    </div>
+                )}
+                {/* Pin / accepted lozenges (seller view). Sit top-left so they
+                    don't fight the visibility chip on the right. */}
+                {(pinned || accepted) && (
+                    <div className='absolute top-2 left-2 flex flex-col gap-1 items-start'>
+                        {accepted ? (
+                            <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow'>
+                                <CheckCircle2Icon size={11} />
+                                Accepted
+                            </span>
+                        ) : (
+                            <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/95 text-[#e67e22] border border-[#e67e22]/40 shadow-sm'>
+                                <PinIcon size={11} />
+                                Pinned
+                            </span>
+                        )}
                     </div>
                 )}
                 <div className='absolute top-2 right-2'>

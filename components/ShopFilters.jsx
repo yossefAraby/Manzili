@@ -1,8 +1,8 @@
 'use client'
 
 import { categories } from '@/assets/assets'
-import { FilterIcon } from 'lucide-react'
-import { useState } from 'react'
+import { FilterIcon, XIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { getCurrencySymbol } from '@/lib/currency'
 
 const currencySym = getCurrencySymbol()
@@ -21,6 +21,18 @@ export default function ShopFilters({ onCategoryChange, onPriceRangeChange, init
     const [selectedCategories, setSelectedCategories] = useState(initialCategories)
     const [selectedPriceRange, setSelectedPriceRange] = useState(null)
     const [sliderMax, setSliderMax] = useState(MAX_PRICE)
+    // Mobile drawer toggle. Inline sidebar on lg+; bottom-sheet otherwise.
+    const [mobileOpen, setMobileOpen] = useState(false)
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return undefined
+        if (!mobileOpen) return undefined
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prev
+        }
+    }, [mobileOpen])
 
     const handleCategoryToggle = (category) => {
         const newSelected = selectedCategories.includes(category)
@@ -60,24 +72,121 @@ export default function ShopFilters({ onCategoryChange, onPriceRangeChange, init
     }
 
     const hasActiveFilters = selectedCategories.length > 0 || selectedPriceRange || sliderMax !== MAX_PRICE
+    const activeFilterCount =
+        selectedCategories.length + (selectedPriceRange ? 1 : 0) + (sliderMax !== MAX_PRICE && !selectedPriceRange ? 1 : 0)
+
+    const body = (
+        <FilterBody
+            selectedCategories={selectedCategories}
+            handleCategoryToggle={handleCategoryToggle}
+            sliderMax={sliderMax}
+            handleSliderChange={handleSliderChange}
+            selectedPriceRange={selectedPriceRange}
+            handlePriceRangeSelect={handlePriceRangeSelect}
+            hasActiveFilters={hasActiveFilters}
+        />
+    )
 
     return (
-        <div className="w-full p-4">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    <FilterIcon size={20} />
-                    Filters
-                </h3>
-                {hasActiveFilters && (
-                    <button
-                        onClick={clearFilters}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                        Clear all
-                    </button>
+        <>
+            {/* Mobile trigger pill — only renders below lg. */}
+            <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+            >
+                <FilterIcon size={16} />
+                Filters
+                {activeFilterCount > 0 && (
+                    <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
+                        {activeFilterCount}
+                    </span>
                 )}
+            </button>
+
+            {/* Mobile bottom-sheet drawer. */}
+            <div
+                className={`lg:hidden fixed inset-0 z-[60] transition-opacity ${
+                    mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+                aria-hidden={!mobileOpen}
+            >
+                <div onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                <div
+                    role="dialog"
+                    aria-label="Filters"
+                    className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
+                        mobileOpen ? 'translate-y-0' : 'translate-y-full'
+                    }`}
+                >
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                        <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <FilterIcon size={20} />
+                            Filters
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setMobileOpen(false)}
+                            aria-label="Close filters"
+                            className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
+                        >
+                            <XIcon size={22} />
+                        </button>
+                    </div>
+                    <div className="overflow-y-auto flex-1">{body}</div>
+                    <div className="border-t border-slate-100 px-5 py-3 flex gap-2 sticky bottom-0 bg-white">
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            disabled={!hasActiveFilters}
+                            className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMobileOpen(false)}
+                            className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
+                        >
+                            Show results
+                        </button>
+                    </div>
+                </div>
             </div>
 
+            {/* Desktop inline sidebar. */}
+            <div className="hidden lg:block w-full p-4">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <FilterIcon size={20} />
+                        Filters
+                    </h3>
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearFilters}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                            Clear all
+                        </button>
+                    )}
+                </div>
+                {body}
+            </div>
+        </>
+    )
+}
+
+function FilterBody({
+    selectedCategories,
+    handleCategoryToggle,
+    sliderMax,
+    handleSliderChange,
+    selectedPriceRange,
+    handlePriceRangeSelect,
+    hasActiveFilters,
+}) {
+    return (
+        <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
             {/* Categories Section */}
             <div className="mb-8">
                 <h4 className="font-medium text-slate-700 mb-4">Categories</h4>

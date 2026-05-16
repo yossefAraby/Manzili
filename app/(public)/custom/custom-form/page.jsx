@@ -56,7 +56,17 @@ async function hydrateSeedImages(urls) {
 // 1. SUB-COMPONENTS (Reused with minor modifications)
 // ==========================================
 
-const ImageUploader = ({ images, setImages, required = false }) => {
+const ImageUploader = ({ images, setImages, required = false, itemName = "" }) => {
+  // Open Pinterest in a new tab pre-filled with whatever the buyer has typed
+  // so far. Disabled when there's nothing to search yet — Pinterest's empty
+  // search is just noise.
+  const trimmedQuery = (itemName || "").trim();
+  const canInspire = trimmedQuery.length > 0;
+  const openPinterest = () => {
+    if (!canInspire) return;
+    const url = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(trimmedQuery)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
   // Use ref to track current images for cleanup
   const imagesRef = useRef(images);
   
@@ -110,9 +120,28 @@ const ImageUploader = ({ images, setImages, required = false }) => {
 
   return (
     <div className="w-full">
-      <label htmlFor="image-upload" className="block mb-2 font-medium">
-        Visual Inspiration (Max 5) {required && <span className="text-red-500">*</span>}
-      </label>
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <label htmlFor="image-upload" className="font-medium">
+          Visual Inspiration (Max 5) {required && <span className="text-red-500">*</span>}
+        </label>
+        <button
+          type="button"
+          onClick={openPinterest}
+          disabled={!canInspire}
+          title={
+            canInspire
+              ? `Search Pinterest for "${trimmedQuery}"`
+              : "Type an item name first to inspire from Pinterest"
+          }
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+            canInspire
+              ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+              : "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
+          }`}
+        >
+          Inspire from Pinterest
+        </button>
+      </div>
       <label
         htmlFor="image-upload"
         className={`flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 transition-colors bg-[#faf8f5] ${images.length >= 5 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-slate-50"}`}
@@ -847,7 +876,12 @@ function CustomOrderPageInner() {
                 </div>
               </div>
 
-              <ImageUploader images={images} setImages={setImages} required />
+              <ImageUploader
+                images={images}
+                setImages={setImages}
+                required
+                itemName={formData.itemName}
+              />
 
               <div className="w-full">
                 <label htmlFor="description" className="block mb-2 font-medium">

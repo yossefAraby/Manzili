@@ -431,6 +431,37 @@ export default function NegotiationPage() {
                 </div>
               )}
 
+              {/* Conversation history — mirrors the buyer side. While the
+                  proposal is still pending/declined/blocked the back-and-
+                  forth lives here on the card. Once the buyer accepts and
+                  the chat unlocks, this same history is replayed inside
+                  the chat surface, so we hide it from the card to avoid
+                  showing the same messages twice. */}
+              {!chatUnlocked &&
+                Array.isArray(offer?.comments) &&
+                offer.comments.length > 0 && (
+                  <div className="card-enter mb-4 flex flex-col gap-2">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                      Conversation
+                    </p>
+                    {offer.comments.map((c) => (
+                      <div
+                        key={c.id}
+                        className={`p-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                          c.author === "seller"
+                            ? "bg-[#faf8f5] border border-slate-200 text-slate-700 self-end"
+                            : "bg-blue-50 border border-blue-100 text-slate-800"
+                        }`}
+                      >
+                        <p className="text-[10px] font-medium uppercase tracking-wide opacity-60 mb-1">
+                          {c.author === "seller" ? "You" : "Buyer"}
+                        </p>
+                        {c.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
               <div className="flex flex-col gap-3">
                 <label className={`flex items-center justify-between gap-3 text-xs ${inputsLocked ? "opacity-50" : ""}`}>
                   <span className="text-slate-600 min-w-0 truncate">
