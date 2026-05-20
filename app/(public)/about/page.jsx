@@ -1,19 +1,21 @@
 'use client'
 
+// Roles for each team member. Names render RTL so they look right; the role
+// itself stays LTR (English) since the team uses both languages day-to-day.
 const team = [
-    "يوسف محمد السيد",
-    "عبد الرحمن محمد",
-    "محمود ناجي ناجي",
-    "فارس هيثم احمد",
-    "احمد السيد احمد",
-    "محمد عبد القادر",
-    "نور محمد عصمت",
-    "محمود أحمد محمود",
-    "علي السيد احمد",
-    "ادهم صلاح السيد",
-    "مروان محمود عبد",
-    "يحيى محمد شحاته",
-    "يوسف محمد عبد",
+    { name: "يوسف محمد السيد", role: "Team Leader / Project Orchestrator & Frontend Dev" },
+    { name: "عبد الرحمن محمد", role: "Technical Lead & Backend Dev" },
+    { name: "محمود ناجي ناجي", role: "Data Analyst (Formerly Mobile Dev)" },
+    { name: "فارس هيثم احمد", role: "Frontend Dev" },
+    { name: "احمد السيد احمد", role: "Data Analyst" },
+    { name: "محمد عبد القادر عبدربه", role: "Backend Dev" },
+    { name: "نور محمد عصمت", role: "Data Analyst" },
+    { name: "محمود أحمد محمود", role: "Data Analyst" },
+    { name: "علي السيد احمد", role: "Backend Dev" },
+    { name: "ادهم صلاح السيد", role: "Data Analyst" },
+    { name: "مروان محمود عبد السالم", role: "Data Analyst (Formerly Mobile Dev)" },
+    { name: "يحيى محمد شحاته", role: "UI/UX Designer" },
+    { name: "يوسف محمد عبد الحكيم", role: "Database Dev" },
 ]
 
 export default function AboutPage() {
@@ -32,10 +34,14 @@ export default function AboutPage() {
                 </p>
 
                 <h2 className="text-lg font-medium text-slate-800 mb-4">Team</h2>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-slate-700" dir="rtl">
-                    {team.map((name) => (
-                        <li key={name} className="py-1 border-b border-slate-100 last:border-0">
-                            {name}
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {team.map(({ name, role }) => (
+                        <li
+                            key={name}
+                            className="rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-slate-200 transition-all"
+                        >
+                            <p className="text-slate-800 font-medium" dir="rtl">{name}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{role}</p>
                         </li>
                     ))}
                 </ul>

@@ -12,10 +12,15 @@ import {
   MinusIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  SparklesIcon,
+  WandSparklesIcon,
+  Loader2Icon,
+  ExternalLinkIcon,
+  ZoomInIcon,
 } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { categories } from "@/assets/assets";
+import { assets, categories } from "@/assets/assets";
 import StoreSearch from "@/components/StoreSearch";
 import { addCustomRequest } from "@/lib/features/customRequest/customRequestSlice";
 import {
@@ -23,6 +28,13 @@ import {
   blobToDataURL,
   fileToDataURL,
 } from "@/lib/customRequestsLocal";
+import {
+  ensurePuter,
+  puterChat,
+  puterImage,
+  puterTranscribe,
+  looksLikeQuotaError,
+} from "@/lib/ai/puterClient";
 
 const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
 
@@ -31,6 +43,31 @@ const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
  * existing ImageUploader expects. Skips anything that fails to load so a
  * broken URL doesn't sink the whole prefill.
  */
+// Parse the model's JSON-array-of-strings response when calling Puter chat
+// directly from the client. Mirrors the server-side parser in
+// app/api/ai/review/route.js so both paths produce the same shape.
+function parseSuggestionsClient(raw) {
+  if (!raw) return [];
+  const cleaned = String(raw)
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
+  try {
+    const arr = JSON.parse(cleaned);
+    if (Array.isArray(arr)) {
+      return arr.filter((s) => typeof s === "string" && s.trim()).slice(0, 8);
+    }
+  } catch {
+    /* fall through to line-split */
+  }
+  return cleaned
+    .split(/\n+/)
+    .map((l) => l.replace(/^[-*\d.\s)]+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 async function hydrateSeedImages(urls) {
   if (!Array.isArray(urls) || urls.length === 0) return [];
   const results = await Promise.all(
@@ -56,7 +93,15 @@ async function hydrateSeedImages(urls) {
 // 1. SUB-COMPONENTS (Reused with minor modifications)
 // ==========================================
 
-const ImageUploader = ({ images, setImages, required = false, itemName = "" }) => {
+const ImageUploader = ({
+  images,
+  setImages,
+  required = false,
+  itemName = "",
+  onGenerateAI,
+  aiGenerating = false,
+  flashImages = false,
+}) => {
   // Open Pinterest in a new tab pre-filled with whatever the buyer has typed
   // so far. Disabled when there's nothing to search yet — Pinterest's empty
   // search is just noise.
@@ -118,33 +163,68 @@ const ImageUploader = ({ images, setImages, required = false, itemName = "" }) =
     };
   }, []);
 
+  // Lightbox state — clicking a thumbnail opens a full-size preview. Closes
+  // on Escape, on backdrop click, or on the close button.
+  const [lightboxIdx, setLightboxIdx] = useState(null);
+  useEffect(() => {
+    if (lightboxIdx == null) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setLightboxIdx(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [lightboxIdx]);
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <label htmlFor="image-upload" className="font-medium">
           Visual Inspiration (Max 5) {required && <span className="text-red-500">*</span>}
         </label>
-        <button
-          type="button"
-          onClick={openPinterest}
-          disabled={!canInspire}
-          title={
-            canInspire
-              ? `Search Pinterest for "${trimmedQuery}"`
-              : "Type an item name first to inspire from Pinterest"
-          }
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-            canInspire
-              ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
-              : "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
-          }`}
-        >
-          Inspire from Pinterest
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={openPinterest}
+            disabled={!canInspire}
+            title={
+              canInspire
+                ? `Search Pinterest for "${trimmedQuery}"`
+                : "Type an item name first to inspire from Pinterest"
+            }
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
+              canInspire
+                ? "border-rose-300 bg-gradient-to-b from-rose-50 to-rose-100 text-rose-700 hover:from-rose-100 hover:to-rose-200 hover:shadow-md active:translate-y-px active:shadow-sm"
+                : "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
+            }`}
+          >
+            <ExternalLinkIcon size={14} />
+            Inspire from Pinterest
+          </button>
+          {onGenerateAI && (
+            <button
+              type="button"
+              onClick={onGenerateAI}
+              disabled={aiGenerating || images.length >= 5}
+              title="Generate a reference image from your inputs with AI"
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
+                aiGenerating || images.length >= 5
+                  ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
+                  : "border-amber-300 bg-gradient-to-b from-amber-50 to-amber-100 text-amber-800 hover:from-amber-100 hover:to-amber-200 hover:shadow-md active:translate-y-px active:shadow-sm"
+              }`}
+            >
+              {aiGenerating ? (
+                <Loader2Icon size={14} className="animate-spin" />
+              ) : (
+                <WandSparklesIcon size={14} />
+              )}
+              {aiGenerating ? "Generating..." : "Generate image with AI"}
+            </button>
+          )}
+        </div>
       </div>
       <label
         htmlFor="image-upload"
-        className={`flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 transition-colors bg-[#faf8f5] ${images.length >= 5 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-slate-50"}`}
+        className={`flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 transition-colors bg-[#faf8f5] ${images.length >= 5 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-slate-50"} ${flashImages ? "flash-error" : ""}`}
       >
         <UploadCloudIcon className="text-slate-400 mb-2" size={32} />
         <span className="text-sm text-slate-500">Upload Sketches / Photos</span>
@@ -163,13 +243,26 @@ const ImageUploader = ({ images, setImages, required = false, itemName = "" }) =
         <div className="flex gap-4 mt-4 overflow-x-auto pb-2 px-1" role="list">
           {images.map((img, idx) => (
             <div key={idx} className="relative shrink-0" role="listitem">
-              <Image
-                src={img.preview}
-                alt={`Upload preview ${idx + 1}`}
-                width={80}
-                height={80}
-                className="object-cover rounded-lg h-20 w-20 border border-slate-200"
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxIdx(idx)}
+                aria-label={`View image ${idx + 1} larger`}
+                className="group relative block rounded-lg overflow-hidden border border-slate-200 hover:border-slate-400 transition-colors"
+              >
+                <Image
+                  src={img.preview}
+                  alt={`Upload preview ${idx + 1}`}
+                  width={80}
+                  height={80}
+                  className="object-cover h-20 w-20 transition-transform group-hover:scale-105"
+                />
+                <span className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/30 transition-colors flex items-center justify-center">
+                  <ZoomInIcon
+                    size={20}
+                    className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
+                  />
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => handleRemoveImage(idx)}
@@ -184,6 +277,35 @@ const ImageUploader = ({ images, setImages, required = false, itemName = "" }) =
       )}
       {required && images.length === 0 && (
         <p className="mt-2 text-sm text-red-500">At least one image is required</p>
+      )}
+
+      {lightboxIdx != null && images[lightboxIdx] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightboxIdx(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxIdx(null)}
+            aria-label="Close preview"
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors backdrop-blur-sm"
+          >
+            <XIcon size={22} />
+          </button>
+          <div
+            className="relative max-w-5xl max-h-[88vh] animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={images[lightboxIdx].preview}
+              alt={`Visual inspiration ${lightboxIdx + 1}`}
+              className="max-w-full max-h-[88vh] object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -613,6 +735,63 @@ function CustomOrderPageInner() {
   // only when submitting / displaying — much friendlier than two coupled states.
   const [deliveryDays, setDeliveryDays] = useState(null);
 
+  // AI state. `flashFields` briefly tags the names of empty required inputs so
+  // the matching elements pulse a red border (1.6s, see .flash-error in
+  // globals.css). `aiSuggestions` is [] when the inline panel is hidden.
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiReviewing, setAiReviewing] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [flashFields, setFlashFields] = useState(() => new Set());
+
+  // Caches keyed by the image's stable `preview` blob URL and the audio blob
+  // reference. As long as the user doesn't remove/replace those entries we
+  // reuse the caption / transcript across multiple "Generate with AI" clicks
+  // — saves vision + audio tokens, which dominate cost.
+  const captionCacheRef = useRef(new Map()); // preview -> caption
+  const transcriptCacheRef = useRef({ blob: null, transcript: "" });
+  // Last synthesized prompt + the signature of the inputs that produced it,
+  // so consecutive clicks with no field changes go straight to image gen.
+  const promptCacheRef = useRef({ signature: "", prompt: "" });
+  // Timestamps of recent image generations (epoch ms). We allow at most 2
+  // calls per rolling 60 s — older entries fall off the array.
+  const generationTimestampsRef = useRef([]);
+  const RATE_LIMIT_COUNT = 2;
+  const RATE_LIMIT_WINDOW_MS = 60_000;
+
+  // Puter consent modal — promise-based so it integrates cleanly with the
+  // `ensurePuter({ askConsent })` flow. The handler that resolves this promise
+  // is stored in a ref so the modal's buttons can call it from outside React's
+  // closure.
+  const [puterModalOpen, setPuterModalOpen] = useState(false);
+  const puterConsentResolveRef = useRef(null);
+  const askPuterConsent = () =>
+    new Promise((resolve) => {
+      puterConsentResolveRef.current = resolve;
+      setPuterModalOpen(true);
+    });
+  const handlePuterConsentDecision = (proceed) => {
+    setPuterModalOpen(false);
+    const resolve = puterConsentResolveRef.current;
+    puterConsentResolveRef.current = null;
+    if (resolve) resolve(proceed);
+  };
+
+  const flashField = (name) => {
+    setFlashFields((prev) => {
+      const next = new Set(prev);
+      next.add(name);
+      return next;
+    });
+    setTimeout(() => {
+      setFlashFields((prev) => {
+        if (!prev.has(name)) return prev;
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    }, 1600);
+  };
+
   // Prefill from the /product "Customize this for me" CTA: read the seed out
   // of sessionStorage, populate the form, default visibility to private and
   // pre-select the source product's store as the recipient artisan.
@@ -693,6 +872,327 @@ function CustomOrderPageInner() {
   useEffect(() => {
     setFormData((p) => ({ ...p, deliveryDate: computedDeliveryDate }));
   }, [computedDeliveryDate]);
+
+  // AI: review buyer inputs and surface clarification suggestions inline.
+  // Keeps the existing toast vocabulary — loading toast dismissed by id so we
+  // don't leave a hanging spinner if the request fails.
+  const handleAIReview = async () => {
+    if (aiReviewing) return;
+    setAiReviewing(true);
+    const toastId = toast.loading("Reviewing your request with AI...");
+
+    const reviewPayload = {
+      formData: {
+        itemName: formData.itemName,
+        category: formData.category,
+        description: formData.description,
+        material: formData.material,
+        quantity: formData.quantity,
+        size: formData.size,
+        colors,
+        deliveryDate: formData.deliveryDate,
+      },
+    };
+
+    try {
+      let list = null;
+
+      // Tier 1: Puter — but only if the buyer is already signed in from a
+      // previous image-generation flow. Review never prompts on its own.
+      const puter = await ensurePuter({ passive: true });
+      if (puter) {
+        try {
+          const raw = await puterChat(puter, {
+            system:
+              "You are reviewing a custom-order request for a handmade-goods marketplace. " +
+              "Identify the 3-5 most useful clarifications. Respond ONLY with a JSON array of short strings.",
+            user: JSON.stringify(reviewPayload.formData),
+            temperature: 0.4,
+          });
+          list = parseSuggestionsClient(raw);
+        } catch (e) {
+          if (!looksLikeQuotaError(e)) {
+            console.warn("[puter review] failed, will fall back:", e?.message || e);
+          }
+        }
+      }
+
+      // Tier 2: server route (z.ai → Gemini).
+      if (!list) {
+        const res = await fetch("/api/ai/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(reviewPayload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "review failed");
+        list = Array.isArray(data.suggestions) ? data.suggestions : [];
+      }
+
+      if (list.length === 0) {
+        toast.success("Looks good — no clarifications needed.", { id: toastId });
+      } else {
+        setAiSuggestions(list);
+        toast.success(`${list.length} suggestion${list.length > 1 ? "s" : ""} ready`, { id: toastId });
+      }
+    } catch (e) {
+      toast.error(`AI review failed: ${e.message}`, { id: toastId });
+    } finally {
+      setAiReviewing(false);
+    }
+  };
+
+  // AI: generate a reference image from the buyer's current inputs.
+  // Required-field gate matches isSubmitEnabled() so we don't ship a half-empty
+  // prompt to the model. Empty fields flash red so the buyer sees what's
+  // missing before reading the toast.
+  //
+  // Caching strategy (saves tokens across repeat clicks):
+  //   - captions: keyed by each image's stable `preview` blob URL. Removed
+  //     images are evicted; new uploads always re-caption.
+  //   - transcript: keyed by audioBlob identity. Re-record => new transcript.
+  //   - synthesized prompt: keyed by a signature of every field that feeds
+  //     into the prompt. Identical signature => skip the prompt-synthesis call.
+  // Rate limit: at most RATE_LIMIT_COUNT successful generations per rolling
+  // RATE_LIMIT_WINDOW_MS — prevents accidental spam while a single user is
+  // tinkering. We record the timestamp only after the image is in hand so a
+  // failure (which still costs the upstream provider) doesn't blow the budget.
+  const handleAIGenerate = async () => {
+    if (aiGenerating) return;
+
+    const missing = [];
+    if (!formData.itemName.trim()) missing.push("itemName");
+    if (!formData.category) missing.push("category");
+    if (!formData.description.trim()) missing.push("description");
+    if (images.length === 0) missing.push("images");
+    if (missing.length > 0) {
+      missing.forEach(flashField);
+      toast("AI generation requires filling all input data", { icon: "ℹ️" });
+      return;
+    }
+
+    // Rate limit gate — drop any timestamps outside the window, then check.
+    const now = Date.now();
+    generationTimestampsRef.current = generationTimestampsRef.current.filter(
+      (t) => now - t < RATE_LIMIT_WINDOW_MS,
+    );
+    if (generationTimestampsRef.current.length >= RATE_LIMIT_COUNT) {
+      const oldest = generationTimestampsRef.current[0];
+      const waitSec = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - oldest)) / 1000);
+      toast(`Slow down — try again in ${waitSec}s`, { icon: "⏱️" });
+      return;
+    }
+
+    setAiGenerating(true);
+    const toastId = toast.loading("Reading your reference images...");
+
+    // Puter.js is the LAST-RESORT fallback — it requires a sign-in popup, so
+    // we only ask the buyer for it after our automated providers have failed.
+    // `puterRef` caches the lazily-resolved instance across the 4 stages of
+    // this run so we don't re-attempt the consent modal multiple times.
+    let puterCached = null;
+    let puterAttempted = false;
+    const tryPuter = async () => {
+      if (puterAttempted) return puterCached;
+      puterAttempted = true;
+      puterCached = await ensurePuter({ askConsent: askPuterConsent });
+      return puterCached;
+    };
+
+    try {
+      // 1) Captions — reuse cached entries when the same image is still in
+      // the list. Evict cache entries for images the buyer has since removed.
+      const liveKeys = new Set(images.map((img) => img.preview));
+      for (const key of captionCacheRef.current.keys()) {
+        if (!liveKeys.has(key)) captionCacheRef.current.delete(key);
+      }
+      const captionPrompt = (itemName, category) =>
+        `Caption this reference image in 1-2 sentences focused on visual style, materials, ` +
+        `colors, and mood. Context: the buyer is requesting a custom "${itemName || "item"}" ` +
+        `in the "${category || "general"}" category. Output only the caption.`;
+      const captions = await Promise.all(
+        images.map(async (img) => {
+          const cached = captionCacheRef.current.get(img.preview);
+          if (cached) return cached;
+          const dataUrl = await fileToDataURL(img.file);
+
+          // Primary: server route (z.ai vision → Gemini).
+          let caption = null;
+          try {
+            const r = await fetch("/api/ai/describe-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                imageDataUrl: dataUrl,
+                itemName: formData.itemName,
+                category: formData.category,
+              }),
+            });
+            const data = await r.json();
+            if (r.ok) caption = data.caption || "";
+            else throw new Error(data?.error || `describe ${r.status}`);
+          } catch (serverErr) {
+            console.warn("[caption] server failed, trying Puter:", serverErr?.message || serverErr);
+            const puter = await tryPuter();
+            if (puter) {
+              try {
+                const res = await puter.ai.chat(
+                  captionPrompt(formData.itemName, formData.category),
+                  dataUrl,
+                );
+                caption =
+                  (typeof res === "string" && res) ||
+                  res?.message?.content ||
+                  (typeof res?.toString === "function" && res.toString()) ||
+                  null;
+              } catch (e) {
+                console.warn("[puter caption] failed:", e?.message || e);
+              }
+            }
+            // Caption is best-effort within the larger pipeline; falling
+            // through with an empty string keeps the rest of the run alive.
+            if (!caption) caption = "";
+          }
+          captionCacheRef.current.set(img.preview, caption);
+          return caption;
+        }),
+      );
+
+      // 2) Transcript — only re-run if the audio blob reference changed.
+      let transcript = "";
+      if (audioBlob) {
+        if (transcriptCacheRef.current.blob === audioBlob) {
+          transcript = transcriptCacheRef.current.transcript;
+        } else {
+          toast.loading("Transcribing voice memo...", { id: toastId });
+          // Primary: server route (Gemini → Groq Whisper).
+          try {
+            const audioDataUrl = await blobToDataURL(audioBlob);
+            const res = await fetch("/api/ai/transcribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                audioDataUrl,
+                mimeType: audioBlob.type || "audio/webm",
+              }),
+            });
+            const data = await res.json();
+            if (res.ok) transcript = data.transcript || "";
+            else throw new Error(data?.error || `transcribe ${res.status}`);
+          } catch (serverErr) {
+            console.warn("[transcribe] server failed, trying Puter:", serverErr?.message || serverErr);
+            const puter = await tryPuter();
+            if (puter) {
+              try {
+                transcript = await puterTranscribe(puter, audioBlob);
+              } catch (e) {
+                console.warn("[puter transcribe] failed:", e?.message || e);
+              }
+            }
+            // Transcription stays best-effort.
+          }
+          transcriptCacheRef.current = { blob: audioBlob, transcript };
+        }
+      } else {
+        transcriptCacheRef.current = { blob: null, transcript: "" };
+      }
+
+      // 3) Prompt synthesis — skip if every input that feeds into it matches
+      // the previous successful run. Signature is a deterministic JSON of the
+      // exact fields the route uses.
+      const promptInputs = {
+        itemName: formData.itemName,
+        category: formData.category,
+        description: formData.description,
+        material: formData.material,
+        colors,
+        size: formData.size,
+        captions,
+        transcript,
+      };
+      const signature = JSON.stringify(promptInputs);
+      let prompt;
+      if (signature === promptCacheRef.current.signature && promptCacheRef.current.prompt) {
+        prompt = promptCacheRef.current.prompt;
+      } else {
+        toast.loading("Crafting an image prompt...", { id: toastId });
+        // Primary: server route (z.ai → Gemini → Groq).
+        try {
+          const synthRes = await fetch("/api/ai/synth-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(promptInputs),
+          });
+          const synthData = await synthRes.json();
+          if (synthRes.ok) prompt = synthData.prompt;
+          else throw new Error(synthData?.error || `synth ${synthRes.status}`);
+        } catch (serverErr) {
+          console.warn("[synth-prompt] server failed, trying Puter:", serverErr?.message || serverErr);
+          const puter = await tryPuter();
+          if (puter) {
+            try {
+              prompt = await puterChat(puter, {
+                system:
+                  "You are a prompt engineer for an image-generation model. Given a buyer's " +
+                  "handmade-item request, produce ONE single-paragraph image prompt (60-110 words) " +
+                  "that vividly describes the finished object: form, materials, finish, colors, " +
+                  "mood, lighting, background. No markdown, no preamble.",
+                user: JSON.stringify(promptInputs),
+                temperature: 0.7,
+              });
+            } catch (e) {
+              console.warn("[puter synth-prompt] failed:", e?.message || e);
+            }
+          }
+          if (!prompt) throw serverErr;
+        }
+        promptCacheRef.current = { signature, prompt };
+      }
+
+      // 4) Image generation — never cached; the buyer always wants a fresh
+      // variant when they click again, even with identical inputs.
+      toast.loading("Painting your reference image...", { id: toastId });
+      let imageDataUrl = null;
+      // Primary: server route (Gemini → Pollinations).
+      try {
+        const genRes = await fetch("/api/ai/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        });
+        const genData = await genRes.json();
+        if (genRes.ok) imageDataUrl = genData.imageDataUrl;
+        else throw new Error(genData?.error || `generate ${genRes.status}`);
+      } catch (serverErr) {
+        console.warn("[image] server failed, trying Puter:", serverErr?.message || serverErr);
+        const puter = await tryPuter();
+        if (puter) {
+          try {
+            imageDataUrl = await puterImage(puter, prompt);
+          } catch (e) {
+            console.warn("[puter image] failed:", e?.message || e);
+          }
+        }
+        if (!imageDataUrl) throw serverErr;
+      }
+
+      const blob = await (await fetch(imageDataUrl)).blob();
+      const file = new File([blob], `ai-generated-${Date.now()}.png`, {
+        type: blob.type || "image/png",
+      });
+      setImages((prev) => [
+        ...prev,
+        { file, preview: URL.createObjectURL(file) },
+      ]);
+
+      generationTimestampsRef.current.push(Date.now());
+      toast.success("AI reference image added", { id: toastId });
+    } catch (e) {
+      toast.error(`AI generation failed: ${e.message}`, { id: toastId });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   // Validation
   const validateForm = () => {
@@ -808,6 +1308,10 @@ function CustomOrderPageInner() {
       setSelectedStore(null);
       setShowAdditionalDetails(false);
       setDeliveryDays(null);
+      setAiSuggestions([]);
+      captionCacheRef.current.clear();
+      transcriptCacheRef.current = { blob: null, transcript: "" };
+      promptCacheRef.current = { signature: "", prompt: "" };
 
       router.push(`/custom/request-view/${id}`);
     } catch {
@@ -846,7 +1350,7 @@ function CustomOrderPageInner() {
                   onChange={handleInput}
                   type="text"
                   placeholder="e.g. Vintage Oak Table"
-                  className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5]"
+                  className={`border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5] ${flashFields.has("itemName") ? "flash-error" : ""}`}
                 />
               </div>
 
@@ -860,7 +1364,7 @@ function CustomOrderPageInner() {
                     name="category"
                     value={formData.category}
                     onChange={handleInput}
-                    className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 pr-10 rounded-xl bg-[#faf8f5] appearance-none cursor-pointer"
+                    className={`border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 pr-10 rounded-xl bg-[#faf8f5] appearance-none cursor-pointer ${flashFields.has("category") ? "flash-error" : ""}`}
                   >
                     <option value="">Select a category</option>
                     {categories.map((cat, idx) => (
@@ -881,6 +1385,9 @@ function CustomOrderPageInner() {
                 setImages={setImages}
                 required
                 itemName={formData.itemName}
+                onGenerateAI={handleAIGenerate}
+                aiGenerating={aiGenerating}
+                flashImages={flashFields.has("images")}
               />
 
               <div className="w-full">
@@ -894,7 +1401,7 @@ function CustomOrderPageInner() {
                   onChange={handleInput}
                   rows={5}
                   placeholder="Describe what you're looking for in detail..."
-                  className="border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl resize-none bg-[#faf8f5]"
+                  className={`border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl resize-none bg-[#faf8f5] ${flashFields.has("description") ? "flash-error" : ""}`}
                 />
               </div>
             </div>
@@ -1012,16 +1519,36 @@ function CustomOrderPageInner() {
 
             {/* Request visibility + submit */}
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-50">
-              <h3 className="text-lg font-bold text-[#1c355e] mb-4">
-                Request visibility{" "}
-                <span className="text-red-500 text-base font-bold">*</span>
-              </h3>
+              <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                <h3 className="text-lg font-bold text-[#1c355e]">
+                  Request visibility{" "}
+                  <span className="text-red-500 text-base font-bold">*</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleAIReview}
+                  disabled={aiReviewing}
+                  title="Let AI review your inputs and suggest clarifications"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
+                    aiReviewing
+                      ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
+                      : "border-blue-300 bg-gradient-to-b from-blue-50 to-blue-100 text-blue-800 hover:from-blue-100 hover:to-blue-200 hover:shadow-md active:translate-y-px active:shadow-sm"
+                  }`}
+                >
+                  {aiReviewing ? (
+                    <Loader2Icon size={14} className="animate-spin" />
+                  ) : (
+                    <SparklesIcon size={14} />
+                  )}
+                  {aiReviewing ? "Reviewing..." : "Review inputs with AI"}
+                </button>
+              </div>
 
               <fieldset className="w-full border-0 p-0 m-0">
-                <div className="grid grid-cols-1 gap-3 mb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <label
                     htmlFor="vis-open"
-                    className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${formData.visibility === "open" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-[#fcfbf9]"}`}
+                    className={`flex items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors ${formData.visibility === "open" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-[#fcfbf9]"}`}
                   >
                     <input
                       id="vis-open"
@@ -1031,9 +1558,9 @@ function CustomOrderPageInner() {
                       onChange={() =>
                         setFormData((p) => ({ ...p, visibility: "open" }))
                       }
-                      className="accent-[#2582eb] w-5 h-5 shrink-0"
+                      className="accent-[#2582eb] w-5 h-5 shrink-0 mt-0.5"
                     />
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-slate-800 text-sm">
                         Open Request
                       </p>
@@ -1045,7 +1572,7 @@ function CustomOrderPageInner() {
 
                   <label
                     htmlFor="vis-private"
-                    className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${formData.visibility === "private" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-[#fcfbf9]"}`}
+                    className={`flex items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors ${formData.visibility === "private" ? "border-[#2582eb] bg-blue-50" : "border-slate-200 bg-[#fcfbf9]"}`}
                   >
                     <input
                       id="vis-private"
@@ -1055,9 +1582,9 @@ function CustomOrderPageInner() {
                       onChange={() =>
                         setFormData((p) => ({ ...p, visibility: "private" }))
                       }
-                      className="accent-[#2582eb] w-5 h-5 shrink-0"
+                      className="accent-[#2582eb] w-5 h-5 shrink-0 mt-0.5"
                     />
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-slate-800 text-sm">
                         Private Request
                       </p>
@@ -1068,6 +1595,30 @@ function CustomOrderPageInner() {
                   </label>
                 </div>
               </fieldset>
+
+              {aiSuggestions.length > 0 && (
+                <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#1c355e]">
+                      <SparklesIcon size={16} className="text-blue-600" />
+                      AI suggestions
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAiSuggestions([])}
+                      aria-label="Dismiss AI suggestions"
+                      className="p-1 rounded-md text-slate-400 hover:bg-blue-100 hover:text-slate-600"
+                    >
+                      <XIcon size={14} />
+                    </button>
+                  </div>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                    {aiSuggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {formData.visibility === "private" && (
                 <div className="mb-5">
@@ -1094,6 +1645,51 @@ function CustomOrderPageInner() {
           </div>
         </form>
       </div>
+
+      {puterModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="puter-modal-title"
+        >
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-[#faf8f5] flex items-center justify-center overflow-hidden">
+              <Image
+                src={assets.logo}
+                alt="Manzili"
+                width={56}
+                height={56}
+                className="object-contain"
+              />
+            </div>
+            <h2 id="puter-modal-title" className="text-xl font-bold text-[#1c355e] mb-2">
+              Unlock AI for your request
+            </h2>
+            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+              Manzili can use AI to review your inputs and generate a reference
+              image of your idea. To use the free version, a quick one-time
+              sign-in is needed. You can skip and we&apos;ll do our best without it.
+            </p>
+            <div className="flex flex-col sm:flex-row-reverse gap-2">
+              <button
+                type="button"
+                onClick={() => handlePuterConsentDecision(true)}
+                className="flex-1 bg-[#b64b2b] hover:bg-[#9c4024] text-white font-medium rounded-full py-3 shadow-md transition-all"
+              >
+                Continue
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePuterConsentDecision(false)}
+                className="flex-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-medium rounded-full py-3 transition-colors"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
