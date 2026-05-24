@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
+import ReportButton from "@/components/ReportButton";
 import { mapStoredRequestToCollaborationOrder } from "@/lib/customRequestsLocal";
 import {
   OFFER_STATUS,
@@ -31,6 +32,8 @@ import {
   addOfferToRequest,
   appendOfferChatMessage,
   markOfferReadyToShip,
+  getMilestoneSchedule,
+  markOfferProgressUploaded,
 } from "@/lib/services/localCustomRequestService";
 import {
   notifyProposalSent,
@@ -105,6 +108,7 @@ function commentsToMessages(comments) {
     sender: c.author === "seller" ? "artisan" : "buyer",
     type: "text",
     text: c.text,
+    image: c.image || null,
     time: new Date(c.createdAt).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -142,6 +146,10 @@ export default function NegotiationPage() {
   // after 4s of inactivity.
   const [readyToShipTaps, setReadyToShipTaps] = useState(0);
   const tapTimer = useRef(null);
+
+  const [progressImage, setProgressImage] = useState(null);
+  const [progressNote, setProgressNote] = useState("");
+  const [isUploadingProgress, setIsUploadingProgress] = useState(false);
 
   // ---- load -----------------------------------------------------------------
   useEffect(() => {
@@ -223,12 +231,31 @@ export default function NegotiationPage() {
   const isDeclined = status === OFFER_STATUS.DECLINED;
   const isBlocked = status === OFFER_STATUS.BLOCKED;
   const isAccepted = status === OFFER_STATUS.ACCEPTED;
+  const isFirstPaid = status === OFFER_STATUS.FIRST_PAID;
+  const isProgressUploaded = status === OFFER_STATUS.PROGRESS_UPLOADED;
+  const isSecondPaid = status === OFFER_STATUS.SECOND_PAID;
   const isReadyToShip = status === OFFER_STATUS.READY_TO_SHIP;
   const isPaid = status === OFFER_STATUS.PAID;
   const isSuperseded = status === OFFER_STATUS.SUPERSEDED;
 
-  const chatUnlocked = isAccepted || isReadyToShip || isPaid;
-  const inputsLocked = isPending || isAccepted || isReadyToShip || isPaid || isBlocked || isSuperseded;
+  const chatUnlocked =
+    isAccepted ||
+    isFirstPaid ||
+    isProgressUploaded ||
+    isSecondPaid ||
+    isReadyToShip ||
+    isPaid;
+
+  const inputsLocked =
+    isPending ||
+    isAccepted ||
+    isFirstPaid ||
+    isProgressUploaded ||
+    isSecondPaid ||
+    isReadyToShip ||
+    isPaid ||
+    isBlocked ||
+    isSuperseded;
 
   const countdown = useMemo(
     () => (chatUnlocked ? formatCountdown(offer?.deliveryDate) : null),
@@ -320,6 +347,135 @@ export default function NegotiationPage() {
     }
   };
 
+  const schedule = useMemo(() => (offer ? getMilestoneSchedule(offer.price) : null), [offer]);
+  const isThreePayments = schedule?.mode === "thirds";
+
+  const handleProgressUpload = async (e) => {
+    if (e) e.preventDefault();
+    if (!progressImage) {
+      toast.error("Please upload a halfway progress image.");
+      return;
+    }
+    try {
+      setIsUploadingProgress(true);
+      // 1. Mark status as progress_uploaded
+      const updated = await markOfferProgressUploaded(offer.id);
+      // 2. Append progress comment with image to the chat history
+      await appendOfferChatMessage(offer.id, {
+        author: "seller",
+        text: progressNote.trim() ? `[Halfway Progress Update] ${progressNote}` : "Sent the halfway progress update image!",
+        image: progressImage,
+      });
+      setOffer(updated);
+      setProgressImage(null);
+      setProgressNote("");
+      toast.success("Halfway progress update sent successfully!");
+    } catch {
+      toast.error("Could not submit the progress update.");
+    } finally {
+      setIsUploadingProgress(false);
+    }
+  };
+
+  const renderProgressUploadForm = () => {
+    return (
+      <div className="card-enter mt-2 mb-4 p-4 bg-amber-50/40 border border-amber-200 rounded-2xl flex flex-col gap-3">
+        <p className="text-xs font-semibold text-[#1c355e] uppercase tracking-wider flex items-center gap-1.5">
+          <CameraIcon size={14} className="text-[#e67e22]" />
+          Halfway Progress Update
+        </p>
+        <p className="text-[11px] text-slate-500 leading-normal">
+          This order splits into three payments. You must upload a progress image to proceed.
+        </p>
+        
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#e67e22] transition-colors rounded-xl p-4 cursor-pointer bg-white relative overflow-hidden group">
+          {progressImage ? (
+            <div className="w-full h-32 relative flex items-center justify-center">
+              <Image
+                src={progressImage}
+                alt="Progress preview"
+                width={120}
+                height={120}
+                className="object-contain max-h-32"
+                unoptimized
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setProgressImage(null);
+                }}
+                className="absolute top-1 right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 shadow-md transition"
+                aria-label="Remove image"
+              >
+                <XCircleIcon size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="text-center flex flex-col items-center gap-1.5 py-2">
+              <CameraIcon size={24} className="text-slate-400 group-hover:text-[#e67e22] transition-colors" />
+              <span className="text-xs font-medium text-slate-600">Upload progress image</span>
+              <span className="text-[10px] text-slate-400">PNG, JPG up to 512KB</span>
+            </div>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={isUploadingProgress}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 512 * 1024) {
+                toast.error("Image must be under 512 KB");
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => {
+                setProgressImage(reader.result);
+              };
+              reader.readAsDataURL(file);
+            }}
+          />
+        </label>
+
+        <div>
+          <label className="block text-[10px] font-medium text-slate-500 mb-1">
+            Note to buyer
+          </label>
+          <textarea
+            rows={2}
+            value={progressNote}
+            onChange={(e) => setProgressNote(e.target.value.slice(0, 240))}
+            placeholder="Describe progress so far..."
+            className="w-full p-2.5 rounded-xl border border-slate-300 text-xs resize-none outline-none focus:border-[#e67e22] focus:ring-1 focus:ring-[#e67e22] bg-white text-slate-800"
+            disabled={isUploadingProgress}
+          />
+        </div>
+
+        <button
+          type="button"
+          disabled={!progressImage || isUploadingProgress}
+          onClick={handleProgressUpload}
+          className="w-full py-2.5 rounded-full bg-[#e67e22] hover:bg-[#d35400] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-medium text-xs flex items-center justify-center gap-2 transition shadow-sm"
+        >
+          {isUploadingProgress ? (
+            <>
+              <LoaderIcon size={14} className="animate-spin" />
+              Sending Update...
+            </>
+          ) : (
+            <>
+              <CheckCircle2Icon size={14} />
+              Submit Progress Update
+            </>
+          )}
+        </button>
+      </div>
+    );
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!messageInput.trim() || !chatUnlocked || !offer?.id) return;
@@ -365,13 +521,23 @@ export default function NegotiationPage() {
   return (
     <div className="min-h-screen bg-[#f4efe4] py-6 sm:py-10 px-3 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors"
-        >
-          <ChevronLeftIcon size={20} />
-          <span className="font-medium">Back to Requests</span>
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            <ChevronLeftIcon size={20} />
+            <span className="font-medium">Back to Requests</span>
+          </button>
+
+          <ReportButton
+            type="SELLER_MISCONDUCT"
+            storeId={request?.storeId}
+            storeOrderId={orderId}
+            label="Report"
+            className="text-xs text-slate-400 hover:text-rose-500"
+          />
+        </div>
 
         <div
           className={`grid grid-cols-1 gap-6 transition-all duration-500 ${
@@ -550,22 +716,35 @@ export default function NegotiationPage() {
                   </div>
                 </div>
 
-                <CtaButton
-                  status={status}
-                  isSending={isSending}
-                  readyToShipTaps={readyToShipTaps}
-                  onSend={handleSendProposal}
-                  onReadyToShip={handleReadyToShip}
-                />
+                {isFirstPaid && isThreePayments && renderProgressUploadForm()}
+
+                {!(isFirstPaid && isThreePayments) && (
+                  <CtaButton
+                    status={status}
+                    isSending={isSending}
+                    readyToShipTaps={readyToShipTaps}
+                    onSend={handleSendProposal}
+                    onReadyToShip={handleReadyToShip}
+                    isThreePayments={isThreePayments}
+                  />
+                )}
 
                 <p className="text-[10px] text-center text-slate-400 -mt-1">
                   {isAccepted
-                    ? "Tap 3× to confirm ready to ship."
-                    : isReadyToShip
-                      ? "Waiting for buyer payment."
-                      : isPaid
-                        ? "Buyer paid — ship to the saved address."
-                        : "By negotiating, you commit to this price and deadline."}
+                    ? "Awaiting buyer's first payment."
+                    : isFirstPaid
+                      ? isThreePayments
+                        ? "First payment cleared. Please upload progress update."
+                        : "First payment cleared. Work on the order and mark ready to ship when finished."
+                      : isProgressUploaded
+                        ? "Progress uploaded. Awaiting buyer's halfway payment."
+                        : isSecondPaid
+                          ? "Halfway payment cleared. Finish order and tap 3× to confirm ready to ship."
+                          : isReadyToShip
+                            ? "Waiting for buyer final payment."
+                            : isPaid
+                              ? "Buyer paid — ship to the saved address."
+                              : "By negotiating, you commit to this price and deadline."}
                 </p>
               </div>
             </div>
@@ -605,7 +784,9 @@ function ChatCard({ orderDetails, offer, messages, messageInput, setMessageInput
               ? "bg-emerald-100 text-emerald-700"
               : offer.status === OFFER_STATUS.READY_TO_SHIP
                 ? "bg-amber-100 text-amber-700"
-                : "bg-blue-100 text-blue-700"
+                : offer.status === OFFER_STATUS.PROGRESS_UPLOADED
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-blue-100 text-blue-700"
           }`}
         >
           <CheckCircle2Icon size={12} />
@@ -613,7 +794,13 @@ function ChatCard({ orderDetails, offer, messages, messageInput, setMessageInput
             ? "Paid"
             : offer.status === OFFER_STATUS.READY_TO_SHIP
               ? "Ready to ship"
-              : "Accepted"}
+              : offer.status === OFFER_STATUS.PROGRESS_UPLOADED
+                ? "Halfway · pay 2nd"
+                : offer.status === OFFER_STATUS.SECOND_PAID
+                  ? "2nd paid · working"
+                  : offer.status === OFFER_STATUS.FIRST_PAID
+                    ? "1st paid · working"
+                    : "Accepted · pay 1st"}
         </span>
       </div>
 
@@ -644,7 +831,19 @@ function ChatCard({ orderDetails, offer, messages, messageInput, setMessageInput
                   : "bg-white border border-slate-100 shadow-sm text-slate-700 rounded-bl-none"
               }`}
             >
-              <p className="text-sm leading-relaxed">{msg.text}</p>
+              {msg.text && <p className="text-sm leading-relaxed">{msg.text}</p>}
+              {msg.image && (
+                <div className="w-48 h-48 rounded-lg overflow-hidden relative border border-slate-100 mt-2">
+                  <Image
+                    src={msg.image}
+                    alt="Progress update image"
+                    width={192}
+                    height={192}
+                    className="object-cover w-full h-full"
+                    unoptimized={isDataUrl(msg.image)}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -755,6 +954,11 @@ function CompactDetails({
               <CalendarIcon size={10} />
               {formatDate(orderDetails.createdAt)}
             </span>
+            {orderDetails.updatedAt && orderDetails.updatedAt !== orderDetails.createdAt && (
+              <span className="inline-flex items-center gap-1 text-slate-400 italic text-xs">
+                · Edited {formatDate(orderDetails.updatedAt)}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -903,6 +1107,12 @@ function ProposalStatusBadge({ status }) {
         return { label: "Blocked", className: "bg-rose-100 text-rose-700" };
       case OFFER_STATUS.ACCEPTED:
         return { label: "Accepted", className: "bg-emerald-100 text-emerald-700" };
+      case OFFER_STATUS.FIRST_PAID:
+        return { label: "1st milestone paid", className: "bg-emerald-100 text-emerald-700" };
+      case OFFER_STATUS.PROGRESS_UPLOADED:
+        return { label: "Progress uploaded", className: "bg-amber-100 text-amber-700" };
+      case OFFER_STATUS.SECOND_PAID:
+        return { label: "2nd milestone paid", className: "bg-emerald-100 text-emerald-700" };
       case OFFER_STATUS.READY_TO_SHIP:
         return { label: "Ready to ship", className: "bg-amber-100 text-amber-700" };
       case OFFER_STATUS.PAID:
@@ -921,7 +1131,7 @@ function ProposalStatusBadge({ status }) {
   );
 }
 
-function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip }) {
+function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, isThreePayments }) {
   const config = (() => {
     if (status === OFFER_STATUS.PENDING) {
       return {
@@ -951,6 +1161,24 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip }
       };
     }
     if (status === OFFER_STATUS.ACCEPTED) {
+      return {
+        label: "Waiting for buyer's first payment",
+        onClick: null,
+        className: "bg-slate-200 text-slate-500 cursor-default",
+        icon: <ClockIcon size={18} className="pulse-dot" />,
+        disabled: true,
+      };
+    }
+    if (status === OFFER_STATUS.PROGRESS_UPLOADED) {
+      return {
+        label: "Waiting for buyer's halfway payment",
+        onClick: null,
+        className: "bg-amber-100 text-amber-700 cursor-default",
+        icon: <ClockIcon size={18} className="pulse-dot" />,
+        disabled: true,
+      };
+    }
+    if (status === OFFER_STATUS.SECOND_PAID || (status === OFFER_STATUS.FIRST_PAID && !isThreePayments)) {
       const tapsRemaining = 3 - readyToShipTaps - 1; // taps after current click
       const armed = readyToShipTaps > 0;
       const label = isSending
@@ -964,7 +1192,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip }
         label,
         onClick: onReadyToShip,
         className: armed
-          ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg ring-4 ring-amber-200"
+          ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg ring-4 ring-amber-200 animate-pulse"
           : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md",
         icon: <PackageCheckIcon size={18} />,
         disabled: isSending,

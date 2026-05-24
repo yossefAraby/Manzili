@@ -1,10 +1,18 @@
-'use client'
-import { CalendarIcon, CheckCircle2Icon, ImageIcon, PinIcon, StoreIcon, UserIcon } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
-import React from 'react'
-import { useSelector } from 'react-redux'
-import { selectIsSeller } from '@/lib/features/auth/authSlice'
+"use client";
+import {
+  CalendarIcon,
+  CheckCircle2Icon,
+  ImageIcon,
+  PinIcon,
+  StoreIcon,
+  UserIcon,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
+import { useSelector } from "react-redux";
+import { selectIsSeller } from "@/lib/features/auth/authSlice";
+import ReportButton from "@/components/ReportButton";
 
 /**
  * Optional flags (used on /custom when the seller is viewing):
@@ -13,106 +21,134 @@ import { selectIsSeller } from '@/lib/features/auth/authSlice'
  *   - `accepted`   → adds a ring + "Accepted" pill. Implies pinned.
  */
 const CustomRequestCard = ({ request, pinned = false, accepted = false }) => {
-    // Sellers click into the negotiation surface (they want to make an offer);
-    // buyers and guests click into the read view. The negotiation page itself
-    // exposes a "Show more" link back to the read view for sellers who want
-    // the full spec sheet.
-    const isSeller = useSelector(selectIsSeller)
-    const href = isSeller
-        ? `/custom/negotiation/${request.id}`
-        : `/custom/request-view/${request.id}`
-    // Format date
-    const formatDate = (dateString) => {
-        if (!dateString) return 'No date'
-        const date = new Date(dateString)
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    }
+  // Sellers click into the negotiation surface (they want to make an offer);
+  // buyers and guests click into the read view. The negotiation page itself
+  // exposes a "Show more" link back to the read view for sellers who want
+  // the full spec sheet.
+  const isSeller = useSelector(selectIsSeller);
+  const href = isSeller
+    ? `/custom/negotiation/${request.id}`
+    : `/custom/request-view/${request.id}`;
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "No date";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
-    // Get category color
-    const getCategoryColor = (category) => {
-        const colors = {
-            'Woodwork': 'bg-amber-100 text-amber-800',
-            'Accessories': 'bg-purple-100 text-purple-800',
-            'Stationery': 'bg-blue-100 text-blue-800',
-            'Food & Snacks': 'bg-red-100 text-red-800',
-            'Fragrances': 'bg-pink-100 text-pink-800',
-            'Textiles': 'bg-green-100 text-green-800',
-            'Porcelain': 'bg-cyan-100 text-cyan-800',
-        }
-        return colors[category] || 'bg-slate-100 text-slate-800'
-    }
+  // Get category color
+  const getCategoryColor = (category) => {
+    const colors = {
+      Woodwork: "bg-amber-100 text-amber-800",
+      Accessories: "bg-purple-100 text-purple-800",
+      Stationery: "bg-blue-100 text-blue-800",
+      "Food & Snacks": "bg-red-100 text-red-800",
+      Fragrances: "bg-pink-100 text-pink-800",
+      Textiles: "bg-green-100 text-green-800",
+      Porcelain: "bg-cyan-100 text-cyan-800",
+    };
+    return colors[category] || "bg-slate-100 text-slate-800";
+  };
 
-    return (
-        <Link href={href} className='group max-xl:mx-auto'>
-            <div
-                className={`bg-[#F5F5F5] aspect-square w-full sm:w-60 sm:aspect-auto sm:h-68 rounded-lg flex items-center justify-center relative overflow-hidden transition-all ${
-                    accepted
-                        ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-white shadow-md'
-                        : pinned
-                            ? 'ring-1 ring-[#e67e22]/40 shadow-sm'
-                            : ''
-                }`}
-            >
-                {request.images && request.images.length > 0 ? (
-                    <Image
-                        width={500}
-                        height={500}
-                        className='max-w-full max-h-full sm:max-h-40 sm:w-auto object-contain group-hover:scale-110 transition duration-300'
-                        src={request.images[0]}
-                        alt={request.itemName}
-                        suppressHydrationWarning
-                        unoptimized={typeof request.images[0] === 'string' && request.images[0].startsWith('data:')}
-                    />
-                ) : (
-                    <div className='flex flex-col items-center text-slate-400'>
-                        <ImageIcon size={48} />
-                        <p className='mt-2 text-sm'>No images</p>
-                    </div>
-                )}
-                {/* Pin / accepted lozenges (seller view). Sit top-left so they
+  return (
+    <div className="group max-xl:mx-auto">
+      <Link href={href} className="block">
+        <div
+          className={`bg-[#F5F5F5] aspect-square w-full sm:w-60 sm:aspect-auto sm:h-68 rounded-lg flex items-center justify-center relative overflow-hidden transition-all ${
+            accepted
+              ? "ring-2 ring-emerald-400 ring-offset-2 ring-offset-white shadow-md"
+              : pinned
+                ? "ring-1 ring-[#e67e22]/40 shadow-sm"
+                : ""
+          }`}
+        >
+          {request.images && request.images.length > 0 ? (
+            <Image
+              width={500}
+              height={500}
+              className="max-w-full max-h-full sm:max-h-40 sm:w-auto object-contain group-hover:scale-110 transition duration-300"
+              src={request.images[0]}
+              alt={request.itemName}
+              suppressHydrationWarning
+              unoptimized={
+                typeof request.images[0] === "string" &&
+                request.images[0].startsWith("data:")
+              }
+            />
+          ) : (
+            <div className="flex flex-col items-center text-slate-400">
+              <ImageIcon size={48} />
+              <p className="mt-2 text-sm">No images</p>
+            </div>
+          )}
+          {/* Pin / accepted lozenges (seller view). Sit top-left so they
                     don't fight the visibility chip on the right. */}
-                {(pinned || accepted) && (
-                    <div className='absolute top-2 left-2 flex flex-col gap-1 items-start'>
-                        {accepted ? (
-                            <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow'>
-                                <CheckCircle2Icon size={11} />
-                                Accepted
-                            </span>
-                        ) : (
-                            <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/95 text-[#e67e22] border border-[#e67e22]/40 shadow-sm'>
-                                <PinIcon size={11} />
-                                Pinned
-                            </span>
-                        )}
-                    </div>
-                )}
-                <div className='absolute top-2 right-2'>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.visibility === 'private' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                        {request.visibility === 'private' ? 'Private' : 'Open'}
-                    </span>
-                </div>
+          {(pinned || accepted) && (
+            <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+              {accepted ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow">
+                  <CheckCircle2Icon size={11} />
+                  Accepted
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/95 text-[#e67e22] border border-[#e67e22]/40 shadow-sm">
+                  <PinIcon size={11} />
+                  Pinned
+                </span>
+              )}
             </div>
-            <div className='flex justify-between gap-3 text-sm text-slate-800 pt-2 max-w-60'>
-                <div className='flex-1'>
-                    <p className='font-medium line-clamp-1'>{request.itemName}</p>
-                    <div className='flex items-center gap-2 mt-1'>
-                        {request.category && (
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${getCategoryColor(request.category)}`}>
-                                {request.category}
-                            </span>
-                        )}
-                        <span className='text-xs text-slate-500'>
-                            {request.store ? `For ${request.store.name}` : `By ${request.user?.name}`}
-                        </span>
-                    </div>
-                    <div className='text-xs text-slate-500 mt-1'>
-                        <CalendarIcon size={12} className='inline mr-1' />
-                        {formatDate(request.createdAt)}
-                    </div>
-                </div>
+          )}
+          <div className="absolute top-2 right-2">
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${request.visibility === "private" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"}`}
+            >
+              {request.visibility === "private" ? "Private" : "Open"}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-between gap-3 text-sm text-slate-800 pt-2 max-w-60">
+          <div className="flex-1">
+            <p className="font-medium line-clamp-1">{request.itemName}</p>
+            <div className="flex items-center gap-2 mt-1">
+              {request.category && (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs ${getCategoryColor(request.category)}`}
+                >
+                  {request.category}
+                </span>
+              )}
+              <span className="text-xs text-slate-500">
+                {request.store
+                  ? `For ${request.store.name}`
+                  : `By ${request.user?.name}`}
+              </span>
             </div>
-        </Link>
-    )
-}
+            <div className="text-xs text-slate-500 mt-1">
+              <CalendarIcon size={12} className="inline mr-1" />
+              {formatDate(request.createdAt)}
+            </div>
+            {request.updatedAt && request.updatedAt !== request.createdAt && (
+              <div className="text-xs text-slate-400 mt-0.5 italic">
+                Edited {formatDate(request.updatedAt)}
+              </div>
+            )}
+          </div>
+        </div>
+      </Link>
+      {/* Report button — outside the link so it doesn't navigate */}
+      <div className="mt-1 pl-0.5">
+        <ReportButton
+          type="UNFULFILLED_CUSTOM_REQUEST"
+          customRequestId={request.id}
+          label="Report request"
+        />
+      </div>
+    </div>
+  );
+};
 
-export default CustomRequestCard
+export default CustomRequestCard;

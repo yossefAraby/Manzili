@@ -27,6 +27,7 @@ import {
   addLocalCustomRequest,
   blobToDataURL,
   fileToDataURL,
+  getLocalCustomRequestById,
 } from "@/lib/customRequestsLocal";
 import {
   ensurePuter,
@@ -722,6 +723,7 @@ function CustomOrderPageInner() {
   const session = useSelector((s) => s.auth.session);
   const searchParams = useSearchParams();
   const customizeId = searchParams.get("customize");
+  const editId = searchParams.get("edit");
 
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [images, setImages] = useState([]);
@@ -829,6 +831,82 @@ function CustomOrderPageInner() {
       cancelled = true;
     };
   }, [customizeId]);
+
+  // Prefill from an existing request when `?edit=<id>` is present. We read
+  // the full stored payload out of localStorage and hydrate every field —
+  // images (data URLs → File entries), voice memo, store selection, colors,
+  // size mode, delivery window — so the buyer can tweak and resubmit. The
+  // submit handler below picks up `editId` to keep the same id + createdAt
+  // rather than minting a new record.
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    try {
+      const saved = getLocalCustomRequestById(editId);
+      if (!saved) {
+        toast.error("Couldn't find that request to edit.");
+        return;
+      }
+
+      setFormData({
+        itemName: saved.itemName || "",
+        description: saved.description || "",
+        visibility: saved.visibility || "open",
+        category: saved.category || "",
+        quantity: saved.quantity ?? 1,
+        size: saved.size || { length: "", width: "", height: "" },
+        sizeMode: saved.sizeMode || "dimensions",
+        packageSize: saved.packageSize || "MEDIUM",
+        material: saved.material || "",
+        deliveryDate: saved.deliveryDate || "",
+      });
+
+      if (Array.isArray(saved.colors) && saved.colors.length > 0) {
+        setColors(saved.colors);
+      }
+
+      if (saved.store) setSelectedStore(saved.store);
+
+      // Derive the days-from-today slider back from the absolute date so the
+      // existing UI control reflects what was saved.
+      if (saved.deliveryDate) {
+        const d = new Date(saved.deliveryDate);
+        const diff = Math.round((d - new Date()) / (1000 * 60 * 60 * 24));
+        if (Number.isFinite(diff) && diff >= 0) setDeliveryDays(diff);
+      }
+
+      // Always expand the additional-details panel in edit mode — the buyer
+      // already filled some of these fields, so it's confusing to hide them.
+      setShowAdditionalDetails(true);
+
+      // Stored images are data URLs (base64) — fetch round-trips them back
+      // through a Blob → File so the existing ImageUploader sees the same
+      // shape it expects from a fresh upload.
+      hydrateSeedImages(saved.images).then((mapped) => {
+        if (!cancelled && mapped.length > 0) setImages(mapped);
+      });
+
+      // Voice memo data URL → Blob, dropped straight into audioBlob so the
+      // existing player + submit pipeline both work unchanged.
+      if (saved.voiceMemoDataUrl) {
+        fetch(saved.voiceMemoDataUrl)
+          .then((r) => r.blob())
+          .then((blob) => {
+            if (!cancelled) setAudioBlob(blob);
+          })
+          .catch(() => {
+            /* leave audioBlob null if the data URL is malformed */
+          });
+      }
+
+      toast.success("Loaded your request — make your changes and resubmit");
+    } catch {
+      /* ignore — leave the form blank */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [editId]);
 
   // Handlers
   const handleInput = (e) => {
@@ -1238,8 +1316,14 @@ function CustomOrderPageInner() {
         voiceMemoDataUrl = await blobToDataURL(audioBlob);
       }
 
-      const id = `req_${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
+      // In edit mode we preserve the original id + createdAt so collaborators
+      // (offers, chat, payment milestones) keyed off the request id keep working.
+      const existing = editId ? getLocalCustomRequestById(editId) : null;
+      const id =
+        existing?.id ||
+        `req_${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
       const persistedRequest = {
+        ...(existing || {}),
         id,
         itemName: formData.itemName.trim(),
         description: formData.description.trim(),
@@ -1261,11 +1345,14 @@ function CustomOrderPageInner() {
               username: selectedStore.username,
             }
           : null,
-        createdAt: new Date().toISOString(),
-        ownerUserId: session?.userId ?? null,
-        user: session?.userId
-          ? { name: session.name, email: session.email }
-          : { name: "Guest" },
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: existing ? new Date().toISOString() : undefined,
+        ownerUserId: session?.userId ?? existing?.ownerUserId ?? null,
+        user:
+          existing?.user ||
+          (session?.userId
+            ? { name: session.name, email: session.email }
+            : { name: "Guest" }),
       };
 
       addLocalCustomRequest(persistedRequest);
@@ -1297,7 +1384,9 @@ function CustomOrderPageInner() {
         /* Local simulation remains the source of truth */
       }
 
-      toast.success("Custom Request Submitted Successfully!");
+      toast.success(
+        editId ? "Request updated successfully!" : "Custom Request Submitted Successfully!",
+      );
 
       // Reset state then send the buyer to their newly-created request page.
       // Resetting before navigating keeps a clean form if they hit Back.
@@ -1634,7 +1723,13 @@ function CustomOrderPageInner() {
                 disabled={loading || !isSubmitEnabled()}
                 className={`w-full bg-[#b64b2b] hover:bg-[#9c4024] text-white font-medium rounded-full py-3.5 shadow-md text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#b64b2b] ${isSubmitEnabled() && !loading ? "hover:shadow-lg active:scale-[0.99]" : ""}`}
               >
-                {loading ? "Submitting..." : "Submit Request"}
+                {loading
+                  ? editId
+                    ? "Updating..."
+                    : "Submitting..."
+                  : editId
+                    ? "Update Request"
+                    : "Submit Request"}
               </button>
 
               <p className="text-[11px] text-center text-slate-400 mt-3 leading-relaxed">

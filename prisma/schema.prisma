@@ -1,12 +1,10 @@
 generator client {
-    provider        = "prisma-client-js"
-    previewFeatures = ["driverAdapters"]
+    provider = "prisma-client-js"
 }
 
 datasource db {
     provider  = "postgresql"
     url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
 }
 
 // Required for creating a User: id, name, email, image, cart (optional JSON string)
@@ -23,6 +21,7 @@ model User {
     store       Store?
     buyerOrders Order[]   @relation("BuyerRelation")
     customRequests CustomRequest[]
+    reports       Report[]
 }
 
 // Required for creating a Product: name, description, mrp, price, images, category, storeId
@@ -35,6 +34,7 @@ model Product {
     images      String[]
     category    String
     inStock     Boolean  @default(true)
+    isDisabled   Boolean  @default(false)
     storeId     String
     shippingSize            ShippingSize         @default(MEDIUM)
     shippingBulkyCategory   ShippingBulkyCategory @default(NORMAL)
@@ -61,6 +61,7 @@ enum StoreOrderStatus {
     SHIPPED
     DELIVERED
     CANCELED
+    RETURNED
 }
 
 enum PaymentMethod {
@@ -95,6 +96,20 @@ enum WalletBalanceBucket {
     AVAILABLE
 }
 
+enum ReportType {
+    NON_HANDMADE_PRODUCT
+    SELLER_MISCONDUCT
+    UNFULFILLED_CUSTOM_REQUEST
+    GENERAL
+}
+
+enum ReportStatus {
+    PENDING
+    REVIEWED
+    RESOLVED
+    DISMISSED
+}
+
 enum ShippingSize {
     SMALL
     MEDIUM
@@ -119,6 +134,7 @@ model Order {
     createdAt     DateTime      @default(now())
     updatedAt     DateTime      @updatedAt
     isCouponUsed  Boolean       @default(false)
+    stripePaymentIntentId String?
     coupon        Json          @default("{}")
     storeOrders   StoreOrder[]
 
@@ -340,6 +356,10 @@ model SellerWallet {
     pendingBalance   Float  @default(0)
     availableBalance Float  @default(0)
     currency         String @default("EGP")
+    stripeAccountId  String?
+    bankName         String?
+    bankAccountHolder String?
+    bankLast4        String?
     createdAt        DateTime @default(now())
     updatedAt        DateTime @updatedAt
     transactions     WalletTransaction[]
@@ -388,4 +408,23 @@ model CustomRequest {
     // Relations
     user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
     store Store? @relation(fields: [storeId], references: [id])
+}
+
+model Report {
+    id              String       @id @default(cuid())
+    reporterId      String?
+    type            ReportType
+    reason          String
+    description     String
+    status          ReportStatus @default(PENDING)
+    adminNote       String?
+    productId       String?
+    storeId         String?
+    storeOrderId    String?
+    customRequestId String?
+    resolvedAt      DateTime?
+    createdAt       DateTime     @default(now())
+    updatedAt       DateTime     @updatedAt
+
+    reporter User? @relation(fields: [reporterId], references: [id], onDelete: SetNull)
 }

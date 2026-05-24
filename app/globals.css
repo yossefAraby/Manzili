@@ -183,3 +183,15 @@
 .card-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
+
+/* Hide mobile header wishlist icon on extremely narrow devices (<400px) to prevent cart overlap with logo */
+@media (max-width: 400px) {
+    .wishlist-mobile-responsive {
+        display: none !important;
+    }
+}
+@media (min-width: 401px) {
+    .wishlist-mobile-responsive {
+        display: inline-flex !important;
+    }
+}

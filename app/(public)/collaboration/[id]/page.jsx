@@ -15,10 +15,13 @@ import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
+import ReportButton from "@/components/ReportButton";
+import { mapStoredRequestToCollaborationOrder } from "@/lib/customRequestsLocal";
 import {
-  mapStoredRequestToCollaborationOrder,
-} from "@/lib/customRequestsLocal";
-import { addOfferToRequest, getCustomRequestById, listOffersByRequestId } from "@/lib/services/localCustomRequestService";
+  addOfferToRequest,
+  getCustomRequestById,
+  listOffersByRequestId,
+} from "@/lib/services/localCustomRequestService";
 
 function isDataUrl(src) {
   return typeof src === "string" && src.startsWith("data:");
@@ -241,6 +244,14 @@ export default function CollaborationSpace() {
           {/* CHAT CARD (Left Column) */}
           {/* ========================================== */}
           <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm flex flex-col h-[750px] overflow-hidden">
+            {/* Admin oversight notice */}
+            <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-xs text-slate-500 mb-3">
+              <span className="shrink-0 mt-0.5">🔒</span>
+              <span>
+                Conversations in this space may be reviewed by Manzili
+                administrators for quality assurance and dispute resolution.
+              </span>
+            </div>
             {/* Chat Header */}
             <div className="p-5 border-b border-slate-100 flex items-center gap-3 bg-white z-10">
               <div className="w-10 h-10 bg-slate-200 rounded-xl overflow-hidden shrink-0 relative border border-slate-100">
@@ -258,14 +269,18 @@ export default function CollaborationSpace() {
                   {orderDetails.itemName}
                 </p>
                 <p className="text-xs text-slate-500 truncate">
-                  {orderDetails.category
-                    ? `${orderDetails.category} · `
-                    : ""}
+                  {orderDetails.category ? `${orderDetails.category} · ` : ""}
                   {orderDetails.buyerName}
                   {orderDetails.store
                     ? ` · For ${orderDetails.store.name}`
                     : ""}
                 </p>
+                <ReportButton
+                  type="SELLER_MISCONDUCT"
+                  customRequestId={orderId}
+                  label="Report this conversation"
+                  className="text-xs text-slate-400 hover:text-rose-500"
+                />
               </div>
             </div>
 
@@ -437,7 +452,11 @@ export default function CollaborationSpace() {
                         Size (L × W × H cm):
                       </p>
                       <p className="font-medium text-xs">
-                        {[orderDetails.size.length, orderDetails.size.width, orderDetails.size.height]
+                        {[
+                          orderDetails.size.length,
+                          orderDetails.size.width,
+                          orderDetails.size.height,
+                        ]
                           .map((n) => (n !== "" && n != null ? n : "—"))
                           .join(" × ")}
                       </p>
@@ -547,7 +566,9 @@ export default function CollaborationSpace() {
                       Proposed Price
                     </label>
                     <div className="flex items-center border border-slate-300 rounded-xl px-3 bg-white focus-within:border-[#e67e22] focus-within:ring-1 focus-within:ring-[#e67e22] transition-colors">
-                      <span className="text-xs font-semibold text-slate-500 pr-2">EGP</span>
+                      <span className="text-xs font-semibold text-slate-500 pr-2">
+                        EGP
+                      </span>
                       <input
                         suppressHydrationWarning
                         type="number"

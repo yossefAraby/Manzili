@@ -27,6 +27,22 @@ const StoreInfo = ({store}) => {
             <p className="flex items-center gap-2"> <MapPin size={16} /> {store.address}</p>
             <p className="flex items-center gap-2"><Phone size={16} /> {store.contact}</p>
             <p className="flex items-center gap-2"><Mail size={16} />  {store.email}</p>
+            
+            {store.nationalIdImage && (
+                <div className="mt-4 border border-slate-200 rounded-xl p-3 bg-slate-50 max-w-lg">
+                    <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">National ID Document</p>
+                    <div className="relative w-full h-40 max-w-sm rounded-lg overflow-hidden border border-slate-200 bg-white">
+                        <Image
+                            src={store.nationalIdImage}
+                            alt="National ID Document"
+                            fill
+                            className="object-contain"
+                            unoptimized
+                        />
+                    </div>
+                </div>
+            )}
+
             <p className="text-slate-700 mt-5">Applied  on <span className="text-xs">{new Date(store.createdAt).toLocaleDateString()}</span> by</p>
             <div className="flex items-center gap-2 text-sm ">
                 <Image width={36} height={36} src={store.user.image} alt={store.user.name} className="w-9 h-9 rounded-full" />

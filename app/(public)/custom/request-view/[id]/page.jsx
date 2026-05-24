@@ -26,6 +26,7 @@ import {
 import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
 import AddressModal from "@/components/AddressModal";
+import ReportButton from "@/components/ReportButton";
 import {
   OFFER_STATUS,
   acceptOffer,
@@ -33,8 +34,11 @@ import {
   blockOffer,
   declineOffer,
   getCustomRequestById,
+  getMilestoneSchedule,
+  getNextMilestone,
+  getPaidTotal,
   listOffersByRequestId,
-  markOfferPaid,
+  recordOfferPayment,
 } from "@/lib/services/localCustomRequestService";
 import {
   notifyOfferAccepted,
@@ -109,6 +113,7 @@ function commentsToMessages(comments) {
     sender: c.author === "buyer" ? "buyer" : "seller",
     type: "text",
     text: c.text,
+    image: c.image || null,
     time: new Date(c.createdAt).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -195,9 +200,27 @@ export default function RequestViewPage() {
   const activeOffer = useMemo(
     () =>
       offers.find((o) =>
-        [OFFER_STATUS.ACCEPTED, OFFER_STATUS.READY_TO_SHIP, OFFER_STATUS.PAID].includes(o.status),
+        [
+          OFFER_STATUS.ACCEPTED,
+          OFFER_STATUS.FIRST_PAID,
+          OFFER_STATUS.PROGRESS_UPLOADED,
+          OFFER_STATUS.SECOND_PAID,
+          OFFER_STATUS.READY_TO_SHIP,
+          OFFER_STATUS.PAID,
+        ].includes(o.status),
       ) ?? null,
     [offers],
+  );
+
+  // The next milestone the buyer needs to settle (or null when it's the
+  // seller's turn — i.e. status is *_paid awaiting progress / ready-to-ship).
+  const nextMilestone = useMemo(
+    () => (activeOffer ? getNextMilestone(activeOffer) : null),
+    [activeOffer],
+  );
+  const milestoneSchedule = useMemo(
+    () => (activeOffer ? getMilestoneSchedule(activeOffer.price) : null),
+    [activeOffer],
   );
 
   const inboundProposals = useMemo(() => {
@@ -310,15 +333,24 @@ export default function RequestViewPage() {
   };
 
   const handlePay = async () => {
-    if (!activeOffer) return;
-    if (!selectedAddress) {
+    if (!activeOffer || !nextMilestone) return;
+    // Address is only required for the final milestone — the moment the
+    // buyer actually commits a destination. Earlier milestones are just
+    // payment ticks (think wire transfer / Stripe charge, no shipping yet).
+    const isFinal = nextMilestone.key === "final";
+    if (isFinal && !selectedAddress) {
       toast.error("Please select or add a shipping address.");
       return;
     }
     try {
-      await markOfferPaid(activeOffer.id, { address: selectedAddress, paymentMethod });
+      await recordOfferPayment(activeOffer.id, {
+        milestone: nextMilestone.key,
+        amount: nextMilestone.amount,
+        paymentMethod,
+        address: isFinal ? selectedAddress : null,
+      });
       await refresh();
-      if (activeOffer.sellerId) {
+      if (isFinal && activeOffer.sellerId) {
         notifyOrderPaid({
           sellerUserId: activeOffer.sellerId,
           buyerName,
@@ -328,7 +360,13 @@ export default function RequestViewPage() {
           currentUserId,
         });
       }
-      toast.success("Order finalized.");
+      toast.success(
+        isFinal
+          ? "Final payment cleared — order finalized."
+          : nextMilestone.key === "first"
+            ? "First payment cleared — the seller can start working."
+            : "Second payment cleared — work continues.",
+      );
     } catch {
       toast.error("Could not complete payment.");
     }
@@ -383,11 +421,14 @@ export default function RequestViewPage() {
   const sizeKnown = hasDimensions(request.size);
   const isPackageSize = request.sizeMode === "package" && request.packageSize;
 
-  const showPaymentCard = activeOffer && activeOffer.status === OFFER_STATUS.READY_TO_SHIP;
+  // Card appears whenever a milestone is due. Shipping fee is folded into
+  // the FINAL milestone only — earlier ticks are pure product payments.
+  const showPaymentCard = Boolean(activeOffer && nextMilestone);
   const showPaidBanner = activeOffer && activeOffer.status === OFFER_STATUS.PAID;
 
   const subtotal = activeOffer ? Number(activeOffer.price || 0) : 0;
   const total = subtotal + ESTIMATED_SHIPPING_FALLBACK;
+  const paidSoFar = activeOffer ? getPaidTotal(activeOffer) : 0;
 
   return (
     <div className="min-h-screen bg-[#f4efe4] py-6 sm:py-10 px-3 sm:px-6">
@@ -401,16 +442,25 @@ export default function RequestViewPage() {
             <span className="font-medium">Back to Requests</span>
           </button>
 
-          {isOwner && !activeOffer && (
-            <button
-              type="button"
-              onClick={handleEdit}
-              className="shine-once inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white text-sm font-medium shadow-md transition-colors"
-            >
-              <PencilIcon size={16} />
-              Edit
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            <ReportButton
+              type="UNFULFILLED_CUSTOM_REQUEST"
+              customRequestId={requestId}
+              storeId={request?.storeId}
+              label="Report"
+              className="text-xs text-slate-400 hover:text-rose-500"
+            />
+            {isOwner && !activeOffer && (
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="shine-once inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white text-sm font-medium shadow-md transition-colors"
+              >
+                <PencilIcon size={16} />
+                Edit
+              </button>
+            )}
+          </div>
         </div>
 
         {/* PAYMENT CARD (top) */}
@@ -421,6 +471,9 @@ export default function RequestViewPage() {
             currency={currency}
             subtotal={subtotal}
             total={total}
+            paidSoFar={paidSoFar}
+            milestone={nextMilestone}
+            schedule={milestoneSchedule}
             addressList={addressList}
             selectedAddress={selectedAddress}
             setSelectedAddress={setSelectedAddress}
@@ -432,6 +485,29 @@ export default function RequestViewPage() {
             onPay={handlePay}
           />
         )}
+
+        {/* WAITING-ON-SELLER BANNER — buyer has paid their next milestone
+            but the seller hasn't reached the next checkpoint yet. */}
+        {isOwner &&
+          activeOffer &&
+          !nextMilestone &&
+          activeOffer.status !== OFFER_STATUS.PAID && (
+            <div className="card-enter mb-6 p-5 rounded-3xl bg-blue-50 border-2 border-blue-200 flex items-center gap-3 text-blue-800">
+              <ClockIcon size={22} />
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  {activeOffer.status === OFFER_STATUS.FIRST_PAID
+                    ? "First payment cleared — the seller is working."
+                    : "Second payment cleared — the seller is finishing up."}
+                </p>
+                <p className="text-xs opacity-80">
+                  You've paid {currency} {paidSoFar.toFixed(2)} of {currency}{" "}
+                  {subtotal.toFixed(2)} so far. Watch this page for the next
+                  milestone.
+                </p>
+              </div>
+            </div>
+          )}
 
         {isOwner && showPaidBanner && (
           <div className="card-enter mb-6 p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-200 flex items-center gap-3 text-emerald-800">
@@ -536,6 +612,9 @@ function PaymentCard({
   currency,
   subtotal,
   total,
+  paidSoFar,
+  milestone,
+  schedule,
   addressList,
   selectedAddress,
   setSelectedAddress,
@@ -546,6 +625,38 @@ function PaymentCard({
   setShowAddressModal,
   onPay,
 }) {
+  // Headline + sub-headline copy depend on which milestone is up. Final
+  // milestone bundles shipping; first/second are pure product payments.
+  const isFinal = milestone?.key === "final";
+  const header = (() => {
+    if (milestone?.key === "first") {
+      return {
+        title:
+          schedule?.mode === "thirds"
+            ? "Pay the first installment to start the work"
+            : "Pay the first half to start the work",
+        sub:
+          schedule?.mode === "thirds"
+            ? "The artisan begins after the first 1/3 clears."
+            : "The artisan begins after the first half clears.",
+      };
+    }
+    if (milestone?.key === "second") {
+      return {
+        title: "Pay the second installment — the artisan is half-way through",
+        sub: "Settling the middle third keeps the build moving.",
+      };
+    }
+    return {
+      title: "Your order is ready to ship",
+      sub: "Confirm address and the final payment to finalize.",
+    };
+  })();
+  const amountDue = milestone?.amount ?? 0;
+  const dueLine = isFinal
+    ? `${currency} ${amountDue.toFixed(2)} + shipping ≈ ${currency} ${(amountDue + ESTIMATED_SHIPPING_FALLBACK).toFixed(2)}`
+    : `${currency} ${amountDue.toFixed(2)}`;
+
   return (
     <div className="card-enter mb-6 bg-white rounded-3xl shadow-md border-2 border-amber-300 overflow-hidden">
       <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50 to-amber-100 border-b border-amber-200 flex items-center gap-3">
@@ -553,12 +664,24 @@ function PaymentCard({
           <CheckIcon size={20} />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-amber-900">Your order is ready to ship</p>
-          <p className="text-xs text-amber-700/80">Confirm address and payment to finalize.</p>
+          <p className="text-sm font-semibold text-amber-900">{header.title}</p>
+          <p className="text-xs text-amber-700/80">{header.sub}</p>
         </div>
       </div>
 
-      <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Milestone strip — three (or two) dots showing which installments
+          have cleared and which is up next. */}
+      <div className="px-5 sm:px-6 pt-4">
+        <MilestoneStrip
+          schedule={schedule}
+          payments={activeOffer?.payments || []}
+          currency={currency}
+          activeKey={milestone?.key}
+        />
+      </div>
+
+      <div className={`p-5 sm:p-6 grid grid-cols-1 gap-6 ${isFinal ? "md:grid-cols-2" : ""}`}>
+        {isFinal && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-1.5">
             <MapPinIcon size={14} />
@@ -636,8 +759,9 @@ function PaymentCard({
             </label>
           </div>
         </div>
+        )}
 
-        <div className="md:border-l md:border-slate-100 md:pl-6">
+        <div className={isFinal ? "md:border-l md:border-slate-100 md:pl-6" : ""}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Summary</p>
           <div className="flex flex-col gap-2 text-sm text-slate-600">
             <div className="flex justify-between">
@@ -651,31 +775,117 @@ function PaymentCard({
               <span className="text-slate-700">{activeOffer.sellerName || "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span>Subtotal</span>
+              <span>Order subtotal</span>
               <span>{currency} {subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Shipping (est.)</span>
-              <span>{currency} {ESTIMATED_SHIPPING_FALLBACK.toFixed(2)}</span>
+              <span>Already paid</span>
+              <span className="text-emerald-700">{currency} {paidSoFar.toFixed(2)}</span>
             </div>
+            <div className="flex justify-between">
+              <span>
+                {milestone?.key === "first"
+                  ? schedule?.mode === "thirds"
+                    ? "First installment (1/3)"
+                    : "First installment (1/2)"
+                  : milestone?.key === "second"
+                    ? "Second installment (1/3)"
+                    : schedule?.mode === "thirds"
+                      ? "Final installment (1/3)"
+                      : "Final installment (1/2)"}
+              </span>
+              <span>{currency} {(milestone?.amount ?? 0).toFixed(2)}</span>
+            </div>
+            {isFinal && (
+              <div className="flex justify-between">
+                <span>Shipping (est.)</span>
+                <span>{currency} {ESTIMATED_SHIPPING_FALLBACK.toFixed(2)}</span>
+              </div>
+            )}
             <div className="border-t border-slate-100 mt-2 pt-2 flex justify-between text-base font-semibold text-slate-900">
-              <span>Total</span>
-              <span>{currency} {total.toFixed(2)}</span>
+              <span>Due now</span>
+              <span>
+                {currency}{" "}
+                {(
+                  (milestone?.amount ?? 0) + (isFinal ? ESTIMATED_SHIPPING_FALLBACK : 0)
+                ).toFixed(2)}
+              </span>
             </div>
           </div>
           <button
             onClick={onPay}
-            disabled={!selectedAddress}
+            disabled={isFinal && !selectedAddress}
             className="cta-morph w-full mt-5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-full py-3 text-base shadow-md active:scale-95 flex items-center justify-center gap-2"
           >
             <CheckIcon size={18} />
-            Confirm & Pay
+            {milestone?.key === "first"
+              ? "Pay first installment"
+              : milestone?.key === "second"
+                ? "Pay second installment"
+                : "Confirm & pay final"}
           </button>
           <p className="text-[11px] text-center text-slate-400 mt-2">
-            Stripe demo — no real charge is made.
+            Stripe demo — no real charge is made. <span className="block">Hint: {dueLine}</span>
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Visual breakdown of the milestone schedule rendered above the address +
+ * summary blocks. Each dot is one milestone — green when settled, amber
+ * when due now, slate when still upcoming. Labels switch between "1/3"
+ * and "1/2" automatically based on `schedule.mode`.
+ */
+function MilestoneStrip({ schedule, payments, currency, activeKey }) {
+  if (!schedule || schedule.total <= 0) return null;
+  const settled = new Set((payments || []).map((p) => p.milestone));
+  const steps =
+    schedule.mode === "thirds"
+      ? [
+          { key: "first", label: "1/3 · Start", amount: schedule.first },
+          { key: "second", label: "1/3 · Halfway", amount: schedule.second },
+          { key: "final", label: "1/3 · Delivery", amount: schedule.final },
+        ]
+      : [
+          { key: "first", label: "1/2 · Start", amount: schedule.first },
+          { key: "final", label: "1/2 · Delivery", amount: schedule.final },
+        ];
+  return (
+    <div className="flex items-center gap-2">
+      {steps.map((step, i) => {
+        const done = settled.has(step.key);
+        const due = step.key === activeKey && !done;
+        const tone = done
+          ? "bg-emerald-500 text-white border-emerald-500"
+          : due
+            ? "bg-amber-500 text-white border-amber-500 ring-4 ring-amber-200"
+            : "bg-white text-slate-500 border-slate-300";
+        return (
+          <div key={step.key} className="flex items-center gap-2 flex-1 min-w-0">
+            <div
+              className={`shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold transition-colors ${tone}`}
+              aria-label={`${step.label} ${done ? "paid" : due ? "due now" : "upcoming"}`}
+            >
+              {done ? <CheckIcon size={14} /> : i + 1}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-slate-700 truncate">{step.label}</p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {currency} {Number(step.amount || 0).toFixed(2)}
+              </p>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className={`h-px flex-1 ${done ? "bg-emerald-300" : "bg-slate-200"}`}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -708,14 +918,22 @@ function ChatCard({ request, mainImage, activeOffer, currency, messages, message
               ? "bg-emerald-100 text-emerald-700"
               : activeOffer.status === OFFER_STATUS.READY_TO_SHIP
                 ? "bg-amber-100 text-amber-700"
-                : "bg-blue-100 text-blue-700"
+                : activeOffer.status === OFFER_STATUS.PROGRESS_UPLOADED
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-blue-100 text-blue-700"
           }`}
         >
           {activeOffer.status === OFFER_STATUS.PAID
             ? "Paid"
             : activeOffer.status === OFFER_STATUS.READY_TO_SHIP
               ? "Ready to ship"
-              : "Accepted"}
+              : activeOffer.status === OFFER_STATUS.PROGRESS_UPLOADED
+                ? "Halfway · pay 2nd"
+                : activeOffer.status === OFFER_STATUS.SECOND_PAID
+                  ? "2nd paid · working"
+                  : activeOffer.status === OFFER_STATUS.FIRST_PAID
+                    ? "1st paid · working"
+                    : "Accepted · pay 1st"}
         </span>
       </div>
 
@@ -744,7 +962,19 @@ function ChatCard({ request, mainImage, activeOffer, currency, messages, message
                   : "bg-white border border-slate-100 shadow-sm text-slate-700 rounded-bl-none"
               }`}
             >
-              <p className="text-sm leading-relaxed">{msg.text}</p>
+              {msg.text && <p className="text-sm leading-relaxed">{msg.text}</p>}
+              {msg.image && (
+                <div className="w-48 h-48 rounded-lg overflow-hidden relative border border-slate-100 mt-2">
+                  <Image
+                    src={msg.image}
+                    alt="Progress update image"
+                    width={192}
+                    height={192}
+                    className="object-cover w-full h-full"
+                    unoptimized={isDataUrl(msg.image)}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -902,6 +1132,11 @@ function CompactDetails({
               <CalendarIcon size={10} />
               {formatDate(request.createdAt)}
             </span>
+            {request.updatedAt && request.updatedAt !== request.createdAt && (
+              <span className="inline-flex items-center gap-1 text-slate-400 italic text-xs">
+                · Edited {formatDate(request.updatedAt)}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -1047,6 +1282,11 @@ function DetailsBody({ request, colors, sizeKnown, isPackageSize }) {
             <CalendarIcon size={14} />
             Posted {formatDate(request.createdAt)}
           </span>
+          {request.updatedAt && request.updatedAt !== request.createdAt && (
+            <span className="inline-flex items-center gap-1.5 text-slate-400 italic text-xs">
+              · Edited {formatDate(request.updatedAt)}
+            </span>
+          )}
         </div>
       </div>
       <div>

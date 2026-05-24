@@ -1,12 +1,18 @@
-'use client'
+"use client";
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { SparklesIcon, StarIcon, TagIcon, WandSparklesIcon } from "lucide-react";
+import {
+  SparklesIcon,
+  StarIcon,
+  TagIcon,
+  WandSparklesIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
+import ReportButton from "@/components/ReportButton";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrencySymbol } from "@/lib/currency";
 
@@ -14,143 +20,222 @@ import { getCurrencySymbol } from "@/lib/currency";
 const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
 
 const ProductDetails = ({ product }) => {
+  const productId = product.id;
+  const currency = getCurrencySymbol();
 
-    const productId = product.id;
-    const currency = getCurrencySymbol();
+  const cart = useSelector((state) => state.cart.cartItems);
+  const inWishlist = useSelector((state) =>
+    Boolean(state.wishlist.wishlistItems[productId]),
+  );
+  const dispatch = useDispatch();
 
-    const cart = useSelector(state => state.cart.cartItems);
-    const inWishlist = useSelector(state => Boolean(state.wishlist.wishlistItems[productId]));
-    const dispatch = useDispatch();
+  const router = useRouter();
 
-    const router = useRouter()
+  const [mainImage, setMainImage] = useState(product.images[0]);
+  const [selectedVariants, setSelectedVariants] = useState(() => {
+    const init = {};
+    (product.variants || []).forEach((v) => {
+      init[v.type] = v.options?.[0] ?? "";
+    });
+    return init;
+  });
 
-    const [mainImage, setMainImage] = useState(product.images[0]);
+  const addToCartHandler = () => {
+    dispatch(addToCart({ productId }));
+  };
 
-    const addToCartHandler = () => {
-        dispatch(addToCart({ productId }))
+  const customizeThisItem = () => {
+    // Stash a lightweight seed object — image data URLs can be large so we
+    // only forward the URLs (the /custom/custom-form page will fetch + convert
+    // them to its expected {file, preview} shape itself).
+    const seed = {
+      productId: product.id,
+      itemName: product.name,
+      description: product.description,
+      category: product.category,
+      material: product.material || "",
+      imageUrls: Array.isArray(product.images)
+        ? product.images.slice(0, 5)
+        : [],
+      store: product.store
+        ? {
+            id: product.store.id || product.storeId,
+            name: product.store.name,
+            username: product.store.username,
+            logo: product.store.logo,
+            description: product.store.description,
+          }
+        : null,
+    };
+    try {
+      sessionStorage.setItem(CUSTOMIZE_SEED_KEY, JSON.stringify(seed));
+    } catch {
+      /* ignore quota / private-mode failures — page will just render empty */
     }
+    router.push(
+      `/custom/custom-form?customize=${encodeURIComponent(product.id)}`,
+    );
+  };
 
-    const customizeThisItem = () => {
-        // Stash a lightweight seed object — image data URLs can be large so we
-        // only forward the URLs (the /custom/custom-form page will fetch + convert
-        // them to its expected {file, preview} shape itself).
-        const seed = {
-            productId: product.id,
-            itemName: product.name,
-            description: product.description,
-            category: product.category,
-            material: product.material || '',
-            imageUrls: Array.isArray(product.images) ? product.images.slice(0, 5) : [],
-            store: product.store
-                ? {
-                      id: product.store.id || product.storeId,
-                      name: product.store.name,
-                      username: product.store.username,
-                      logo: product.store.logo,
-                      description: product.store.description,
-                  }
-                : null,
-        }
-        try {
-            sessionStorage.setItem(CUSTOMIZE_SEED_KEY, JSON.stringify(seed))
-        } catch {
-            /* ignore quota / private-mode failures — page will just render empty */
-        }
-        router.push(`/custom/custom-form?customize=${encodeURIComponent(product.id)}`)
-    }
+  const averageRating =
+    product.rating.reduce((acc, item) => acc + item.rating, 0) /
+    product.rating.length;
+  const listPrice = Number(product.mrp);
+  const salePrice = Number(product.price);
+  const hasListDiscount = listPrice > salePrice && listPrice > 0;
+  const discountPercent = hasListDiscount
+    ? Math.round(((listPrice - salePrice) / listPrice) * 100)
+    : 0;
 
-    const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;
-    const listPrice = Number(product.mrp);
-    const salePrice = Number(product.price);
-    const hasListDiscount = listPrice > salePrice && listPrice > 0;
-    const discountPercent = hasListDiscount
-        ? Math.round(((listPrice - salePrice) / listPrice) * 100)
-        : 0;
-    
-    return (
-        <div className="flex max-lg:flex-col gap-12">
-            <div className="flex max-sm:flex-col-reverse gap-3">
-                <div className="flex sm:flex-col gap-3">
-                    {product.images.map((image, index) => (
-                        <div key={index} onClick={() => setMainImage(product.images[index])} className="bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer">
-                            <Image src={image} className="group-hover:scale-103 group-active:scale-95 transition" alt="" width={45} height={45} />
-                        </div>
-                    ))}
-                </div>
-                <div className="flex justify-center items-center h-100 sm:size-113 bg-slate-100 rounded-lg ">
-                    <Image src={mainImage} alt="" width={250} height={250} />
-                </div>
+  return (
+    <div className="flex max-lg:flex-col gap-12">
+      <div className="flex max-sm:flex-col-reverse gap-3">
+        <div className="flex sm:flex-col gap-3">
+          {product.images.map((image, index) => (
+            <div
+              key={index}
+              onClick={() => setMainImage(product.images[index])}
+              className="bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer"
+            >
+              <Image
+                src={image}
+                className="group-hover:scale-103 group-active:scale-95 transition"
+                alt=""
+                width={45}
+                height={45}
+              />
             </div>
-            <div className="flex-1">
-                <h1 className="text-3xl font-semibold text-slate-800">{product.name}</h1>
-                <div className='flex items-center mt-2'>
-                    {Array(5).fill('').map((_, index) => (
-                        <StarIcon key={index} size={14} className='text-transparent mt-0.5' fill={averageRating >= index + 1 ? "#2582eb" : "#D1D5DB"} />
-                    ))}
-                    <p className="text-sm ml-3 text-slate-500">{product.rating.length} Reviews</p>
-                </div>
-                <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
-                    <p>
-                        {currency}
-                        {salePrice}
-                    </p>
-                    {hasListDiscount && (
-                        <p className="text-xl text-slate-500 line-through">
-                            {currency}
-                            {listPrice}
-                        </p>
-                    )}
-                </div>
-                {discountPercent > 0 && (
-                    <div className="flex items-center gap-2 text-slate-500">
-                        <TagIcon size={14} />
-                        <p>Save {discountPercent}% right now</p>
-                    </div>
-                )}
-                <div className="flex items-end gap-5 mt-10">
-                    {
-                        cart[productId] && (
-                            <div className="flex flex-col gap-3">
-                                <p className="text-lg text-slate-800 font-semibold">Quantity</p>
-                                <Counter productId={productId} />
-                            </div>
-                        )
-                    }
-                    <button onClick={() => !cart[productId] ? addToCartHandler() : router.push('/cart')} className="bg-slate-800 text-white px-10 py-3 text-sm font-medium rounded hover:bg-slate-900 active:scale-95 transition">
-                        {!cart[productId] ? 'Add to Cart' : 'View Cart'}
-                    </button>
-                    <button
-                        onClick={() => dispatch(toggleWishlist({ productId }))}
-                        className="border border-slate-300 text-slate-700 px-6 py-3 text-sm font-medium rounded hover:bg-slate-50 transition"
-                    >
-                        {inWishlist ? 'Wishlisted' : 'Wishlist'}
-                    </button>
-                </div>
-
-                <hr className="border-gray-300 my-5" />
-
-                {/* Customize-this-item CTA — sends the artisan a private request
-                    seeded with this product so the buyer can ask for tweaks. */}
-                <div className="flex flex-col gap-2 max-w-md">
-                    <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
-                        <SparklesIcon size={14} className="text-[#2582eb]" />
-                        Love this but want a tweak? The maker can craft your version.
-                    </p>
-                    <button
-                        type="button"
-                        onClick={customizeThisItem}
-                        className="group inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white bg-[#1c355e] hover:bg-[#2582eb] transition-colors duration-200 shadow-sm hover:shadow"
-                    >
-                        <WandSparklesIcon
-                            size={16}
-                            className="transition-transform duration-200 group-hover:rotate-12"
-                        />
-                        <span>Customize this for me</span>
-                    </button>
-                </div>
-            </div>
+          ))}
         </div>
-    )
-}
+        <div className="flex justify-center items-center h-100 sm:size-113 bg-slate-100 rounded-lg ">
+          <Image src={mainImage} alt="" width={250} height={250} />
+        </div>
+      </div>
+      <div className="flex-1">
+        <h1 className="text-3xl font-semibold text-slate-800">
+          {product.name}
+        </h1>
+        <div className="flex items-center mt-2">
+          {Array(5)
+            .fill("")
+            .map((_, index) => (
+              <StarIcon
+                key={index}
+                size={14}
+                className="text-transparent mt-0.5"
+                fill={averageRating >= index + 1 ? "#2582eb" : "#D1D5DB"}
+              />
+            ))}
+          <p className="text-sm ml-3 text-slate-500">
+            {product.rating.length} Reviews
+          </p>
+        </div>
+        <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
+          <p>
+            {currency}
+            {salePrice}
+          </p>
+          {hasListDiscount && (
+            <p className="text-xl text-slate-500 line-through">
+              {currency}
+              {listPrice}
+            </p>
+          )}
+        </div>
+        {discountPercent > 0 && (
+          <div className="flex items-center gap-2 text-slate-500">
+            <TagIcon size={14} />
+            <p>Save {discountPercent}% right now</p>
+          </div>
+        )}
+        {/* ── Variant selectors ── */}
+        {Array.isArray(product.variants) && product.variants.length > 0 && (
+          <div className="mt-6 space-y-4">
+            {product.variants.map((variant) => (
+              <div key={variant.id ?? variant.type}>
+                <p className="text-sm font-medium text-slate-700 mb-2">
+                  {variant.type}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {variant.options.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() =>
+                        setSelectedVariants((prev) => ({
+                          ...prev,
+                          [variant.type]: opt,
+                        }))
+                      }
+                      className={`px-3 py-1.5 text-sm border rounded-lg transition ${
+                        selectedVariants[variant.type] === opt
+                          ? "bg-slate-800 text-white border-slate-800"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-end gap-5 mt-10">
+          {cart[productId] && (
+            <div className="flex flex-col gap-3">
+              <p className="text-lg text-slate-800 font-semibold">Quantity</p>
+              <Counter productId={productId} />
+            </div>
+          )}
+          <button
+            onClick={() =>
+              !cart[productId] ? addToCartHandler() : router.push("/cart")
+            }
+            className="bg-slate-800 text-white px-10 py-3 text-sm font-medium rounded hover:bg-slate-900 active:scale-95 transition"
+          >
+            {!cart[productId] ? "Add to Cart" : "View Cart"}
+          </button>
+          <button
+            onClick={() => dispatch(toggleWishlist({ productId }))}
+            className="border border-slate-300 text-slate-700 px-6 py-3 text-sm font-medium rounded hover:bg-slate-50 transition"
+          >
+            {inWishlist ? "Wishlisted" : "Wishlist"}
+          </button>
+        </div>
 
-export default ProductDetails
+        <hr className="border-gray-300 my-5" />
+
+        {/* Customize-this-item CTA — sends the artisan a private request
+                    seeded with this product so the buyer can ask for tweaks. */}
+        <div className="flex flex-col gap-2 max-w-md">
+          <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
+            <SparklesIcon size={14} className="text-[#2582eb]" />
+            Love this but want a tweak? The maker can craft your version.
+          </p>
+          <button
+            type="button"
+            onClick={customizeThisItem}
+            className="group inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white bg-[#1c355e] hover:bg-[#2582eb] transition-colors duration-200 shadow-sm hover:shadow"
+          >
+            <WandSparklesIcon
+              size={16}
+              className="transition-transform duration-200 group-hover:rotate-12"
+            />
+            <span>Customize this for me</span>
+          </button>
+        </div>
+        <div className="mt-4">
+          <ReportButton
+            type="NON_HANDMADE_PRODUCT"
+            productId={product.id}
+            storeId={product.storeId}
+            label="Report this product"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductDetails;

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
 import Loading from "@/components/Loading"
+import Pagination from "@/components/Pagination"
 import { getCurrencySymbol } from "@/lib/currency"
 import { XIcon } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
@@ -27,6 +28,16 @@ export default function StoreManageProducts() {
         [productList, storeId],
     )
 
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 15
+    const totalPages = Math.max(1, Math.ceil(products.length / ITEMS_PER_PAGE))
+    const paginatedProducts = products.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE,
+    )
+
+    useEffect(() => { setCurrentPage(1) }, [products.length])
+
     const [loading, setLoading] = useState(true)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editForm, setEditForm] = useState({
@@ -35,7 +46,12 @@ export default function StoreManageProducts() {
         mrp: "",
         price: "",
         category: "",
+        material: "",
     })
+    const [editVariants, setEditVariants] = useState([])
+    const [newVariantType, setNewVariantType] = useState("")
+    const [newVariantOption, setNewVariantOption] = useState("")
+    const [editingVariantId, setEditingVariantId] = useState(null)
 
     useEffect(() => {
         const t = setTimeout(() => setLoading(false), 0)
@@ -57,7 +73,16 @@ export default function StoreManageProducts() {
             mrp: String(product.mrp ?? ""),
             price: String(product.price ?? ""),
             category: product.category ?? "",
+            material: product.material ?? "",
         })
+        setEditVariants(
+            Array.isArray(product.variants)
+                ? product.variants.map((v) => ({ ...v, id: v.id ?? Date.now() }))
+                : [],
+        )
+        setNewVariantType("")
+        setNewVariantOption("")
+        setEditingVariantId(null)
     }
 
     const closeEditModal = () => {
@@ -68,7 +93,51 @@ export default function StoreManageProducts() {
             mrp: "",
             price: "",
             category: "",
+            material: "",
         })
+        setEditVariants([])
+        setNewVariantType("")
+        setNewVariantOption("")
+        setEditingVariantId(null)
+    }
+
+    const addEditVariantType = () => {
+        const t = newVariantType.trim()
+        if (!t) return
+        if (editVariants.some((v) => v.type.toLowerCase() === t.toLowerCase())) {
+            toast.error("Variant type already exists")
+            return
+        }
+        setEditVariants((prev) => [...prev, { id: Date.now(), type: t, options: [] }])
+        setNewVariantType("")
+        setEditingVariantId(null)
+    }
+
+    const removeEditVariantType = (id) => {
+        setEditVariants((prev) => prev.filter((v) => v.id !== id))
+    }
+
+    const addEditOption = (variantId) => {
+        const opt = newVariantOption.trim()
+        if (!opt) return
+        setEditVariants((prev) =>
+            prev.map((v) =>
+                v.id === variantId
+                    ? v.options.includes(opt) ? v : { ...v, options: [...v.options, opt] }
+                    : v,
+            ),
+        )
+        setNewVariantOption("")
+    }
+
+    const removeEditOption = (variantId, opt) => {
+        setEditVariants((prev) =>
+            prev.map((v) =>
+                v.id === variantId
+                    ? { ...v, options: v.options.filter((o) => o !== opt) }
+                    : v,
+            ),
+        )
     }
 
     const handleSaveEdit = (e) => {
@@ -96,6 +165,9 @@ export default function StoreManageProducts() {
                 category: trimmedCategory,
                 mrp: parsedMrp,
                 price: parsedPrice,
+                material: editForm.material.trim(),
+                variants: editVariants.filter((v) => v.options.length > 0),
+                updatedAt: new Date().toISOString(),
             }),
         )
 
@@ -122,7 +194,7 @@ export default function StoreManageProducts() {
                     </tr>
                 </thead>
                 <tbody className="text-slate-700">
-                    {products.map((product) => (
+                    {paginatedProducts.map((product) => (
                         <tr key={product.id} className="border-t border-gray-200 hover:bg-gray-50">
                             <td className="px-4 py-3">
                                 <div className="flex gap-2 items-center">
@@ -153,6 +225,8 @@ export default function StoreManageProducts() {
                 </tbody>
             </table>
             )}
+
+            <Pagination currentPage={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
 
             {editingProduct && (
                 <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
@@ -225,6 +299,67 @@ export default function StoreManageProducts() {
                                     className="w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#2582eb] bg-[#faf8f5]"
                                     placeholder="Category"
                                 />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block mb-1.5 text-slate-600 font-medium">Material</label>
+                                <input
+                                    value={editForm.material}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, material: e.target.value }))}
+                                    className="w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#2582eb] bg-[#faf8f5]"
+                                    placeholder="e.g. Oak wood, cotton, ceramic"
+                                />
+                            </div>
+
+                            {/* ── Variants ── */}
+                            <div className="sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                <p className="text-slate-600 font-medium mb-1">Product Variants</p>
+                                <p className="text-xs text-slate-400 mb-3">Add size, color or any other variant options.</p>
+
+                                {editVariants.map((variant) => (
+                                    <div key={variant.id} className="mb-3 border border-slate-200 rounded-lg p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium text-slate-700">{variant.type}</span>
+                                            <button type="button" onClick={() => removeEditVariantType(variant.id)}
+                                                className="text-xs text-rose-500 hover:text-rose-700">Remove</button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {variant.options.map((opt) => (
+                                                <span key={opt} className="flex items-center gap-1 bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full">
+                                                    {opt}
+                                                    <button type="button" onClick={() => removeEditOption(variant.id, opt)}
+                                                        className="text-slate-400 hover:text-slate-700 leading-none ml-0.5">×</button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        {editingVariantId === variant.id ? (
+                                            <div className="flex gap-2">
+                                                <input type="text" value={newVariantOption}
+                                                    onChange={(e) => setNewVariantOption(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEditOption(variant.id) } }}
+                                                    placeholder="e.g. Large"
+                                                    className="flex-1 p-1.5 px-3 text-sm border border-slate-200 rounded outline-slate-400" />
+                                                <button type="button" onClick={() => addEditOption(variant.id)}
+                                                    className="text-sm bg-slate-700 text-white px-3 py-1.5 rounded hover:bg-slate-900 transition">Add</button>
+                                                <button type="button" onClick={() => { setEditingVariantId(null); setNewVariantOption("") }}
+                                                    className="text-sm border border-slate-200 text-slate-500 px-3 py-1.5 rounded hover:bg-slate-50 transition">Done</button>
+                                            </div>
+                                        ) : (
+                                            <button type="button" onClick={() => { setEditingVariantId(variant.id); setNewVariantOption("") }}
+                                                className="text-xs text-[#2582eb] hover:underline">+ Add option</button>
+                                        )}
+                                    </div>
+                                ))}
+
+                                <div className="flex gap-2 mt-2">
+                                    <input type="text" value={newVariantType}
+                                        onChange={(e) => setNewVariantType(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEditVariantType() } }}
+                                        placeholder="Variant type (e.g. Size, Color)"
+                                        className="flex-1 p-2 px-3 text-sm border border-slate-200 rounded outline-slate-400" />
+                                    <button type="button" onClick={addEditVariantType}
+                                        className="text-sm bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-900 transition">+ Add</button>
+                                </div>
                             </div>
 
                             <div className="sm:col-span-2 pt-2 flex items-center justify-end gap-3">

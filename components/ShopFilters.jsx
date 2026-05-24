@@ -1,271 +1,387 @@
-'use client'
+"use client";
 
-import { categories } from '@/assets/assets'
-import { FilterIcon, XIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { getCurrencySymbol } from '@/lib/currency'
+import { categories } from "@/assets/assets";
+import { FilterIcon, XIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCurrencySymbol } from "@/lib/currency";
 
-const currencySym = getCurrencySymbol()
+const currencySym = getCurrencySymbol();
 const priceRanges = [
-    { label: `Under 200 ${currencySym}`, min: 0, max: 200 },
-    { label: `200 - 400 ${currencySym}`, min: 200, max: 400 },
-    { label: `400 - 600 ${currencySym}`, min: 400, max: 600 },
-    { label: `600 - 1000 ${currencySym}`, min: 600, max: 1000 },
-    { label: `Over 1000 ${currencySym}`, min: 1000, max: Infinity },
-]
+  { label: `Under 200 ${currencySym}`, min: 0, max: 200 },
+  { label: `200 - 400 ${currencySym}`, min: 200, max: 400 },
+  { label: `400 - 600 ${currencySym}`, min: 400, max: 600 },
+  { label: `600 - 1000 ${currencySym}`, min: 600, max: 1000 },
+  { label: `Over 1000 ${currencySym}`, min: 1000, max: Infinity },
+];
 
-const MIN_PRICE = 0
-const MAX_PRICE = 1500
+const MIN_PRICE = 0;
+const MAX_PRICE = 1500;
 
-export default function ShopFilters({ onCategoryChange, onPriceRangeChange, initialCategories = [] }) {
-    const [selectedCategories, setSelectedCategories] = useState(initialCategories)
-    const [selectedPriceRange, setSelectedPriceRange] = useState(null)
-    const [sliderMax, setSliderMax] = useState(MAX_PRICE)
-    // Mobile drawer toggle. Inline sidebar on lg+; bottom-sheet otherwise.
-    const [mobileOpen, setMobileOpen] = useState(false)
+export default function ShopFilters({
+  onCategoryChange,
+  onPriceRangeChange,
+  onSortChange,
+  onAvailabilityChange,
+  initialCategories = [],
+}) {
+  const [selectedCategories, setSelectedCategories] =
+    useState(initialCategories);
+  const [selectedPriceRange, setSelectedPriceRange] = useState(null);
+  const [sliderMax, setSliderMax] = useState(MAX_PRICE);
+  const [sortBy, setSortBy] = useState("latest");
+  const [stockFilter, setStockFilter] = useState("all"); // 'all' | 'inStock' | 'outOfStock'
+  // Mobile drawer toggle. Inline sidebar on lg+; bottom-sheet otherwise.
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-    useEffect(() => {
-        if (typeof document === 'undefined') return undefined
-        if (!mobileOpen) return undefined
-        const prev = document.body.style.overflow
-        document.body.style.overflow = 'hidden'
-        return () => {
-            document.body.style.overflow = prev
-        }
-    }, [mobileOpen])
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    if (!mobileOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
 
-    const handleCategoryToggle = (category) => {
-        const newSelected = selectedCategories.includes(category)
-            ? selectedCategories.filter(c => c !== category)
-            : [...selectedCategories, category]
-        setSelectedCategories(newSelected)
-        onCategoryChange?.(newSelected)
+  const handleCategoryToggle = (category) => {
+    const newSelected = selectedCategories.includes(category)
+      ? selectedCategories.filter((c) => c !== category)
+      : [...selectedCategories, category];
+    setSelectedCategories(newSelected);
+    onCategoryChange?.(newSelected);
+  };
+
+  const handlePriceRangeSelect = (range) => {
+    const newRange = selectedPriceRange?.label === range.label ? null : range;
+    setSelectedPriceRange(newRange);
+    setSliderMax(MAX_PRICE); // reset slider
+    onPriceRangeChange?.(newRange);
+  };
+
+  const handleSliderChange = (e) => {
+    const value = parseInt(e.target.value);
+    setSliderMax(value);
+    setSelectedPriceRange(null); // clear radio selection
+    if (value === MAX_PRICE) {
+      // No filter when slider at max
+      onPriceRangeChange?.(null);
+    } else {
+      // Create a custom range object
+      const customRange = {
+        label: `Under ${value} EGP`,
+        min: MIN_PRICE,
+        max: value,
+      };
+      onPriceRangeChange?.(customRange);
     }
+  };
 
-    const handlePriceRangeSelect = (range) => {
-        const newRange = selectedPriceRange?.label === range.label ? null : range
-        setSelectedPriceRange(newRange)
-        setSliderMax(MAX_PRICE) // reset slider
-        onPriceRangeChange?.(newRange)
-    }
+  const handleSortChange = (val) => {
+    setSortBy(val);
+    onSortChange?.(val);
+  };
+  const handleStockChange = (val) => {
+    setStockFilter(val);
+    onAvailabilityChange?.(val);
+  };
 
-    const handleSliderChange = (e) => {
-        const value = parseInt(e.target.value)
-        setSliderMax(value)
-        setSelectedPriceRange(null) // clear radio selection
-        if (value === MAX_PRICE) {
-            // No filter when slider at max
-            onPriceRangeChange?.(null)
-        } else {
-            // Create a custom range object
-            const customRange = { label: `Under ${value} EGP`, min: MIN_PRICE, max: value }
-            onPriceRangeChange?.(customRange)
-        }
-    }
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedPriceRange(null);
+    setSliderMax(MAX_PRICE);
+    setSortBy("latest");
+    setStockFilter("all");
+    onCategoryChange?.([]);
+    onPriceRangeChange?.(null);
+    onSortChange?.("latest");
+    onAvailabilityChange?.("all");
+  };
 
-    const clearFilters = () => {
-        setSelectedCategories([])
-        setSelectedPriceRange(null)
-        setSliderMax(MAX_PRICE)
-        onCategoryChange?.([])
-        onPriceRangeChange?.(null)
-    }
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    selectedPriceRange ||
+    sliderMax !== MAX_PRICE ||
+    sortBy !== "latest" ||
+    stockFilter !== "all";
 
-    const hasActiveFilters = selectedCategories.length > 0 || selectedPriceRange || sliderMax !== MAX_PRICE
-    const activeFilterCount =
-        selectedCategories.length + (selectedPriceRange ? 1 : 0) + (sliderMax !== MAX_PRICE && !selectedPriceRange ? 1 : 0)
+  const activeFilterCount =
+    selectedCategories.length +
+    (selectedPriceRange ? 1 : 0) +
+    (sliderMax !== MAX_PRICE && !selectedPriceRange ? 1 : 0) +
+    (sortBy !== "latest" ? 1 : 0) +
+    (stockFilter !== "all" ? 1 : 0);
 
-    const body = (
-        <FilterBody
-            selectedCategories={selectedCategories}
-            handleCategoryToggle={handleCategoryToggle}
-            sliderMax={sliderMax}
-            handleSliderChange={handleSliderChange}
-            selectedPriceRange={selectedPriceRange}
-            handlePriceRangeSelect={handlePriceRangeSelect}
-            hasActiveFilters={hasActiveFilters}
+  const body = (
+    <FilterBody
+      selectedCategories={selectedCategories}
+      handleCategoryToggle={handleCategoryToggle}
+      sliderMax={sliderMax}
+      handleSliderChange={handleSliderChange}
+      selectedPriceRange={selectedPriceRange}
+      handlePriceRangeSelect={handlePriceRangeSelect}
+      hasActiveFilters={hasActiveFilters}
+      sortBy={sortBy}
+      stockFilter={stockFilter}
+      handleSortChange={handleSortChange}
+      handleStockChange={handleStockChange}
+    />
+  );
+
+  return (
+    <>
+      {/* Mobile trigger pill — only renders below lg. */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+      >
+        <FilterIcon size={16} />
+        Filters
+        {activeFilterCount > 0 && (
+          <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      {/* Mobile bottom-sheet drawer. */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[60] transition-opacity ${
+          mobileOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!mobileOpen}
+      >
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         />
-    )
-
-    return (
-        <>
-            {/* Mobile trigger pill — only renders below lg. */}
+        <div
+          role="dialog"
+          aria-label="Filters"
+          className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
+            mobileOpen ? "translate-y-0" : "translate-y-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <FilterIcon size={20} />
+              Filters
+            </h3>
             <button
-                type="button"
-                onClick={() => setMobileOpen(true)}
-                className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close filters"
+              className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
             >
-                <FilterIcon size={16} />
-                Filters
-                {activeFilterCount > 0 && (
-                    <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
-                        {activeFilterCount}
-                    </span>
-                )}
+              <XIcon size={22} />
             </button>
-
-            {/* Mobile bottom-sheet drawer. */}
-            <div
-                className={`lg:hidden fixed inset-0 z-[60] transition-opacity ${
-                    mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-                }`}
-                aria-hidden={!mobileOpen}
+          </div>
+          <div className="overflow-y-auto flex-1">{body}</div>
+          <div className="border-t border-slate-100 px-5 py-3 flex gap-2 sticky bottom-0 bg-white">
+            <button
+              type="button"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
             >
-                <div onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-                <div
-                    role="dialog"
-                    aria-label="Filters"
-                    className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
-                        mobileOpen ? 'translate-y-0' : 'translate-y-full'
-                    }`}
-                >
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                        <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                            <FilterIcon size={20} />
-                            Filters
-                        </h3>
-                        <button
-                            type="button"
-                            onClick={() => setMobileOpen(false)}
-                            aria-label="Close filters"
-                            className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
-                        >
-                            <XIcon size={22} />
-                        </button>
-                    </div>
-                    <div className="overflow-y-auto flex-1">{body}</div>
-                    <div className="border-t border-slate-100 px-5 py-3 flex gap-2 sticky bottom-0 bg-white">
-                        <button
-                            type="button"
-                            onClick={clearFilters}
-                            disabled={!hasActiveFilters}
-                            className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
-                        >
-                            Clear
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMobileOpen(false)}
-                            className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
-                        >
-                            Show results
-                        </button>
-                    </div>
-                </div>
-            </div>
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
+            >
+              Show results
+            </button>
+          </div>
+        </div>
+      </div>
 
-            {/* Desktop inline sidebar. */}
-            <div className="hidden lg:block w-full p-4">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <FilterIcon size={20} />
-                        Filters
-                    </h3>
-                    {hasActiveFilters && (
-                        <button
-                            onClick={clearFilters}
-                            className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                            Clear all
-                        </button>
-                    )}
-                </div>
-                {body}
-            </div>
-        </>
-    )
+      {/* Desktop inline sidebar. */}
+      <div className="hidden lg:block w-full p-4">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+            <FilterIcon size={20} />
+            Filters
+          </h3>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        {body}
+      </div>
+    </>
+  );
 }
 
 function FilterBody({
-    selectedCategories,
-    handleCategoryToggle,
-    sliderMax,
-    handleSliderChange,
-    selectedPriceRange,
-    handlePriceRangeSelect,
-    hasActiveFilters,
+  selectedCategories,
+  handleCategoryToggle,
+  sliderMax,
+  handleSliderChange,
+  selectedPriceRange,
+  handlePriceRangeSelect,
+  hasActiveFilters,
+  sortBy,
+  stockFilter,
+  handleSortChange,
+  handleStockChange,
 }) {
-    return (
-        <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
-            {/* Categories Section */}
-            <div className="mb-8">
-                <h4 className="font-medium text-slate-700 mb-4">Categories</h4>
-                <div className="space-y-3">
-                    {categories.map((cat) => (
-                        <label key={cat} className="flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={selectedCategories.includes(cat)}
-                                onChange={() => handleCategoryToggle(cat)}
-                                className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                            />
-                            <span className="ml-3 text-slate-700">{cat}</span>
-                        </label>
-                    ))}
-                </div>
-            </div>
-
-            {/* Price Range Section */}
-            <div className="mb-8">
-                <h4 className="font-medium text-slate-700 mb-4">Price Range</h4>
-                
-                {/* Slider */}
-                <div className="mb-6">
-                    <div className="flex justify-between text-sm text-slate-600 mb-2">
-                        <span>Max price: <strong>{`${getCurrencySymbol()} ${sliderMax}`}</strong></span>
-                        <span>{`${getCurrencySymbol()} ${MIN_PRICE} - ${getCurrencySymbol()} ${MAX_PRICE}`}</span>
-                    </div>
-                    <input
-                        type="range"
-                        min={MIN_PRICE}
-                        max={MAX_PRICE}
-                        step={10}
-                        value={sliderMax}
-                        onChange={handleSliderChange}
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600"
-                    />
-                </div>
-
-                {/* Predefined ranges */}
-                <div className="space-y-3">
-                    {priceRanges.map((range) => (
-                        <label key={range.label} className="flex items-center cursor-pointer">
-                            <input
-                                type="radio"
-                                name="priceRange"
-                                checked={selectedPriceRange?.label === range.label}
-                                onChange={() => handlePriceRangeSelect(range)}
-                                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                            />
-                            <span className="ml-3 text-slate-700">{range.label}</span>
-                        </label>
-                    ))}
-                </div>
-            </div>
-
-            {/* Active filters summary */}
-            {hasActiveFilters && (
-                <div className="mt-8 pt-6 border-t border-slate-200">
-                    <p className="text-sm text-slate-600 mb-2">Active filters:</p>
-                    <div className="flex flex-wrap gap-2">
-                        {selectedCategories.map(cat => (
-                            <span key={cat} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {cat}
-                            </span>
-                        ))}
-                        {selectedPriceRange && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                {selectedPriceRange.label}
-                            </span>
-                        )}
-                        {sliderMax !== MAX_PRICE && !selectedPriceRange && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                Under ${sliderMax} EGP
-                            </span>
-                        )}
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
+      {/* Sort By Section */}
+      <div className="mb-8">
+        <h4 className="font-medium text-slate-700 mb-4">Sort By</h4>
+        <div className="space-y-3">
+          {[
+            { value: "latest", label: "Latest" },
+            { value: "price_asc", label: "Price: Low to High" },
+            { value: "price_desc", label: "Price: High to Low" },
+          ].map((opt) => (
+            <label key={opt.value} className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="sortBy"
+                checked={sortBy === opt.value}
+                onChange={() => handleSortChange(opt.value)}
+                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+              />
+              <span className="ml-3 text-slate-700">{opt.label}</span>
+            </label>
+          ))}
         </div>
-    )
+      </div>
+
+      {/* Availability Section */}
+      <div className="mb-8">
+        <h4 className="font-medium text-slate-700 mb-4">Availability</h4>
+        <div className="space-y-3">
+          {[
+            { value: "all", label: "All" },
+            { value: "inStock", label: "In Stock" },
+            { value: "outOfStock", label: "Out of Stock" },
+          ].map((opt) => (
+            <label key={opt.value} className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="stockFilter"
+                checked={stockFilter === opt.value}
+                onChange={() => handleStockChange(opt.value)}
+                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+              />
+              <span className="ml-3 text-slate-700">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Categories Section */}
+      <div className="mb-8">
+        <h4 className="font-medium text-slate-700 mb-4">Categories</h4>
+        <div className="space-y-3">
+          {categories.map((cat) => (
+            <label key={cat} className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedCategories.includes(cat)}
+                onChange={() => handleCategoryToggle(cat)}
+                className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+              />
+              <span className="ml-3 text-slate-700">{cat}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Price Range Section */}
+      <div className="mb-8">
+        <h4 className="font-medium text-slate-700 mb-4">Price Range</h4>
+
+        {/* Slider */}
+        <div className="mb-6">
+          <div className="flex justify-between text-sm text-slate-600 mb-2">
+            <span>
+              Max price:{" "}
+              <strong>{`${getCurrencySymbol()} ${sliderMax}`}</strong>
+            </span>
+            <span>{`${getCurrencySymbol()} ${MIN_PRICE} - ${getCurrencySymbol()} ${MAX_PRICE}`}</span>
+          </div>
+          <input
+            type="range"
+            min={MIN_PRICE}
+            max={MAX_PRICE}
+            step={10}
+            value={sliderMax}
+            onChange={handleSliderChange}
+            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600"
+          />
+        </div>
+
+        {/* Predefined ranges */}
+        <div className="space-y-3">
+          {priceRanges.map((range) => (
+            <label
+              key={range.label}
+              className="flex items-center cursor-pointer"
+            >
+              <input
+                type="radio"
+                name="priceRange"
+                checked={selectedPriceRange?.label === range.label}
+                onChange={() => handlePriceRangeSelect(range)}
+                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+              />
+              <span className="ml-3 text-slate-700">{range.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Active filters summary */}
+      {hasActiveFilters && (
+        <div className="mt-8 pt-6 border-t border-slate-200">
+          <p className="text-sm text-slate-600 mb-2">Active filters:</p>
+          <div className="flex flex-wrap gap-2">
+            {sortBy !== "latest" && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                {sortBy === "price_asc"
+                  ? "Price: Low to High"
+                  : "Price: High to Low"}
+              </span>
+            )}
+            {stockFilter !== "all" && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                {stockFilter === "inStock" ? "In Stock" : "Out of Stock"}
+              </span>
+            )}
+            {selectedCategories.map((cat) => (
+              <span
+                key={cat}
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                {cat}
+              </span>
+            ))}
+            {selectedPriceRange && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {selectedPriceRange.label}
+              </span>
+            )}
+            {sliderMax !== MAX_PRICE && !selectedPriceRange && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                Under ${sliderMax} EGP
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

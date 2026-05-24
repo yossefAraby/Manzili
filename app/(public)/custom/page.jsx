@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useState, useMemo } from "react";
 import CustomRequestCard from "@/components/CustomRequestCard";
 import CustomFilters from "@/components/CustomFilters";
+import Pagination from "@/components/Pagination";
 import { MoveLeftIcon, PlusIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
@@ -50,6 +51,9 @@ function CustomProductsContent() {
   // Filter states
   const [selectedOwnership, setSelectedOwnership] = useState("all");
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [sortBy, setSortBy] = useState("latest");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +89,10 @@ function CustomProductsContent() {
       if (cancelled) return;
       const marks = {};
       for (const offer of offers) {
-        const current = marks[offer.requestId] || { pinned: false, accepted: false };
+        const current = marks[offer.requestId] || {
+          pinned: false,
+          accepted: false,
+        };
         if (SELLER_PINNED_STATUSES.has(offer.status)) current.pinned = true;
         if (SELLER_ACCEPTED_STATUSES.has(offer.status)) current.accepted = true;
         marks[offer.requestId] = current;
@@ -96,6 +103,11 @@ function CustomProductsContent() {
       cancelled = true;
     };
   }, [isSeller, currentUserId, customRequests]);
+
+  // Reset to page 1 whenever any filter/sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedOwnership, selectedCategories, sortBy]);
 
   // Apply filters
   const filteredRequests = useMemo(() => {
@@ -139,8 +151,40 @@ function CustomProductsContent() {
       filtered = [...filtered].sort((a, b) => rank(a) - rank(b));
     }
 
+    // User sort (applied after seller engagement sort)
+    if (sortBy === "oldest") {
+      filtered = [...filtered].sort(
+        (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+      );
+    } else {
+      // 'latest' — only apply if seller marks didn't sort differently, or always override:
+      if (!isSeller || Object.keys(sellerMarks).length === 0) {
+        filtered = [...filtered].sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+        );
+      }
+    }
+
     return filtered;
-  }, [customRequests, search, selectedOwnership, selectedCategories, currentUserId, isSeller, sellerMarks]);
+  }, [
+    customRequests,
+    search,
+    selectedOwnership,
+    selectedCategories,
+    currentUserId,
+    isSeller,
+    sellerMarks,
+    sortBy,
+  ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredRequests.length / ITEMS_PER_PAGE),
+  );
+  const paginatedRequests = filteredRequests.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   const handleOwnershipChange = (ownership) => {
     setSelectedOwnership(ownership);
@@ -188,6 +232,7 @@ function CustomProductsContent() {
               onOwnershipChange={handleOwnershipChange}
               onCategoryChange={handleCategoryChange}
               onClearFilters={handleClearFilters}
+              onSortChange={setSortBy}
             />
           </div>
 
@@ -197,9 +242,9 @@ function CustomProductsContent() {
               <div className="text-center py-12">
                 <p className="text-slate-500">Loading custom requests...</p>
               </div>
-            ) : filteredRequests.length > 0 ? (
+            ) : paginatedRequests.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 xl:gap-8 mb-32">
-                {filteredRequests.map((request) => {
+                {paginatedRequests.map((request) => {
                   const mark = sellerMarks[request.id];
                   return (
                     <CustomRequestCard
@@ -230,8 +275,12 @@ function CustomProductsContent() {
                 </button>
               </div>
             )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onChange={setCurrentPage}
+            />
           </div>
-
         </div>
       </div>
     </div>

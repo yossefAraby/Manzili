@@ -1,10 +1,10 @@
 "use client";
-import { Search, ShoppingCart, CircleUserRound, Star, MenuIcon, XIcon, HomeIcon, StoreIcon, PaletteIcon, LogOutIcon, UserIcon, PackageIcon } from "lucide-react";
+import { Search, ShoppingCart, CircleUserRound, Star, MenuIcon, XIcon, HomeIcon, StoreIcon, PaletteIcon, LogOutIcon, UserIcon, PackageIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearSession, selectIsLoggedIn, selectIsSeller } from "@/lib/features/auth/authSlice";
 import { setAddressList } from "@/lib/features/address/addressSlice";
@@ -15,17 +15,16 @@ const Navbar = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   const [search, setSearch] = useState("");
-  // Mobile-only side drawer. Anchored to `mobileMenuOpen` so the same
-  // state drives the slide-in transform, the body-scroll lock, and the
-  // backdrop click-to-close.
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileSearchInputRef = useRef(null);
+
   const cartCount = useSelector((state) => state.cart.total);
   const wishlistCount = useSelector((state) => state.wishlist.total);
   const isLoggedIn = useSelector(selectIsLoggedIn);
   const isSeller = useSelector(selectIsSeller);
 
-  // Body scroll-lock while the drawer is up. Without this, swiping inside
-  // the drawer pulls the page underneath along for the ride on iOS.
+  // Body scroll-lock while the drawer is up.
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
     if (mobileMenuOpen) {
@@ -37,6 +36,13 @@ const Navbar = () => {
     }
     return undefined;
   }, [mobileMenuOpen]);
+
+  // Auto-focus the mobile search input when expanded
+  useEffect(() => {
+    if (mobileSearchOpen && mobileSearchInputRef.current) {
+      mobileSearchInputRef.current.focus();
+    }
+  }, [mobileSearchOpen]);
 
   const closeMobile = () => setMobileMenuOpen(false);
   const navigate = (path) => {
@@ -60,20 +66,40 @@ const Navbar = () => {
   const handleMobileSearch = (e) => {
     e.preventDefault();
     if (!search.trim()) return;
+    setMobileSearchOpen(false);
     closeMobile();
     router.push(`/shop?search=${encodeURIComponent(search.trim())}`);
+  };
+
+  const handleMobileSearchKeyDown = (e) => {
+    if (e.key === "Escape") {
+      setMobileSearchOpen(false);
+    }
+  };
+
+  const toggleMobileSearch = () => {
+    setMobileSearchOpen((prev) => {
+      if (!prev) setSearch("");
+      return !prev;
+    });
   };
 
   return (
     <nav className="relative bg-white">
       <div className="mx-6">
         <div className="flex items-center justify-between max-w-7xl mx-auto py-4 transition-all">
-          {/* Logo and site name (Manzili) */}
+
+          {/* Logo — shrinks to image-only when mobile search is open */}
           <Link
             href="/"
-            className="flex items-center gap-3 relative text-5xl font-bold font-sans"
+            className="flex items-center gap-3 relative text-5xl font-bold font-sans shrink-0"
           >
-            <div className="relative flex items-baseline">
+            {/* Text part fades out on mobile when search is open */}
+            <div
+              className={`relative flex items-baseline transition-all duration-300 ease-in-out sm:flex ${
+                mobileSearchOpen ? "hidden" : "flex"
+              }`}
+            >
               <span className="text-[#1c355e]">M</span>
               <span className="bg-gradient-to-b from-[#e3cda8] to-[#aa804c] text-transparent bg-clip-text">
                 anzili
@@ -89,6 +115,35 @@ const Navbar = () => {
               suppressHydrationWarning
             />
           </Link>
+
+          {/* Mobile search bar — expands inline when toggled */}
+          {mobileSearchOpen && (
+            <form
+              onSubmit={handleMobileSearch}
+              className="sm:hidden flex-1 mx-3 flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-full"
+            >
+              <Search size={16} className="text-slate-500 shrink-0" />
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleMobileSearchKeyDown}
+                placeholder="Search products…"
+                className="w-full bg-transparent outline-none text-sm placeholder-slate-500"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Clear search"
+                >
+                  <XIcon size={14} />
+                </button>
+              )}
+            </form>
+          )}
 
           {/* Desktop Menu */}
           <div className="hidden sm:flex items-center gap-4 lg:gap-8 text-slate-600">
@@ -118,7 +173,7 @@ const Navbar = () => {
             >
               <ShoppingCart size={18} />
               Cart
-              <button className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
+              <button suppressHydrationWarning className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
                 {cartCount}
               </button>
             </Link>
@@ -129,30 +184,36 @@ const Navbar = () => {
               aria-label="Wishlist"
             >
               <Star size={18} />
-              <button className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
+              <button suppressHydrationWarning className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
                 {wishlistCount}
               </button>
             </Link>
 
             <NotificationBell />
 
-            {/* Control button or profile display (Desktop) */}
+            {/* Desktop user profile dropdown */}
             {isLoggedIn ? (
               <div className="flex items-center gap-2 cursor-pointer group relative">
                 <CircleUserRound
                   size={35}
                   className="text-[#1c355e] hover:text-[#2582eb] transition-colors"
                 />
-                {/* Simple dropdown menu that appears on hover */}
+                {/* Dropdown on hover */}
                 <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
-                  <div className="bg-white border border-slate-100 shadow-lg rounded-xl p-3 w-40 text-sm flex flex-col gap-2">
+                  <div className="bg-white border border-slate-100 shadow-lg rounded-xl p-3 w-44 text-sm flex flex-col gap-2">
                     <Link href="/profile" className="hover:text-[#2582eb] border-b pb-2 block">
                       Profile
                     </Link>
                     {isSeller ? (
-                      <Link href="/store" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
-                        My Store
-                      </Link>
+                      <>
+                        <Link href="/store" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
+                          My Store
+                        </Link>
+                        <Link href="/store/wallet" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 flex items-center gap-2">
+                          <WalletIcon size={14} />
+                          My Wallet
+                        </Link>
+                      </>
                     ) : (
                       <Link href="/orders" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
                         Orders
@@ -186,9 +247,23 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Menu — quick-access icons on the bar, full nav lives
-              in the slide-in drawer triggered by the hamburger. */}
+          {/* Mobile quick-access icons */}
           <div className="sm:hidden flex items-center gap-2">
+            {/* Search toggle — replaces wishlist on mobile bar */}
+            <button
+              type="button"
+              onClick={toggleMobileSearch}
+              aria-label={mobileSearchOpen ? "Close search" : "Open search"}
+              aria-expanded={mobileSearchOpen}
+              className={`p-1.5 transition-colors ${
+                mobileSearchOpen
+                  ? "text-[#2582eb]"
+                  : "text-slate-700"
+              }`}
+            >
+              {mobileSearchOpen ? <XIcon size={22} /> : <Search size={22} />}
+            </button>
+
             <Link
               href="/cart"
               className="relative text-slate-700 p-1.5"
@@ -216,9 +291,7 @@ const Navbar = () => {
       </div>
       <hr className="border-gray-300" />
 
-      {/* Mobile drawer + backdrop. Lives outside the nav row so the slide
-          transform isn't constrained by `mx-6`. Backdrop fades and the
-          panel slides from the right. */}
+      {/* Mobile drawer + backdrop */}
       <div
         className={`sm:hidden fixed inset-0 z-[60] transition-opacity ${
           mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -288,7 +361,10 @@ const Navbar = () => {
                 <div className="my-2 border-t border-slate-100 mx-3" />
                 <MobileLink onClick={() => navigate("/profile")} icon={UserIcon} label="Profile" />
                 {isSeller ? (
-                  <MobileLink onClick={() => navigate("/store")} icon={StoreIcon} label="My Store" />
+                  <>
+                    <MobileLink onClick={() => navigate("/store")} icon={StoreIcon} label="My Store" />
+                    <MobileLink onClick={() => navigate("/store/wallet")} icon={WalletIcon} label="My Wallet" />
+                  </>
                 ) : (
                   <MobileLink onClick={() => navigate("/orders")} icon={PackageIcon} label="Orders" />
                 )}
