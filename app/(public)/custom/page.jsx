@@ -7,6 +7,7 @@ import { MoveLeftIcon, PlusIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { selectIsSeller } from "@/lib/features/auth/authSlice";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 import { setCustomRequests } from "@/lib/features/customRequest/customRequestSlice";
 import {
   OFFER_STATUS,
@@ -37,6 +38,7 @@ function CustomProductsContent() {
   const search = searchParams.get("search");
   const router = useRouter();
   const dispatch = useDispatch();
+  const t = useTranslate();
 
   const customRequests = useSelector((state) => state.customRequest.list);
   const session = useSelector((state) => state.auth.session);
@@ -212,7 +214,7 @@ function CustomProductsContent() {
             className="text-2xl text-slate-500 flex items-center gap-2 hover:text-slate-700 transition-colors"
           >
             {search && <MoveLeftIcon size={20} />}
-            Custom <span className="text-slate-700 font-medium">Requests</span>
+            {t('custom.title')}
           </h1>
 
           <button
@@ -244,7 +246,7 @@ function CustomProductsContent() {
           <div className="lg:flex-1 lg:order-1">
             {loading ? (
               <div className="text-center py-12">
-                <p className="text-slate-500">Loading custom requests...</p>
+                <p className="text-slate-500">{t('common.loading')}</p>
               </div>
             ) : paginatedRequests.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 xl:gap-8 mb-32">
@@ -275,7 +277,7 @@ function CustomProductsContent() {
                   className="mt-6 bg-[#1c355e] hover:bg-[#2582eb] text-white px-6 py-2.5 rounded-full font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2 mx-auto"
                 >
                   <PlusIcon size={20} />
-                  Create Your First Request
+                  {t('custom.newRequest')}
                 </button>
               </div>
             )}
@@ -292,11 +294,12 @@ function CustomProductsContent() {
 }
 
 export default function CustomProductsPage() {
+  const t = useTranslate();
   return (
     <Suspense
       fallback={
         <div className="min-h-[70vh] flex items-center justify-center">
-          Loading custom requests...
+          {t('common.loading')}
         </div>
       }
     >

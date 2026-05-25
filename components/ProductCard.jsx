@@ -7,9 +7,10 @@ import React from 'react'
 import { getCurrencySymbol } from '@/lib/currency'
 import { useDispatch, useSelector } from 'react-redux'
 import { toggleWishlist } from '@/lib/features/wishlist/wishlistSlice'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 const ProductCard = ({ product }) => {
-
+    const t = useTranslate();
     const currency = getCurrencySymbol()
     const dispatch = useDispatch()
     const inWishlist = useSelector(state => Boolean(state.wishlist.wishlistItems[product.id]))
@@ -28,7 +29,7 @@ const ProductCard = ({ product }) => {
                         dispatch(toggleWishlist({ productId: product.id }))
                     }}
                     className='absolute top-2 left-2 p-1.5 rounded-full border border-slate-300 bg-white'
-                    aria-label='Toggle wishlist'
+                    aria-label={t('productCard.toggleWishlist')}
                 >
                     <Star size={14} className={inWishlist ? 'text-[#2582eb] fill-[#2582eb]' : 'text-slate-500'} />
                 </button>
@@ -47,7 +48,7 @@ const ProductCard = ({ product }) => {
             </div>
             <div className="mt-1">
                 {product.stock <= 0 && !(product.variants || []).some((v) => v.stock > 0) && (
-                    <span className="text-xs text-rose-500 font-medium">Out of Stock</span>
+                    <span className="text-xs text-rose-500 font-medium">{t('productCard.outOfStock')}</span>
                 )}
             </div>
         </Link>

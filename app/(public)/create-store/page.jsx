@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 import { assets } from "@/assets/assets";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -53,6 +54,7 @@ async function fileToDataUrlIfSmall(file) {
 
 export default function CreateStore() {
   const router = useRouter();
+  const t = useTranslate();
   const dispatch = useDispatch();
   const session = useSelector((s) => s.auth.session);
 
@@ -242,26 +244,24 @@ export default function CreateStore() {
           <form
             onSubmit={(e) =>
               toast.promise(onSubmitHandler(e), {
-                loading: "Submitting…",
+                loading: t('common.loading'),
                 success: "Done",
-                error: (err) => err?.message || "Something went wrong",
+                error: (err) => err?.message || t('common.error'),
               })
             }
             className="max-w-7xl mx-auto flex flex-col items-start gap-3 text-slate-500"
           >
             <div>
               <h1 className="text-3xl ">
-                Add Your{" "}
-                <span className="text-slate-800 font-medium">Store</span>
+                {t('createStore.title')}
               </h1>
               <p className="max-w-lg">
-                To become a seller on Manzili, submit your store details for
-                review. Your store will be activated after admin verification.
+                {t('createStore.subtitle')}
               </p>
             </div>
 
             <label className="mt-10 cursor-pointer">
-              Store Logo
+              {t('createStore.logo')}
               <Image
                 src={
                   storeInfo.image instanceof File
@@ -331,7 +331,7 @@ export default function CreateStore() {
               />
             </label>
 
-            <p>Store Name</p>
+            <p>{t('createStore.storeName')}</p>
             <input
               name="username"
               onChange={onChangeHandler}
@@ -356,7 +356,7 @@ export default function CreateStore() {
               title={session?.name ? 'Locked — uses your account name' : ''}
             />
 
-            <p>Description</p>
+            <p>{t('createStore.description')}</p>
             <textarea
               name="description"
               onChange={onChangeHandler}
@@ -366,7 +366,7 @@ export default function CreateStore() {
               className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded resize-none"
             />
 
-            <p>Email</p>
+            <p>{t('createStore.email')}</p>
             <input
               name="email"
               onChange={onChangeHandler}
@@ -380,7 +380,7 @@ export default function CreateStore() {
               title={session?.email ? 'Locked — uses your account email' : ''}
             />
 
-            <p>Contact Number</p>
+            <p>{t('createStore.contact')}</p>
             <input
               name="contact"
               onChange={onChangeHandler}
@@ -391,7 +391,7 @@ export default function CreateStore() {
               required
             />
 
-            <p className="mt-2">Address</p>
+            <p className="mt-2">{t('createStore.address')}</p>
             <p className="text-xs text-slate-400 -mt-2 max-w-lg">
               Pick governorate, zone and district from Bosta so shipments
               validate — same flow as the checkout address.
@@ -402,7 +402,7 @@ export default function CreateStore() {
               type="submit"
               className="bg-slate-800 text-white px-12 py-2 rounded mt-10 mb-40 active:scale-95 hover:bg-slate-900 transition "
             >
-              Submit
+              {t('common.submit')}
             </button>
           </form>
         </div>

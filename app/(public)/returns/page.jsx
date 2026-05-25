@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { RotateCcwIcon, CheckCircleIcon, ClockIcon, PackageIcon, ArrowRightIcon } from 'lucide-react'
 import { getCurrencySymbol } from '@/lib/currency'
 import PageTitle from '@/components/PageTitle'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const RETURN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
@@ -35,6 +36,7 @@ function getFirstImage(storeOrder) {
 
 // ─── Return card ──────────────────────────────────────────────────────────────
 function ReturnCard({ storeOrder, onReturnSuccess }) {
+    const t = useTranslate()
     const currency = getCurrencySymbol()
     const eligible = isEligible(storeOrder)
     const returned = storeOrder.status === 'RETURNED'
@@ -68,19 +70,19 @@ function ReturnCard({ storeOrder, onReturnSuccess }) {
             {/* Card header */}
             <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-200">
                 <div className="flex items-center gap-3 text-sm">
-                    <span className="text-slate-500">Order</span>
+                    <span className="text-slate-500">{t('returns.cardOrder')}</span>
                     <span className="font-mono text-slate-700 text-xs">{storeOrder.id.slice(-10).toUpperCase()}</span>
                 </div>
                 {returned || state === 'done' ? (
                     <span className="flex items-center gap-1 text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
-                        <RotateCcwIcon size={12} /> Returned
+                        <RotateCcwIcon size={12} /> {t('returns.returned')}
                     </span>
                 ) : eligible ? (
                     <span className="flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full">
-                        <ClockIcon size={12} /> {remaining} day{remaining !== 1 ? 's' : ''} left to return
+                        <ClockIcon size={12} /> {remaining === 1 ? t('returns.daysLeft', { remaining }) : t('returns.daysLeftPlural', { remaining })}
                     </span>
                 ) : (
-                    <span className="text-xs text-slate-400">Return window closed</span>
+                    <span className="text-xs text-slate-400">{t('returns.windowClosed')}</span>
                 )}
             </div>
 
@@ -103,12 +105,12 @@ function ReturnCard({ storeOrder, onReturnSuccess }) {
                         {storeOrder.orderItems?.map(i => i.product?.name || i.name).join(', ')}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        {storeOrder.orderItems?.length} item{storeOrder.orderItems?.length !== 1 ? 's' : ''}
+                        {storeOrder.orderItems?.length} {storeOrder.orderItems?.length !== 1 ? t('orderItem.qty', { qty: storeOrder.orderItems?.length }).replace('الكمية: ', '').replace('Qty : ', '') : 'item'}
                         {' · '}
-                        {storeOrder.store?.name || 'Store'}
+                        {storeOrder.store?.name || t('returns.cardOrder')}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        Ordered {new Date(storeOrder.createdAt).toLocaleDateString('en-GB', {
+                        {t('orders.date')}: {new Date(storeOrder.createdAt).toLocaleDateString('en-GB', {
                             day: '2-digit', month: 'short', year: 'numeric',
                         })}
                     </p>
@@ -128,28 +130,28 @@ function ReturnCard({ storeOrder, onReturnSuccess }) {
                                     onClick={() => setState('confirming')}
                                     className="text-sm border border-slate-300 text-slate-700 px-5 py-2 rounded-lg hover:bg-slate-50 transition active:scale-95"
                                 >
-                                    Request Return
+                                    {t('orderItem.requestReturn')}
                                 </button>
                             )}
                             {state === 'confirming' && (
                                 <div className="flex items-center gap-3 flex-wrap">
-                                    <p className="text-sm text-slate-600">Confirm return of this order?</p>
+                                    <p className="text-sm text-slate-600">{t('returns.confirmReturn')}</p>
                                     <button
                                         onClick={handleReturn}
                                         className="text-sm bg-slate-800 text-white px-5 py-2 rounded-lg hover:bg-slate-900 transition active:scale-95"
                                     >
-                                        Yes, return it
+                                        {t('orderItem.yesReturn')}
                                     </button>
                                     <button
                                         onClick={() => setState('idle')}
                                         className="text-sm border border-slate-200 text-slate-500 px-4 py-2 rounded-lg hover:bg-slate-50 transition"
                                     >
-                                        Cancel
+                                        {t('orderItem.cancel')}
                                     </button>
                                 </div>
                             )}
                             {state === 'loading' && (
-                                <p className="text-sm text-slate-400">Processing return…</p>
+                                <p className="text-sm text-slate-400">{t('returns.processingReturn')}</p>
                             )}
                             {state === 'error' && (
                                 <p className="text-sm text-rose-500">{errMsg}</p>
@@ -157,8 +159,8 @@ function ReturnCard({ storeOrder, onReturnSuccess }) {
                         </>
                     ) : (
                         <p className="text-xs text-slate-400">
-                            This order is no longer eligible for return.
-                            {storeOrder.paymentMethod !== 'STRIPE' && ' COD orders cannot be returned online.'}
+                            {t('returns.noLongerEligible')}
+                            {storeOrder.paymentMethod !== 'STRIPE' && ` ${t('returns.codNotOnline')}`}
                         </p>
                     )}
                 </div>
@@ -168,7 +170,7 @@ function ReturnCard({ storeOrder, onReturnSuccess }) {
             {state === 'done' && (
                 <div className="px-5 pb-4 flex items-center gap-2 text-sm text-emerald-600">
                     <CheckCircleIcon size={16} />
-                    Return submitted. Your refund will be processed within 5–7 business days.
+                    {t('returns.returnSubmitted')}
                 </div>
             )}
         </div>
@@ -177,6 +179,7 @@ function ReturnCard({ storeOrder, onReturnSuccess }) {
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function ReturnsPage() {
+    const t = useTranslate()
     const currency = getCurrencySymbol()
     const [storeOrders, setStoreOrders] = useState([])
     const [loading, setLoading] = useState(true)
@@ -231,7 +234,7 @@ export default function ReturnsPage() {
     if (loading) {
         return (
             <div className="min-h-[70vh] mx-6 flex items-center justify-center">
-                <p className="text-slate-400 text-sm">Loading your orders…</p>
+                <p className="text-slate-400 text-sm">{t('returns.loadingOrders')}</p>
             </div>
         )
     }
@@ -240,20 +243,20 @@ export default function ReturnsPage() {
         <div className="min-h-[70vh] mx-6">
             <div className="my-14 max-w-2xl mx-auto">
                 <PageTitle
-                    heading="Returns"
-                    text="Manage returns for your delivered orders"
-                    linkText="My orders"
+                    heading={t('returns.title')}
+                    text={t('returns.manageText')}
+                    linkText={t('returns.viewAllOrders')}
                     path="/orders"
                 />
 
                 {/* Policy box */}
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8 text-sm text-slate-600 space-y-1.5">
-                    <p className="font-medium text-slate-800 mb-2">Return Policy</p>
-                    <p>• Items can be returned within <strong>7 days</strong> of order placement</p>
-                    <p>• Refunds are issued to your original payment method within 5–7 business days</p>
-                    <p>• Only card (Stripe) payments are eligible for online returns</p>
-                    <p>• COD orders must be resolved by contacting support</p>
-                    <p>• Items must be unused and in original condition</p>
+                    <p className="font-medium text-slate-800 mb-2">{t('returns.policy')}</p>
+                    <p>{t('returns.eligible')}</p>
+                    <p>{t('returns.refund')}</p>
+                    <p>{t('returns.onlyCardEligible')}</p>
+                    <p>{t('returns.codViaSupport')}</p>
+                    <p>{t('returns.condition')}</p>
                 </div>
 
                 {/* Eligible for return */}
@@ -261,7 +264,7 @@ export default function ReturnsPage() {
                     <section className="mb-8">
                         <h2 className="text-lg font-medium text-slate-800 mb-4 flex items-center gap-2">
                             <PackageIcon size={18} className="text-amber-500" />
-                            Eligible for Return
+                            {t('returns.eligibleForReturn')}
                         </h2>
                         <div className="flex flex-col gap-4">
                             {eligible.map((so) => (
@@ -280,7 +283,7 @@ export default function ReturnsPage() {
                     <section className="mb-8">
                         <h2 className="text-lg font-medium text-slate-800 mb-4 flex items-center gap-2">
                             <RotateCcwIcon size={18} className="text-slate-500" />
-                            Returned Orders
+                            {t('returns.returnedOrders')}
                         </h2>
                         <div className="flex flex-col gap-4">
                             {returned.map((so) => (
@@ -299,7 +302,7 @@ export default function ReturnsPage() {
                     <section className="mb-8">
                         <h2 className="text-lg font-medium text-slate-800 mb-4 flex items-center gap-2">
                             <ClockIcon size={18} className="text-slate-400" />
-                            Past Return Window
+                            {t('returns.pastWindow')}
                         </h2>
                         <div className="flex flex-col gap-4">
                             {pastWindow.map((so) => (
@@ -317,15 +320,15 @@ export default function ReturnsPage() {
                 {eligible.length === 0 && returned.length === 0 && pastWindow.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <RotateCcwIcon size={40} className="text-slate-200 mb-4" />
-                        <p className="text-slate-500 font-medium">No delivered orders found</p>
+                        <p className="text-slate-500 font-medium">{t('returns.noDeliveredOrders')}</p>
                         <p className="text-slate-400 text-sm mt-1 mb-6">
-                            Only delivered orders are shown here.
+                            {t('returns.onlyDelivered')}
                         </p>
                         <Link
                             href="/orders"
                             className="flex items-center gap-1.5 text-sm text-[#2582eb] hover:underline"
                         >
-                            View all my orders <ArrowRightIcon size={14} />
+                            {t('returns.viewAllOrders')} <ArrowRightIcon size={14} />
                         </Link>
                     </div>
                 )}

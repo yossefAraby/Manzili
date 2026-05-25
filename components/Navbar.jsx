@@ -10,8 +10,11 @@ import { clearSession, selectIsLoggedIn, selectIsSeller } from "@/lib/features/a
 import { setAddressList } from "@/lib/features/address/addressSlice";
 import { persistAuthSession } from "@/lib/services/localStateBootstrap";
 import NotificationBell from "./NotificationBell";
+import { useLocale, useTranslate } from "@/lib/i18n/LocaleContext";
 
 const Navbar = () => {
+  const t = useTranslate();
+  const { locale, setLocale } = useLocale();
   const router = useRouter();
   const dispatch = useDispatch();
   const [search, setSearch] = useState("");
@@ -129,7 +132,7 @@ const Navbar = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleMobileSearchKeyDown}
-                placeholder="Search products…"
+                placeholder={t('navbar.searchProducts') + '…'}
                 className="w-full bg-transparent outline-none text-sm placeholder-slate-500"
               />
               {search && (
@@ -137,7 +140,7 @@ const Navbar = () => {
                   type="button"
                   onClick={() => setSearch("")}
                   className="text-slate-400 hover:text-slate-600"
-                  aria-label="Clear search"
+                  aria-label={t('navbar.clearSearch')}
                 >
                   <XIcon size={14} />
                 </button>
@@ -147,9 +150,9 @@ const Navbar = () => {
 
           {/* Desktop Menu */}
           <div className="hidden sm:flex items-center gap-4 lg:gap-8 text-slate-600">
-            <Link href="/">Home</Link>
-            <Link href="/shop">Shop</Link>
-            <Link href="/custom">Custom Product</Link>
+            <Link href="/">{t('navbar.home')}</Link>
+            <Link href="/shop">{t('navbar.shop')}</Link>
+            <Link href="/custom">{t('navbar.customProduct')}</Link>
 
             <form
               onSubmit={handleSearch}
@@ -160,7 +163,7 @@ const Navbar = () => {
                 suppressHydrationWarning
                 className="w-full bg-transparent outline-none placeholder-slate-600"
                 type="text"
-                placeholder="Search products"
+                placeholder={t('navbar.searchProducts')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 required
@@ -172,7 +175,7 @@ const Navbar = () => {
               className="relative flex items-center gap-2 text-slate-600 mr-2"
             >
               <ShoppingCart size={18} />
-              Cart
+              {t('navbar.cart')}
               <button suppressHydrationWarning className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
                 {cartCount}
               </button>
@@ -181,7 +184,7 @@ const Navbar = () => {
             <Link
               href="/wishlist"
               className="relative flex items-center gap-2 text-slate-600"
-              aria-label="Wishlist"
+              aria-label={t('navbar.wishlist')}
             >
               <Star size={18} />
               <button suppressHydrationWarning className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
@@ -202,46 +205,95 @@ const Navbar = () => {
                 <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
                   <div className="bg-white border border-slate-100 shadow-lg rounded-xl p-3 w-44 text-sm flex flex-col gap-2">
                     <Link href="/profile" className="hover:text-[#2582eb] border-b pb-2 block">
-                      Profile
+                      {t('navbar.profile')}
                     </Link>
                     {isSeller ? (
                       <>
                         <Link href="/store" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
-                          My Store
+                          {t('navbar.myStore')}
                         </Link>
                         <Link href="/store/wallet" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 flex items-center gap-2">
                           <WalletIcon size={14} />
-                          My Wallet
+                          {t('navbar.myWallet')}
                         </Link>
                       </>
                     ) : (
                       <Link href="/orders" className="hover:text-[#2582eb] cursor-pointer border-b pb-2 block">
-                        Orders
+                        {t('navbar.orders')}
                       </Link>
                     )}
+                    {/* Language toggle */}
+                    <div className="border-b pb-2">
+                      <p className="text-xs text-slate-400 mb-1">{t('navbar.language')}</p>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setLocale('en')}
+                          className={`flex-1 text-xs py-1 rounded-md transition ${
+                            locale === 'en'
+                              ? 'bg-[#2582eb] text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {t('navbar.english')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLocale('ar')}
+                          className={`flex-1 text-xs py-1 rounded-md transition ${
+                            locale === 'ar'
+                              ? 'bg-[#2582eb] text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {t('navbar.arabic')}
+                        </button>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={handleLogout}
                       className="text-left text-red-500 hover:font-semibold cursor-pointer"
                     >
-                      Logout
+                      {t('navbar.logout')}
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-3">
+                {/* Language toggle for logged-out */}
+                <div className="flex items-center border border-slate-200 rounded-full overflow-hidden text-xs mr-1">
+                  <button
+                    type="button"
+                    onClick={() => setLocale('en')}
+                    className={`px-2 py-1 transition ${
+                      locale === 'en' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocale('ar')}
+                    className={`px-2 py-1 transition ${
+                      locale === 'ar' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    AR
+                  </button>
+                </div>
                 <button
                   onClick={() => router.push("/login")}
                   className="px-6 py-2 bg-[#99b5fd] hover:bg-[#2582eb] transition text-white rounded-full font-medium"
                 >
-                  Login
+                  {t('navbar.login')}
                 </button>
                 <button
                   onClick={() => router.push("/register")}
                   className="px-6 py-2 bg-[#1c355e] hover:bg-[#2582eb] transition text-white rounded-full font-medium shadow-sm"
                 >
-                  Sign Up
+                  {t('navbar.signUp')}
                 </button>
               </div>
             )}
@@ -253,7 +305,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={toggleMobileSearch}
-              aria-label={mobileSearchOpen ? "Close search" : "Open search"}
+              aria-label={mobileSearchOpen ? t('navbar.closeSearch') : t('navbar.openSearch')}
               aria-expanded={mobileSearchOpen}
               className={`p-1.5 transition-colors ${
                 mobileSearchOpen
@@ -267,7 +319,7 @@ const Navbar = () => {
             <Link
               href="/cart"
               className="relative text-slate-700 p-1.5"
-              aria-label="Cart"
+              aria-label={t('navbar.cart')}
             >
               <ShoppingCart size={22} />
               {cartCount > 0 && (
@@ -280,7 +332,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              aria-label="Open menu"
+              aria-label={t('navbar.openMenu')}
               aria-expanded={mobileMenuOpen}
               className="p-1.5 text-slate-700 active:scale-95 transition-transform"
             >
@@ -307,7 +359,7 @@ const Navbar = () => {
             mobileMenuOpen ? "translate-x-0" : "translate-x-full"
           }`}
           role="dialog"
-          aria-label="Main menu"
+          aria-label={t('navbar.mobileMenu')}
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <Link href="/" onClick={closeMobile} className="flex items-baseline text-2xl font-bold">
@@ -319,7 +371,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={closeMobile}
-              aria-label="Close menu"
+              aria-label={t('navbar.closeMenu')}
               className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
             >
               <XIcon size={24} />
@@ -335,38 +387,60 @@ const Navbar = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products"
+              placeholder={t('navbar.searchProducts')}
               className="w-full bg-transparent outline-none text-sm placeholder-slate-500"
             />
           </form>
 
           <nav className="flex flex-col mt-4 px-2">
-            <MobileLink onClick={() => navigate("/")} icon={HomeIcon} label="Home" />
-            <MobileLink onClick={() => navigate("/shop")} icon={StoreIcon} label="Shop" />
-            <MobileLink onClick={() => navigate("/custom")} icon={PaletteIcon} label="Custom Product" />
+            <MobileLink onClick={() => navigate("/")} icon={HomeIcon} label={t('navbar.home')} />
+            <MobileLink onClick={() => navigate("/shop")} icon={StoreIcon} label={t('navbar.shop')} />
+            <MobileLink onClick={() => navigate("/custom")} icon={PaletteIcon} label={t('navbar.customProduct')} />
             <MobileLink
               onClick={() => navigate("/wishlist")}
               icon={Star}
-              label="Wishlist"
+              label={t('navbar.wishlist')}
               badge={wishlistCount}
             />
             <MobileLink
               onClick={() => navigate("/cart")}
               icon={ShoppingCart}
-              label="Cart"
+              label={t('navbar.cart')}
               badge={cartCount}
             />
+            {/* Mobile language toggle */}
+            <div className="flex items-center gap-2 px-3 py-3">
+              <span className="text-xs text-slate-400">{t('navbar.language')}:</span>
+              <button
+                type="button"
+                onClick={() => setLocale('en')}
+                className={`text-xs px-2 py-1 rounded ${
+                  locale === 'en' ? 'bg-[#2582eb] text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {t('navbar.english')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocale('ar')}
+                className={`text-xs px-2 py-1 rounded ${
+                  locale === 'ar' ? 'bg-[#2582eb] text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {t('navbar.arabic')}
+              </button>
+            </div>
             {isLoggedIn && (
               <>
                 <div className="my-2 border-t border-slate-100 mx-3" />
-                <MobileLink onClick={() => navigate("/profile")} icon={UserIcon} label="Profile" />
+                <MobileLink onClick={() => navigate("/profile")} icon={UserIcon} label={t('navbar.profile')} />
                 {isSeller ? (
                   <>
-                    <MobileLink onClick={() => navigate("/store")} icon={StoreIcon} label="My Store" />
-                    <MobileLink onClick={() => navigate("/store/wallet")} icon={WalletIcon} label="My Wallet" />
+                    <MobileLink onClick={() => navigate("/store")} icon={StoreIcon} label={t('navbar.myStore')} />
+                    <MobileLink onClick={() => navigate("/store/wallet")} icon={WalletIcon} label={t('navbar.myWallet')} />
                   </>
                 ) : (
-                  <MobileLink onClick={() => navigate("/orders")} icon={PackageIcon} label="Orders" />
+                  <MobileLink onClick={() => navigate("/orders")} icon={PackageIcon} label={t('navbar.orders')} />
                 )}
               </>
             )}
@@ -380,7 +454,7 @@ const Navbar = () => {
                 className="w-full inline-flex items-center justify-center gap-2 text-red-500 font-medium py-2.5 rounded-full border border-red-200 hover:bg-red-50 transition-colors"
               >
                 <LogOutIcon size={16} />
-                Log out
+                {t('navbar.logOut')}
               </button>
             ) : (
               <div className="flex gap-2">
@@ -389,14 +463,14 @@ const Navbar = () => {
                   onClick={() => navigate("/login")}
                   className="flex-1 py-2.5 bg-[#99b5fd] hover:bg-[#2582eb] text-white rounded-full font-medium transition-colors"
                 >
-                  Login
+                  {t('navbar.login')}
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate("/register")}
                   className="flex-1 py-2.5 bg-[#1c355e] hover:bg-[#2582eb] text-white rounded-full font-medium transition-colors"
                 >
-                  Sign Up
+                  {t('navbar.signUp')}
                 </button>
               </div>
             )}

@@ -22,6 +22,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { assets, categories } from "@/assets/assets";
 import StoreSearch from "@/components/StoreSearch";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 import { addCustomRequest } from "@/lib/features/customRequest/customRequestSlice";
 import {
   addLocalCustomRequest,
@@ -103,6 +104,7 @@ const ImageUploader = ({
   aiGenerating = false,
   flashImages = false,
 }) => {
+  const t = useTranslate();
   // Open Pinterest in a new tab pre-filled with whatever the buyer has typed
   // so far. Disabled when there's nothing to search yet — Pinterest's empty
   // search is just noise.
@@ -126,13 +128,13 @@ const ImageUploader = ({
     const files = Array.from(e.target.files);
 
     if (images.length + files.length > 5) {
-      toast.error("Maximum 5 images allowed.");
+      toast.error(t('custom.form.maxImages'));
       return;
     }
 
     const valid = files.filter((file) => {
       if (!file.type.startsWith("image/")) {
-        toast.error(`"${file.name}" is not a valid image.`);
+        toast.error(t('custom.form.notValidImage', { name: file.name }));
         return false;
       }
       if (file.size > 2 * 1024 * 1024) {
@@ -180,7 +182,7 @@ const ImageUploader = ({
     <div className="w-full">
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <label htmlFor="image-upload" className="font-medium">
-          Visual Inspiration (Max 5) {required && <span className="text-red-500">*</span>}
+          {t('custom.form.visualInspiration')} {required && <span className="text-red-500">*</span>}
         </label>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -189,8 +191,8 @@ const ImageUploader = ({
             disabled={!canInspire}
             title={
               canInspire
-                ? `Search Pinterest for "${trimmedQuery}"`
-                : "Type an item name first to inspire from Pinterest"
+                ? t('custom.form.inspireSearch', { query: trimmedQuery })
+                : t('custom.form.inspireDisabled')
             }
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
               canInspire
@@ -199,14 +201,14 @@ const ImageUploader = ({
             }`}
           >
             <ExternalLinkIcon size={14} />
-            Inspire from Pinterest
+            {t('custom.form.inspireFromPinterest')}
           </button>
           {onGenerateAI && (
             <button
               type="button"
               onClick={onGenerateAI}
               disabled={aiGenerating || images.length >= 5}
-              title="Generate a reference image from your inputs with AI"
+              title={t('custom.form.aiGenerateHint')}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
                 aiGenerating || images.length >= 5
                   ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
@@ -218,7 +220,7 @@ const ImageUploader = ({
               ) : (
                 <WandSparklesIcon size={14} />
               )}
-              {aiGenerating ? "Generating..." : "Generate image with AI"}
+              {aiGenerating ? t('custom.form.generating') : t('custom.form.generateWithAI')}
             </button>
           )}
         </div>
@@ -228,7 +230,7 @@ const ImageUploader = ({
         className={`flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 transition-colors bg-[#faf8f5] ${images.length >= 5 ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-slate-50"} ${flashImages ? "flash-error" : ""}`}
       >
         <UploadCloudIcon className="text-slate-400 mb-2" size={32} />
-        <span className="text-sm text-slate-500">Upload Sketches / Photos</span>
+        <span className="text-sm text-slate-500">{t('custom.form.uploadPhotos')}</span>
         <input
           id="image-upload"
           type="file"
@@ -277,7 +279,7 @@ const ImageUploader = ({
         </div>
       )}
       {required && images.length === 0 && (
-        <p className="mt-2 text-sm text-red-500">At least one image is required</p>
+        <p className="mt-2 text-sm text-red-500">{t('custom.form.error')}</p>
       )}
 
       {lightboxIdx != null && images[lightboxIdx] && (
@@ -313,6 +315,7 @@ const ImageUploader = ({
 };
 
 const ColorPalette = ({ colors, setColors, disabled = false }) => {
+  const t = useTranslate();
   const handleAdd = () =>
     setColors((prev) => [...prev, { hex: "#000000", description: "" }]);
   const handleUpdate = (index, field, value) => {
@@ -327,7 +330,7 @@ const ColorPalette = ({ colors, setColors, disabled = false }) => {
 
   return (
     <div className="w-full mb-4">
-      <label className="block mb-2 font-medium">Color Palette</label>
+      <label className="block mb-2 font-medium">{t('custom.form.colorPalette')}</label>
       {colors.map((c, i) => (
         <div key={i} className="flex items-center gap-3 mb-3">
           <input
@@ -341,7 +344,7 @@ const ColorPalette = ({ colors, setColors, disabled = false }) => {
             type="text"
             value={c.description}
             onChange={(e) => handleUpdate(i, "description", e.target.value)}
-            placeholder='e.g., "color of the table legs" or "main body color"'
+            placeholder={t('custom.form.colorPlaceholder')}
             aria-label={`Color description ${i + 1}`}
             className="flex-1 border border-slate-300 p-3 rounded-xl outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5]"
           />
@@ -362,13 +365,14 @@ const ColorPalette = ({ colors, setColors, disabled = false }) => {
         onClick={handleAdd}
         className="flex items-center gap-2 text-sm text-[#2582eb] hover:text-[#1c355e] font-medium transition-colors"
       >
-        <PlusIcon size={16} /> Add color
+        <PlusIcon size={16} /> {t('custom.form.addColor')}
       </button>
     </div>
   );
 };
 
 const AudioRecorder = ({ audioBlob, setAudioBlob }) => {
+  const t = useTranslate();
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -403,14 +407,14 @@ const AudioRecorder = ({ audioBlob, setAudioBlob }) => {
         recorder.start();
         setIsRecording(true);
       } catch (err) {
-        toast.error("Microphone access denied.");
+        toast.error(t('custom.form.microphoneDenied'));
       }
     }
   };
 
   return (
     <div className="w-full">
-      <label className="block mb-2 font-medium">Voice Memo (Optional)</label>
+      <label className="block mb-2 font-medium">{t('custom.form.voiceMemo')}</label>
       {!audioBlob ? (
         <div className="flex items-center gap-4 p-4 border border-slate-300 rounded-xl bg-[#faf8f5]">
           <button
@@ -423,8 +427,8 @@ const AudioRecorder = ({ audioBlob, setAudioBlob }) => {
           </button>
           <p className="text-sm text-slate-500">
             {isRecording
-              ? "Recording... Click to stop"
-              : "Record details text might miss."}
+              ? t('custom.form.recording')
+              : t('custom.form.recordHint')}
           </p>
         </div>
       ) : (
@@ -461,6 +465,7 @@ const PACKAGE_OPTIONS = [
 ];
 
 const SizeInput = ({ size, setSize, mode, setMode, packageSize, setPackageSize }) => {
+  const t = useTranslate();
   const handleDimensionChange = (e) => {
     const val = e.target.value;
     setSize((prev) => ({
@@ -470,13 +475,28 @@ const SizeInput = ({ size, setSize, mode, setMode, packageSize, setPackageSize }
   };
 
   const tabs = [
-    { id: "dimensions", label: "Dimensions" },
-    { id: "package", label: "Shipping size" },
+    { id: "dimensions", label: t('custom.form.dimensions') },
+    { id: "package", label: t('custom.form.shippingSize') },
   ];
+
+  const packageLabels = {
+    SMALL: t('custom.form.packageSmall'),
+    MEDIUM: t('custom.form.packageMedium'),
+    LARGE: t('custom.form.packageLarge'),
+    "Light Bulky": t('custom.form.packageLightBulky'),
+    "Heavy Bulky": t('custom.form.packageHeavyBulky'),
+  };
+  const packageHints = {
+    SMALL: t('custom.form.packageSmallHint'),
+    MEDIUM: t('custom.form.packageMediumHint'),
+    LARGE: t('custom.form.packageLargeHint'),
+    "Light Bulky": t('custom.form.packageLightBulkyHint'),
+    "Heavy Bulky": t('custom.form.packageHeavyBulkyHint'),
+  };
 
   return (
     <div className="w-full">
-      <label className="block mb-2 font-medium">Size</label>
+      <label className="block mb-2 font-medium">{t('custom.form.size')}</label>
 
       {/* Tab switch */}
       <div className="flex border-b border-slate-200 mb-4">
@@ -503,9 +523,9 @@ const SizeInput = ({ size, setSize, mode, setMode, packageSize, setPackageSize }
       {mode === "dimensions" ? (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { name: "length", placeholder: "Length", aria: "Length (cm)" },
-            { name: "width", placeholder: "Width", aria: "Width (cm)" },
-            { name: "height", placeholder: "Height", aria: "Height (cm)" },
+            { name: "length", placeholder: t('custom.form.length'), aria: "Length (cm)" },
+            { name: "width", placeholder: t('custom.form.width'), aria: "Width (cm)" },
+            { name: "height", placeholder: t('custom.form.height'), aria: "Height (cm)" },
           ].map((f) => (
             <div key={f.name} className="relative">
               <input
@@ -519,7 +539,7 @@ const SizeInput = ({ size, setSize, mode, setMode, packageSize, setPackageSize }
                 className="w-full border border-slate-300 rounded-xl bg-[#faf8f5] outline-none focus:ring-2 focus:ring-[#e67e22] px-3 py-2.5 pr-10 text-sm"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
-                cm
+                {t('custom.form.cm')}
               </span>
             </div>
           ))}
@@ -540,8 +560,8 @@ const SizeInput = ({ size, setSize, mode, setMode, packageSize, setPackageSize }
                     : "border-slate-200 bg-[#fcfbf9] hover:border-slate-300"
                 }`}
               >
-                <p className="font-medium text-slate-800 text-sm">{opt.label}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{opt.hint}</p>
+                <p className="font-medium text-slate-800 text-sm">{packageLabels[opt.value]}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{packageHints[opt.value]}</p>
               </button>
             );
           })}
@@ -601,6 +621,14 @@ function formatTargetDate(days) {
 }
 
 const DeliveryWindowPicker = ({ days, setDays }) => {
+  const t = useTranslate();
+  const presetLabelMap = {
+    "Flexible": t('custom.form.flexible'),
+    "1 week": t('custom.form.oneWeek'),
+    "2 weeks": t('custom.form.twoWeeks'),
+    "1 month": t('custom.form.oneMonth'),
+    "2 months": t('custom.form.twoMonths'),
+  };
   const sliderValue = days ?? 7;
   const targetLabel = formatTargetDate(days);
   const relativeLabel = formatRelativeDays(days);
@@ -628,7 +656,7 @@ const DeliveryWindowPicker = ({ days, setDays }) => {
 
   return (
     <div className="w-full">
-      <label className="block mb-2 font-medium">Delivery window</label>
+      <label className="block mb-2 font-medium">{t('custom.form.deliveryWindow')}</label>
 
       {/* Presets */}
       <div className="flex flex-wrap gap-2 mb-3">
@@ -646,7 +674,7 @@ const DeliveryWindowPicker = ({ days, setDays }) => {
                   : "bg-[#faf8f5] text-slate-600 border-slate-200 hover:border-slate-300"
               }`}
             >
-              {p.label}
+              {presetLabelMap[p.label]}
             </button>
           );
         })}
@@ -680,16 +708,16 @@ const DeliveryWindowPicker = ({ days, setDays }) => {
               className="w-16 text-center px-2 py-1 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#e67e22]"
               aria-label="Days from today (numeric)"
             />
-            <span className="text-xs text-slate-500">days</span>
+            <span className="text-xs text-slate-500">{t('custom.form.days')}</span>
           </div>
         </div>
 
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="font-medium text-[#1c355e]">
-            {days == null ? "No deadline — flexible" : relativeLabel}
+            {days == null ? t('custom.form.noDeadline') : relativeLabel}
           </span>
           <span className="text-slate-500">
-            {targetLabel ? `Target · ${targetLabel}` : "Pick a preset or drag the slider"}
+            {targetLabel ? `Target · ${targetLabel}` : t('custom.form.pickPreset')}
           </span>
         </div>
       </div>
@@ -720,6 +748,7 @@ const INITIAL_STATE = {
 function CustomOrderPageInner() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const t = useTranslate();
   const session = useSelector((s) => s.auth.session);
   const searchParams = useSearchParams();
   const customizeId = searchParams.get("customize");
@@ -823,7 +852,7 @@ function CustomOrderPageInner() {
       hydrateSeedImages(seed.imageUrls).then((mapped) => {
         if (!cancelled && mapped.length > 0) setImages(mapped);
       });
-      toast.success("Prefilled from the original item — tweak anything you like");
+      toast.success(t('custom.form.prefilledFromOriginal'));
     } catch {
       /* ignore — leave the form blank */
     }
@@ -844,7 +873,7 @@ function CustomOrderPageInner() {
     try {
       const saved = getLocalCustomRequestById(editId);
       if (!saved) {
-        toast.error("Couldn't find that request to edit.");
+        toast.error(t('custom.form.couldNotFindRequest'));
         return;
       }
 
@@ -899,7 +928,7 @@ function CustomOrderPageInner() {
           });
       }
 
-      toast.success("Loaded your request — make your changes and resubmit");
+      toast.success(t('custom.form.loadedRequestEdit'));
     } catch {
       /* ignore — leave the form blank */
     }
@@ -957,7 +986,7 @@ function CustomOrderPageInner() {
   const handleAIReview = async () => {
     if (aiReviewing) return;
     setAiReviewing(true);
-    const toastId = toast.loading("Reviewing your request with AI...");
+    const toastId = toast.loading(t('custom.form.reviewingWithAI'));
 
     const reviewPayload = {
       formData: {
@@ -1008,10 +1037,11 @@ function CustomOrderPageInner() {
       }
 
       if (list.length === 0) {
-        toast.success("Looks good — no clarifications needed.", { id: toastId });
+        toast.success(t('custom.form.noClarificationsNeeded'), { id: toastId });
       } else {
         setAiSuggestions(list);
-        toast.success(`${list.length} suggestion${list.length > 1 ? "s" : ""} ready`, { id: toastId });
+        const msg = list.length === 1 ? t('custom.form.suggestionCount', { count: list.length }) : t('custom.form.suggestionsReady', { count: list.length });
+        toast.success(msg, { id: toastId });
       }
     } catch (e) {
       toast.error(`AI review failed: ${e.message}`, { id: toastId });
@@ -1045,7 +1075,7 @@ function CustomOrderPageInner() {
     if (images.length === 0) missing.push("images");
     if (missing.length > 0) {
       missing.forEach(flashField);
-      toast("AI generation requires filling all input data", { icon: "ℹ️" });
+      toast(t('custom.form.aiGenerationRequired'), { icon: "ℹ️" });
       return;
     }
 
@@ -1057,12 +1087,12 @@ function CustomOrderPageInner() {
     if (generationTimestampsRef.current.length >= RATE_LIMIT_COUNT) {
       const oldest = generationTimestampsRef.current[0];
       const waitSec = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - oldest)) / 1000);
-      toast(`Slow down — try again in ${waitSec}s`, { icon: "⏱️" });
+      toast(t('custom.form.slowDown', { seconds: waitSec }), { icon: "⏱️" });
       return;
     }
 
     setAiGenerating(true);
-    const toastId = toast.loading("Reading your reference images...");
+    const toastId = toast.loading(t('custom.form.readingImages'));
 
     // Puter.js is the LAST-RESORT fallback — it requires a sign-in popup, so
     // we only ask the buyer for it after our automated providers have failed.
@@ -1142,7 +1172,7 @@ function CustomOrderPageInner() {
         if (transcriptCacheRef.current.blob === audioBlob) {
           transcript = transcriptCacheRef.current.transcript;
         } else {
-          toast.loading("Transcribing voice memo...", { id: toastId });
+          toast.loading(t('custom.form.transcribingVoice'), { id: toastId });
           // Primary: server route (Gemini → Groq Whisper).
           try {
             const audioDataUrl = await blobToDataURL(audioBlob);
@@ -1193,7 +1223,7 @@ function CustomOrderPageInner() {
       if (signature === promptCacheRef.current.signature && promptCacheRef.current.prompt) {
         prompt = promptCacheRef.current.prompt;
       } else {
-        toast.loading("Crafting an image prompt...", { id: toastId });
+        toast.loading(t('custom.form.craftingPrompt'), { id: toastId });
         // Primary: server route (z.ai → Gemini → Groq).
         try {
           const synthRes = await fetch("/api/ai/synth-prompt", {
@@ -1229,7 +1259,7 @@ function CustomOrderPageInner() {
 
       // 4) Image generation — never cached; the buyer always wants a fresh
       // variant when they click again, even with identical inputs.
-      toast.loading("Painting your reference image...", { id: toastId });
+      toast.loading(t('custom.form.paintingImage'), { id: toastId });
       let imageDataUrl = null;
       // Primary: server route (Gemini → Pollinations).
       try {
@@ -1264,9 +1294,9 @@ function CustomOrderPageInner() {
       ]);
 
       generationTimestampsRef.current.push(Date.now());
-      toast.success("AI reference image added", { id: toastId });
+      toast.success(t('custom.form.aiImageAdded'), { id: toastId });
     } catch (e) {
-      toast.error(`AI generation failed: ${e.message}`, { id: toastId });
+      toast.error(t('custom.form.aiGenerationFailed', { message: e.message }), { id: toastId });
     } finally {
       setAiGenerating(false);
     }
@@ -1274,16 +1304,16 @@ function CustomOrderPageInner() {
 
   // Validation
   const validateForm = () => {
-    if (!formData.itemName.trim()) return "Item name is required.";
-    if (!formData.description.trim()) return "Description is required.";
-    if (images.length === 0) return "At least one visual inspiration image is required.";
+    if (!formData.itemName.trim()) return t('custom.form.itemNameRequired');
+    if (!formData.description.trim()) return t('custom.form.descriptionRequired');
+    if (images.length === 0) return t('custom.form.imagesRequired');
     if (formData.visibility === "private" && !selectedStore) {
-      return "Please select a store for private requests.";
+      return t('custom.form.selectStoreRequired');
     }
-    if (!formData.category) return "Category is required.";
+    if (!formData.category) return t('custom.form.categoryRequired');
     if (formData.deliveryDate) {
       const today = new Date().toISOString().split("T")[0];
-      if (formData.deliveryDate < today) return "Delivery date must be in the future.";
+      if (formData.deliveryDate < today) return t('custom.form.futureDate');
     }
     return null;
   };
@@ -1385,7 +1415,7 @@ function CustomOrderPageInner() {
       }
 
       toast.success(
-        editId ? "Request updated successfully!" : "Custom Request Submitted Successfully!",
+        editId ? t('custom.form.requestUpdated') : t('custom.form.requestSubmitted'),
       );
 
       // Reset state then send the buyer to their newly-created request page.
@@ -1404,7 +1434,7 @@ function CustomOrderPageInner() {
 
       router.push(`/custom/request-view/${id}`);
     } catch {
-      toast.error("Submission failed.");
+      toast.error(t('custom.form.error'));
     } finally {
       setLoading(false);
     }
@@ -1421,16 +1451,16 @@ function CustomOrderPageInner() {
           <div className="lg:col-span-6 bg-white rounded-3xl shadow-sm border border-slate-50 flex flex-col overflow-hidden">
             <div className="p-6 lg:p-8 border-b border-slate-100 shrink-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-[#1c355e]">
-                Request <span className="text-[#e67e22]">Custom Order</span>
+                {t('custom.form.request')} <span className="text-[#e67e22]">{t('custom.form.customOrder')}</span>
               </h1>
               <p className="mt-2 text-sm text-slate-500">
-                Describe your vision with as much detail as possible.
+                {t('custom.form.describeVision')}
               </p>
             </div>
             <div className="p-6 lg:p-8 space-y-6">
               <div className="w-full">
                 <label htmlFor="itemName" className="block mb-2 font-medium">
-                  Item Name <span className="text-red-500">*</span>
+                  {t('custom.form.itemName')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="itemName"
@@ -1438,14 +1468,14 @@ function CustomOrderPageInner() {
                   value={formData.itemName}
                   onChange={handleInput}
                   type="text"
-                  placeholder="e.g. Vintage Oak Table"
+                  placeholder={t('custom.form.itemNamePlaceholder')}
                   className={`border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl bg-[#faf8f5] ${flashFields.has("itemName") ? "flash-error" : ""}`}
                 />
               </div>
 
               <div className="w-full">
                 <label htmlFor="category" className="block mb-2 font-medium">
-                  Category <span className="text-red-500">*</span>
+                  {t('custom.form.category')} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -1455,7 +1485,7 @@ function CustomOrderPageInner() {
                     onChange={handleInput}
                     className={`border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 pr-10 rounded-xl bg-[#faf8f5] appearance-none cursor-pointer ${flashFields.has("category") ? "flash-error" : ""}`}
                   >
-                    <option value="">Select a category</option>
+                    <option value="">{t('custom.form.categoryPlaceholder')}</option>
                     {categories.map((cat, idx) => (
                       <option key={idx} value={cat} className="capitalize">
                         {cat}
@@ -1481,7 +1511,7 @@ function CustomOrderPageInner() {
 
               <div className="w-full">
                 <label htmlFor="description" className="block mb-2 font-medium">
-                  Description <span className="text-red-500">*</span>
+                  {t('custom.form.description')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="description"
@@ -1489,7 +1519,7 @@ function CustomOrderPageInner() {
                   value={formData.description}
                   onChange={handleInput}
                   rows={5}
-                  placeholder="Describe what you're looking for in detail..."
+                  placeholder={t('custom.form.descriptionPlaceholder')}
                   className={`border border-slate-300 outline-none focus:ring-2 focus:ring-[#e67e22] w-full p-3 rounded-xl resize-none bg-[#faf8f5] ${flashFields.has("description") ? "flash-error" : ""}`}
                 />
               </div>
@@ -1508,11 +1538,10 @@ function CustomOrderPageInner() {
               >
                 <div>
                   <span className="font-semibold text-[#1c355e] block">
-                    Additional details
+                    {t('custom.form.additionalDetails')}
                   </span>
                   <span className="text-xs text-slate-500 mt-0.5 block">
-                    Optional — voice memo, quantity, size, materials, colors,
-                    delivery
+                    {t('custom.form.additionalHint')}
                   </span>
                 </div>
                 {showAdditionalDetails ? (
@@ -1527,7 +1556,7 @@ function CustomOrderPageInner() {
                   <AudioRecorder audioBlob={audioBlob} setAudioBlob={setAudioBlob} />
 
                   <div className="w-full">
-                    <label className="block mb-2 font-medium">Quantity</label>
+                    <label className="block mb-2 font-medium">{t('custom.form.quantity')}</label>
                     <div className="flex items-center gap-3 bg-white border border-slate-300 rounded-lg p-1 w-fit">
                       <button
                         type="button"
@@ -1578,7 +1607,7 @@ function CustomOrderPageInner() {
                   {shouldShowMaterial && (
                     <div className="w-full">
                       <label htmlFor="material" className="block mb-2 font-medium">
-                        Material
+                        {t('custom.form.material')}
                       </label>
                       <input
                         id="material"
@@ -1586,7 +1615,7 @@ function CustomOrderPageInner() {
                         value={formData.material}
                         onChange={handleInput}
                         type="text"
-                        placeholder="e.g., Clay, Wool, Oak"
+                        placeholder={t('custom.form.materialPlaceholder')}
                         className="border border-slate-300 w-full p-3 rounded-xl bg-[#faf8f5] outline-none focus:ring-2 focus:ring-[#e67e22]"
                       />
                     </div>
@@ -1610,14 +1639,14 @@ function CustomOrderPageInner() {
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-50">
               <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
                 <h3 className="text-lg font-bold text-[#1c355e]">
-                  Request visibility{" "}
+                  {t('custom.form.requestVisibility')}{" "}
                   <span className="text-red-500 text-base font-bold">*</span>
                 </h3>
                 <button
                   type="button"
                   onClick={handleAIReview}
                   disabled={aiReviewing}
-                  title="Let AI review your inputs and suggest clarifications"
+                  title={t('custom.form.aiReviewHint')}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
                     aiReviewing
                       ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
@@ -1629,7 +1658,7 @@ function CustomOrderPageInner() {
                   ) : (
                     <SparklesIcon size={14} />
                   )}
-                  {aiReviewing ? "Reviewing..." : "Review inputs with AI"}
+                  {aiReviewing ? t('custom.form.reviewing') : t('custom.form.reviewWithAI')}
                 </button>
               </div>
 
@@ -1651,10 +1680,10 @@ function CustomOrderPageInner() {
                     />
                     <div className="min-w-0">
                       <p className="font-medium text-slate-800 text-sm">
-                        Open Request
+                        {t('custom.form.openRequest')}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Posted to Custom Request Hub (default)
+                        {t('custom.form.openRequestHint')}
                       </p>
                     </div>
                   </label>
@@ -1675,10 +1704,10 @@ function CustomOrderPageInner() {
                     />
                     <div className="min-w-0">
                       <p className="font-medium text-slate-800 text-sm">
-                        Private Request
+                        {t('custom.form.privateRequest')}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Sent to a specific artisan
+                        {t('custom.form.privateRequestHint')}
                       </p>
                     </div>
                   </label>
@@ -1690,7 +1719,7 @@ function CustomOrderPageInner() {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 text-sm font-semibold text-[#1c355e]">
                       <SparklesIcon size={16} className="text-blue-600" />
-                      AI suggestions
+                      {t('custom.form.aiSuggestions')}
                     </div>
                     <button
                       type="button"
@@ -1724,17 +1753,14 @@ function CustomOrderPageInner() {
                 className={`w-full bg-[#b64b2b] hover:bg-[#9c4024] text-white font-medium rounded-full py-3.5 shadow-md text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#b64b2b] ${isSubmitEnabled() && !loading ? "hover:shadow-lg active:scale-[0.99]" : ""}`}
               >
                 {loading
-                  ? editId
-                    ? "Updating..."
-                    : "Submitting..."
+                  ? t('common.loading')
                   : editId
-                    ? "Update Request"
-                    : "Submit Request"}
+                    ? t('common.submit')
+                    : t('custom.form.submit')}
               </button>
 
               <p className="text-[11px] text-center text-slate-400 mt-3 leading-relaxed">
-                Required fields are marked with{" "}
-                <span className="text-red-500">*</span> on the main form.
+                {t('custom.form.requiredFieldsBegin')}<span class="text-red-500">*</span>{t('custom.form.requiredFieldsEnd')}
               </p>
             </div>
           </div>
@@ -1759,12 +1785,10 @@ function CustomOrderPageInner() {
               />
             </div>
             <h2 id="puter-modal-title" className="text-xl font-bold text-[#1c355e] mb-2">
-              Unlock AI for your request
+              {t('custom.form.unlockAI')}
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Manzili can use AI to review your inputs and generate a reference
-              image of your idea. To use the free version, a quick one-time
-              sign-in is needed. You can skip and we&apos;ll do our best without it.
+              {t('custom.form.unlockAIDesc')}
             </p>
             <div className="flex flex-col sm:flex-row-reverse gap-2">
               <button
@@ -1772,14 +1796,14 @@ function CustomOrderPageInner() {
                 onClick={() => handlePuterConsentDecision(true)}
                 className="flex-1 bg-[#b64b2b] hover:bg-[#9c4024] text-white font-medium rounded-full py-3 shadow-md transition-all"
               >
-                Continue
+                {t('custom.form.continue')}
               </button>
               <button
                 type="button"
                 onClick={() => handlePuterConsentDecision(false)}
                 className="flex-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-medium rounded-full py-3 transition-colors"
               >
-                Skip for now
+                {t('custom.form.skipForNow')}
               </button>
             </div>
           </div>

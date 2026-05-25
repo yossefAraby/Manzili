@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { XIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 const RatingModal = ({ ratingModal, setRatingModal }) => {
 
@@ -13,13 +14,14 @@ const RatingModal = ({ ratingModal, setRatingModal }) => {
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
     const dispatch = useDispatch();
+    const t = useTranslate();
 
     const handleSubmit = async () => {
         if (rating < 1 || rating > 5) {
-            return toast('Please select a rating');
+            return toast(t('ratingModal.pleaseSelectRating'));
         }
         if (review.length < 5) {
-            return toast('Write a short review (at least 5 characters)');
+            return toast(t('ratingModal.reviewTooShort'));
         }
 
         const res = await fetch('/api/ratings', {
@@ -31,7 +33,7 @@ const RatingModal = ({ ratingModal, setRatingModal }) => {
         const data = await res.json();
 
         if (!res.ok) {
-            throw new Error(data?.error || 'Failed to submit rating');
+            throw new Error(data?.error || t('ratingModal.failedToSubmit'));
         }
 
         dispatch(addRating(data.rating));
@@ -44,7 +46,7 @@ const RatingModal = ({ ratingModal, setRatingModal }) => {
                 <button onClick={() => setRatingModal(null)} className='absolute top-3 right-3 text-gray-500 hover:text-gray-700'>
                     <XIcon size={20} />
                 </button>
-                <h2 className='text-xl font-medium text-slate-600 mb-4'>Rate Product</h2>
+                <h2 className='text-xl font-medium text-slate-600 mb-4'>{t('ratingModal.rateProduct')}</h2>
                 <div className='flex items-center justify-center mb-4'>
                     {Array.from({ length: 5 }, (_, i) => (
                         <Star
@@ -56,13 +58,13 @@ const RatingModal = ({ ratingModal, setRatingModal }) => {
                 </div>
                 <textarea
                     className='w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-[#2582eb]'
-                    placeholder='Write your review (optional)'
+                    placeholder={t('ratingModal.writeReview')}
                     rows='4'
                     value={review}
                     onChange={(e) => setReview(e.target.value)}
                 ></textarea>
-                <button onClick={e => toast.promise(handleSubmit(), { loading: 'Submitting...' })} className='w-full bg-[#2582eb] text-white py-2 rounded-md hover:bg-[#2582eb]/90 transition'>
-                    Submit Rating
+                <button onClick={e => toast.promise(handleSubmit(), { loading: t('ratingModal.submitting') })} className='w-full bg-[#2582eb] text-white py-2 rounded-md hover:bg-[#2582eb]/90 transition'>
+                    {t('ratingModal.submitRating')}
                 </button>
             </div>
         </div>

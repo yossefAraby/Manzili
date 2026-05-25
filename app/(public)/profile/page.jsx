@@ -11,6 +11,7 @@ import { setAddressList } from '@/lib/features/address/addressSlice'
 import { persistAuthSession, updateAuthProfile } from '@/lib/services/localStateBootstrap'
 import { findStoreById, findStoreByOwnerUserId } from '@/lib/services/localStoreRegistry'
 import { listCustomRequests } from '@/lib/services/localCustomRequestService'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 const NAV = [
   { id: 'personal', label: 'Personal data' },
@@ -30,6 +31,8 @@ export default function ProfilePage() {
   const [nameDraft, setNameDraft] = useState('')
   const [emailDraft, setEmailDraft] = useState('')
   const [myRequests, setMyRequests] = useState([])
+
+  const t = useTranslate()
 
   const storeRecord = useMemo(() => {
     if (!session?.userId) return null
@@ -72,7 +75,7 @@ export default function ProfilePage() {
     const nextSession = { ...session, name: res.user.name, email: res.user.email }
     dispatch(setSession(nextSession))
     persistAuthSession(nextSession)
-    toast.success('Profile updated.')
+    toast.success(t('profile.profileUpdated'))
   }
 
   const removeAddress = (id) => {
@@ -82,7 +85,7 @@ export default function ProfilePage() {
   if (!session?.userId) {
     return (
       <div className="min-h-[50vh] mx-6 flex items-center justify-center text-slate-500">
-        <p className="text-sm">Redirecting…</p>
+        <p className="text-sm">{t('common.loading')}</p>
       </div>
     )
   }
@@ -92,7 +95,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto mb-28 max-w-5xl px-6 text-slate-500">
       <h1 className="text-2xl">
-        Your <span className="text-slate-800 font-medium">profile</span>
+        {t('profile.title')}
       </h1>
       <p className="text-sm mt-2 text-slate-500">
         Manage personal details, addresses, and custom orders in one place.
@@ -118,7 +121,7 @@ export default function ProfilePage() {
               <h2 className="text-slate-800 font-medium text-lg mb-4">Personal data</h2>
               <form onSubmit={savePersonal} className="space-y-4 text-sm">
                 <div>
-                  <label className="block text-slate-600 mb-1">Name</label>
+                  <label className="block text-slate-600 mb-1">{t('profile.name')}</label>
                   <input
                     value={nameDraft}
                     onChange={(e) => setNameDraft(e.target.value)}
@@ -127,7 +130,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-600 mb-1">Email</label>
+                  <label className="block text-slate-600 mb-1">{t('profile.email')}</label>
                   <input
                     type="email"
                     value={emailDraft}
@@ -140,7 +143,7 @@ export default function ProfilePage() {
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-[#2582eb] text-white font-medium hover:opacity-90"
                 >
-                  Save changes
+                  {t('profile.saveChanges')}
                 </button>
               </form>
             </div>
@@ -180,7 +183,7 @@ export default function ProfilePage() {
                         className="self-start text-red-600 text-sm hover:underline"
                         onClick={() => removeAddress(a.id)}
                       >
-                        Remove
+                        {t('common.delete')}
                       </button>
                     </li>
                   ))}

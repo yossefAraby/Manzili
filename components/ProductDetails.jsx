@@ -15,6 +15,7 @@ import Counter from "./Counter";
 import ReportButton from "@/components/ReportButton";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrencySymbol } from "@/lib/currency";
+import { useTranslate } from "@/lib/i18n/LocaleContext";
 
 /** sessionStorage key the customize CTA writes to; /custom/custom-form reads + clears it. */
 const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
@@ -22,6 +23,7 @@ const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
 const isColorType = (t) => /color|colour|colou?r/i.test(t);
 
 const ProductDetails = ({ product }) => {
+  const t = useTranslate();
   const productId = product.id;
   const currency = getCurrencySymbol();
 
@@ -168,7 +170,7 @@ const ProductDetails = ({ product }) => {
               />
             ))}
           <p className="text-sm ml-3 text-slate-500">
-            {product.rating.length} Reviews
+            {product.rating.length} {t('productDetails.reviews')}
           </p>
         </div>
         <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
@@ -186,7 +188,7 @@ const ProductDetails = ({ product }) => {
         {discountPercent > 0 && (
           <div className="flex items-center gap-2 text-slate-500">
             <TagIcon size={14} />
-            <p>Save {discountPercent}% right now</p>
+            <p>{t('productDetails.savePercent', { percent: discountPercent })}</p>
           </div>
         )}
         {/* ── Selected variant labels ── */}
@@ -261,12 +263,12 @@ const ProductDetails = ({ product }) => {
                         </button>
                         {outOfStock && (
                           <span className="text-[10px] text-rose-500 whitespace-nowrap">
-                            Out of Stock
+                            {t('productDetails.outOfStock')}
                           </span>
                         )}
                         {lowStock && !outOfStock && (
                           <span className="text-[10px] text-amber-600 whitespace-nowrap">
-                            Only {opt.stock} left
+                            {t('productDetails.onlyLeft', { stock: opt.stock })}
                           </span>
                         )}
                       </div>
@@ -280,7 +282,7 @@ const ProductDetails = ({ product }) => {
         <div className="flex items-end gap-5 mt-10">
           {cart[cartKey] && (
             <div className="flex flex-col gap-3">
-              <p className="text-lg text-slate-800 font-semibold">Quantity</p>
+              <p className="text-lg text-slate-800 font-semibold">{t('productDetails.quantity')}</p>
               <Counter productId={productId} cartKey={cartKey} />
             </div>
           )}
@@ -296,16 +298,16 @@ const ProductDetails = ({ product }) => {
             }`}
           >
             {selectedOutOfStock
-              ? "Out of Stock"
+              ? t('productDetails.outOfStock')
               : !cart[cartKey]
-                ? "Add to Cart"
-                : "View Cart"}
+                ? t('productDetails.addToCart')
+                : t('productDetails.viewCart')}
           </button>
           <button
             onClick={() => dispatch(toggleWishlist({ productId }))}
             className="border border-slate-300 text-slate-700 px-6 py-3 text-sm font-medium rounded hover:bg-slate-50 transition"
           >
-            {inWishlist ? "Wishlisted" : "Wishlist"}
+            {inWishlist ? t('productDetails.wishlisted') : t('productDetails.wishlist')}
           </button>
         </div>
 
@@ -316,7 +318,7 @@ const ProductDetails = ({ product }) => {
         <div className="flex flex-col gap-2 max-w-md">
           <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
             <SparklesIcon size={14} className="text-[#2582eb]" />
-            Love this but want a tweak? The maker can craft your version.
+            {t('productDetails.customizeHint')}
           </p>
           <button
             type="button"
@@ -327,7 +329,7 @@ const ProductDetails = ({ product }) => {
               size={16}
               className="transition-transform duration-200 group-hover:rotate-12"
             />
-            <span>Customize this for me</span>
+            <span>{t('productDetails.customizeThis')}</span>
           </button>
         </div>
         <div className="mt-4">
@@ -335,7 +337,7 @@ const ProductDetails = ({ product }) => {
             type="NON_HANDMADE_PRODUCT"
             productId={product.id}
             storeId={product.storeId}
-            label="Report this product"
+            label={t('productDetails.reportThis')}
           />
         </div>
       </div>

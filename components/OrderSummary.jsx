@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { getCurrencySymbol } from '@/lib/currency';
 import { calculateCouponDiscountAmount, normalizeCouponCode, validateCouponForCart } from '@/lib/couponUtils';
 import { getCouponByCode } from '@/lib/services/localCouponService';
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 function formatCartMoney(value) {
     return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -21,6 +22,8 @@ function enrichAddressForCheckout(address, session) {
 }
 
 const OrderSummary = ({ totalPrice, items }) => {
+
+    const t = useTranslate();
 
     const currency = getCurrencySymbol();
 
@@ -62,7 +65,7 @@ const OrderSummary = ({ totalPrice, items }) => {
         event.preventDefault();
         const normalizedCode = normalizeCouponCode(couponCodeInput);
         if (!normalizedCode) {
-            toast.error('Please enter a coupon code');
+            toast.error(t('orderSummary.pleaseEnterCoupon'));
             return;
         }
 
@@ -74,19 +77,19 @@ const OrderSummary = ({ totalPrice, items }) => {
         }
 
         setCoupon(matchedCoupon);
-        toast.success('Coupon applied successfully');
+        toast.success(t('orderSummary.couponApplied'));
     }
 
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
 
         if (!selectedAddress) {
-            throw new Error('Please select or add a shipping address');
+            throw new Error(t('orderSummary.selectAddress'));
         }
 
         const addressPayload = enrichAddressForCheckout(selectedAddress, session);
         if (!String(addressPayload.name || '').trim() || !String(addressPayload.street || '').trim()) {
-            throw new Error('Address needs a name and street — sign in or update your saved address');
+            throw new Error(t('orderSummary.addressNeedsName'));
         }
 
         if (paymentMethod === 'COD') {
@@ -101,10 +104,10 @@ const OrderSummary = ({ totalPrice, items }) => {
                 }),
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data?.error || 'Could not place order');
+            if (!res.ok) throw new Error(data?.error || t('orderSummary.couldNotPlaceOrder'));
             dispatch(clearCart());
             router.push('/orders');
-            return { toastMessage: 'Order placed' };
+            return { toastMessage: t('orderSummary.orderPlaced') };
         }
         const checkoutRes = await fetch('/api/checkout', {
             method: 'POST',
@@ -118,29 +121,29 @@ const OrderSummary = ({ totalPrice, items }) => {
         const checkout = await checkoutRes.json().catch(() => ({}));
         if (!checkoutRes.ok) {
             const detail = [checkout?.error, checkout?.code].filter(Boolean).join(' — ');
-            throw new Error(detail || 'Could not start checkout');
+            throw new Error(detail || t('orderSummary.couldNotStartCheckout'));
         }
         if (!checkout?.url) {
-            throw new Error('Checkout URL missing');
+            throw new Error(t('orderSummary.checkoutUrlMissing'));
         }
         window.location.href = checkout.url;
-        return { toastMessage: 'Redirecting to Stripe…' };
+        return { toastMessage: t('orderSummary.redirectingStripe') };
     }
 
     return (
         <div className='w-full max-w-lg lg:max-w-[340px] bg-slate-50/30 border border-slate-200 text-slate-500 text-sm rounded-xl p-7'>
-            <h2 className='text-xl font-medium text-slate-600'>Payment Summary</h2>
-            <p className='text-slate-400 text-xs my-4'>Payment Method</p>
-            <div className='flex gap-2 items-center opacity-45 pointer-events-none select-none' title="Cash on delivery is not available">
+            <h2 className='text-xl font-medium text-slate-600'>{t('orderSummary.paymentSummary')}</h2>
+            <p className='text-slate-400 text-xs my-4'>{t('orderSummary.paymentMethod')}</p>
+            <div className='flex gap-2 items-center opacity-45 pointer-events-none select-none' title={t('orderSummary.codNotAvailable')}>
                 <input type="radio" id="COD" name="payment" disabled className='accent-gray-400' aria-checked={false} />
-                <label htmlFor="COD" className='cursor-not-allowed text-slate-400'>COD</label>
+                <label htmlFor="COD" className='cursor-not-allowed text-slate-400'>{t('orderSummary.cod')}</label>
             </div>
             <div className='flex gap-2 items-center mt-1'>
                 <input type="radio" id="STRIPE" name='payment' onChange={() => setPaymentMethod('STRIPE')} checked={paymentMethod === 'STRIPE'} className='accent-gray-500' />
-                <label htmlFor="STRIPE" className='cursor-pointer'>Stripe</label>
+                <label htmlFor="STRIPE" className='cursor-pointer'>{t('orderSummary.stripe')}</label>
             </div>
             <div className='my-4 py-4 border-y border-slate-200 text-slate-400'>
-                <p>Address</p>
+                <p>{t('orderSummary.address')}</p>
                 {
                     selectedAddress ? (
                         <div className='flex gap-2 items-center'>
@@ -156,7 +159,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                             {
                                 addressList.length > 0 && (
                                     <select className='border border-slate-400 p-2 w-full my-3 outline-none rounded' onChange={(e) => setSelectedAddress(addressList[e.target.value])} >
-                                        <option value="">Select Address</option>
+                                        <option value="">{t('orderSummary.selectAddress')}</option>
                                         {
                                             addressList.map((address, index) => (
                                                 <option key={index} value={index}>
@@ -172,13 +175,13 @@ const OrderSummary = ({ totalPrice, items }) => {
                                 className='flex items-center gap-1 text-slate-600 mt-1'
                                 onClick={() => {
                                     if (!session?.userId) {
-                                        toast.error('Create an account to save a delivery address');
+                                        toast.error(t('orderSummary.createAccount'));
                                         router.push('/register');
                                         return;
                                     }
                                     setShowAddressModal(true);
                                 }}
-                            >Add Address <PlusIcon size={18} /></button>
+                            >{t('orderSummary.addAddress')} <PlusIcon size={18} /></button>
                         </div>
                     )
                 }
@@ -186,9 +189,9 @@ const OrderSummary = ({ totalPrice, items }) => {
             <div className='pb-4 border-b border-slate-200'>
                 <div className='flex justify-between'>
                     <div className='flex flex-col gap-1 text-slate-400'>
-                        <p>Subtotal:</p>
-                        <p>Shipping:</p>
-                        {coupon && <p>Coupon:</p>}
+                        <p>{t('orderSummary.subtotal')}</p>
+                        <p>{t('orderSummary.shipping')}</p>
+                        {coupon && <p>{t('orderSummary.coupon')}</p>}
                     </div>
                     <div className='flex flex-col gap-1 font-medium text-right'>
                         <p>{currency}{formatCartMoney(totalPrice)}</p>
@@ -206,17 +209,17 @@ const OrderSummary = ({ totalPrice, items }) => {
                     </div>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1 leading-snug">
-                    Estimated delivery fee (Bosta sizing). Final carrier charge may differ.
+                    {t('orderSummary.estimatedFee')}
                 </p>
                 {
                     !coupon ? (
-                        <form onSubmit={e => toast.promise(handleCouponCode(e), { loading: 'Checking Coupon...' })} className='flex justify-center gap-3 mt-3'>
-                            <input onChange={(e) => setCouponCodeInput(e.target.value)} value={couponCodeInput} type="text" placeholder='Coupon Code' className='border border-slate-400 p-1.5 rounded w-full outline-none' />
-                            <button className='bg-slate-600 text-white px-3 rounded hover:bg-slate-800 active:scale-95 transition-all'>Apply</button>
+                        <form onSubmit={e => toast.promise(handleCouponCode(e), { loading: t('orderSummary.checkingCoupon') })} className='flex justify-center gap-3 mt-3'>
+                            <input onChange={(e) => setCouponCodeInput(e.target.value)} value={couponCodeInput} type="text" placeholder={t('orderSummary.couponCode')} className='border border-slate-400 p-1.5 rounded w-full outline-none' />
+                            <button className='bg-slate-600 text-white px-3 rounded hover:bg-slate-800 active:scale-95 transition-all'>{t('orderSummary.apply')}</button>
                         </form>
                     ) : (
                         <div className='w-full flex items-center justify-center gap-2 text-xs mt-2'>
-                            <p>Code: <span className='font-semibold ml-1'>{coupon.code.toUpperCase()}</span></p>
+                            <p>{t('orderSummary.code')} <span className='font-semibold ml-1'>{coupon.code.toUpperCase()}</span></p>
                             <p>{coupon.description}</p>
                             <XIcon size={18} onClick={() => setCoupon('')} className='hover:text-red-700 transition cursor-pointer' />
                         </div>
@@ -224,7 +227,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                 }
             </div>
             <div className='flex justify-between py-4'>
-                <p>Total (incl. est. shipping):</p>
+                <p>{t('orderSummary.total')}</p>
                 <p className="font-medium text-right">
                     {currency}
                     {(
@@ -236,13 +239,13 @@ const OrderSummary = ({ totalPrice, items }) => {
             <button
                 onClick={(e) =>
                     toast.promise(handlePlaceOrder(e), {
-                        loading: 'Placing order…',
-                        success: (result) => result?.toastMessage || 'Order placed',
-                        error: (err) => err?.message || 'Could not place order',
+                        loading: t('orderSummary.placingOrder'),
+                        success: (result) => result?.toastMessage || t('orderSummary.orderPlaced'),
+                        error: (err) => err?.message || t('orderSummary.couldNotPlaceOrder'),
                     })
                 }
                 className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'
-            >Place Order</button>
+            >{t('orderSummary.placeOrder')}</button>
 
             {showAddressModal && <AddressModal setShowAddressModal={setShowAddressModal} />}
 

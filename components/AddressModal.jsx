@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { addAddress } from '@/lib/features/address/addressSlice'
 import { makeEntityId } from '@/lib/storage/localStorageEnvelope'
 import { normalizeComparableName } from '@/lib/bosta/locations'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 const DEFAULT_COUNTRY = 'Egypt'
 const DEFAULT_COUNTRY_CODE = 'EG'
@@ -41,6 +42,7 @@ async function readJsonSafe(res) {
 
 const AddressModal = ({ setShowAddressModal }) => {
     const dispatch = useDispatch()
+    const t = useTranslate()
     const session = useSelector((s) => s.auth.session)
 
     const [cities, setCities] = useState([])
@@ -85,7 +87,7 @@ const AddressModal = ({ setShowAddressModal }) => {
         try {
             const res = await fetch('/api/bosta/cities')
             const data = await readJsonSafe(res)
-            if (!res.ok) throw new Error(data?.error || 'Could not load cities')
+            if (!res.ok) throw new Error(data?.error || t('addressModal.couldNotLoadCities'))
             setCities(Array.isArray(data.cities) ? data.cities : [])
         } catch (e) {
             setBostaError(e?.message || 'Bosta cities unavailable')
@@ -144,12 +146,12 @@ const AddressModal = ({ setShowAddressModal }) => {
             setZoneOptions(options)
 
             if (rows.length === 0) {
-                setBostaError('No districts returned for this governorate.')
+                setBostaError(t('addressModal.noDistricts'))
             } else if (options.length === 0) {
                 setBostaError('Could not determine zones for this governorate. Try again later.')
             }
         } catch (err) {
-            setBostaError(err?.message || 'Could not load location data')
+            setBostaError(err?.message || t('addressModal.couldNotLoadLocation'))
             setDistrictRows([])
             setZonesDetail([])
             setZoneOptions([])
@@ -216,7 +218,7 @@ const AddressModal = ({ setShowAddressModal }) => {
 
     return (
         <form
-            onSubmit={(e) => toast.promise(handleSubmit(e), { loading: 'Saving address…' })}
+            onSubmit={(e) => toast.promise(handleSubmit(e), { loading: t('addressModal.savingAddress') })}
             className="fixed inset-0 z-50 bg-white/60 backdrop-blur h-screen flex items-center justify-center overflow-y-auto py-10"
         >
             <div className="flex flex-col gap-4 text-slate-700 w-full max-w-md mx-6 bg-white/90 p-6 rounded-xl border border-slate-200 shadow-lg">
@@ -229,35 +231,35 @@ const AddressModal = ({ setShowAddressModal }) => {
                     </button>
                 </div>
                 <p className="text-xs text-slate-500">
-                    Choose governorate and district from Bosta so shipments validate. Country: {DEFAULT_COUNTRY}.
+                    {t('addressModal.chooseLocation', { country: DEFAULT_COUNTRY })}
                 </p>
                 {bostaError && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">{bostaError}</p>}
 
                 {session?.userId && session?.name && session?.email ? (
                     <p className="text-xs text-slate-500 rounded border border-slate-100 bg-slate-50/80 px-3 py-2">
-                        Delivering for <span className="font-medium text-slate-700">{session.name}</span>
+                        {t('addressModal.deliveringFor')} <span className="font-medium text-slate-700">{session.name}</span>
                         <span className="text-slate-400"> · </span>
                         <span className="text-slate-600">{session.email}</span>
                     </p>
                 ) : (
                     <>
                         <label className="flex flex-col gap-1 text-sm">
-                            Full name
+                            {t('addressModal.fullName')}
                             <input value={name} onChange={(e) => setName(e.target.value)} className="p-2 border border-slate-200 rounded" required />
                         </label>
                         <label className="flex flex-col gap-1 text-sm">
-                            Email
+                            {t('addressModal.email')}
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="p-2 border border-slate-200 rounded" required />
                         </label>
                     </>
                 )}
                 <label className="flex flex-col gap-1 text-sm">
-                    Phone
+                    {t('addressModal.phone')}
                     <input value={phone} onChange={(e) => setPhone(e.target.value)} className="p-2 border border-slate-200 rounded" required />
                 </label>
 
                 <label className="flex flex-col gap-1 text-sm">
-                    City / governorate
+                    {t('addressModal.cityGovernorate')}
                     <select
                         value={cityId}
                         onChange={onCityChange}
@@ -265,7 +267,7 @@ const AddressModal = ({ setShowAddressModal }) => {
                         required
                         disabled={loadingCities}
                     >
-                        <option value="">{loadingCities ? 'Loading cities…' : 'Select city'}</option>
+                        <option value="">{loadingCities ? t('addressModal.loadingCities') : t('addressModal.selectCity')}</option>
                         {cities.map((c) => (
                             <option key={c.id} value={c.id}>
                                 {c.name}
@@ -275,9 +277,9 @@ const AddressModal = ({ setShowAddressModal }) => {
                 </label>
 
                 <label className="flex flex-col gap-1 text-sm">
-                    Zone
+                    {t('addressModal.zone')}
                     <select value={zoneId} onChange={onZoneChange} className="p-2 border border-slate-200 rounded" required disabled={!cityId || loadingDistricts}>
-                        <option value="">{loadingDistricts ? 'Loading zones…' : 'Select zone'}</option>
+                        <option value="">{loadingDistricts ? t('addressModal.loadingZones') : t('addressModal.selectZone')}</option>
                         {zoneOptions.map((z) => (
                             <option key={z.id} value={z.id}>
                                 {z.name}
@@ -295,7 +297,7 @@ const AddressModal = ({ setShowAddressModal }) => {
                         required
                         disabled={!zoneId}
                     >
-                        <option value="">Select district</option>
+                        <option value="">{t('addressModal.selectDistrict')}</option>
                         {filteredDistricts.map((d) => (
                             <option key={d.districtId} value={d.districtId}>
                                 {d.districtName}
@@ -305,12 +307,12 @@ const AddressModal = ({ setShowAddressModal }) => {
                 </label>
 
                 <label className="flex flex-col gap-1 text-sm">
-                    Street / address line
+                    {t('addressModal.streetAddress')}
                     <input value={street} onChange={(e) => setStreet(e.target.value)} className="p-2 border border-slate-200 rounded" required />
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                     <label className="flex flex-col gap-1 text-sm col-span-1">
-                        Building
+                        {t('addressModal.building')}
                         <input value={building} onChange={(e) => setBuilding(e.target.value)} className="p-2 border border-slate-200 rounded" />
                     </label>
                     <label className="flex flex-col gap-1 text-sm col-span-1">

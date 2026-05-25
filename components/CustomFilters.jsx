@@ -3,11 +3,7 @@
 import { categories } from "@/assets/assets";
 import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const ownershipOptions = [
-  { value: "all", label: "Open Requests" },
-  { value: "mine", label: "My Requests" },
-];
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 export default function CustomFilters({
   onOwnershipChange,
@@ -15,6 +11,11 @@ export default function CustomFilters({
   onClearFilters,
   onSortChange,
 }) {
+  const t = useTranslate();
+  const ownershipOptions = [
+    { value: "all", label: t('customFilters.openRequests') },
+    { value: "mine", label: t('customFilters.myRequests') },
+  ];
   const [selectedOwnership, setSelectedOwnership] = useState("all");
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [sortBy, setSortBy] = useState("latest");
@@ -71,11 +72,11 @@ export default function CustomFilters({
     <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
       {/* Sort By */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-3">Sort By</h4>
+        <h4 className="font-medium text-slate-700 mb-3">{t('customFilters.sortBy')}</h4>
         <div className="flex flex-wrap gap-2">
           {[
-            { value: "latest", label: "Latest" },
-            { value: "oldest", label: "Oldest First" },
+            { value: "latest", label: t('customFilters.latest') },
+            { value: "oldest", label: t('customFilters.oldestFirst') },
           ].map((opt) => (
             <button
               key={opt.value}
@@ -95,7 +96,7 @@ export default function CustomFilters({
 
       {/* Categories */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-3">Categories</h4>
+        <h4 className="font-medium text-slate-700 mb-3">{t('customFilters.categories')}</h4>
         <div className="flex flex-wrap gap-2">
           {categories.map((cat) => (
             <button
@@ -138,7 +139,7 @@ export default function CustomFilters({
       {/* Active filters summary */}
       {hasActiveFilters && (
         <div className="mt-8 pt-6 border-t border-slate-200">
-          <p className="text-sm text-slate-600 mb-2">Active filters:</p>
+          <p className="text-sm text-slate-600 mb-2">{t('customFilters.activeFilters')}</p>
           <div className="flex flex-wrap gap-2">
             {sortBy !== "latest" && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -176,7 +177,7 @@ export default function CustomFilters({
         className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
       >
         <FilterIcon size={16} />
-        Filters
+        {t('customFilters.filters')}
         {activeFilterCount > 0 && (
           <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
             {activeFilterCount}
@@ -199,7 +200,7 @@ export default function CustomFilters({
         />
         <div
           role="dialog"
-          aria-label="Filters"
+          aria-label={t('customFilters.filters')}
           className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
             mobileOpen ? "translate-y-0" : "translate-y-full"
           }`}
@@ -207,12 +208,12 @@ export default function CustomFilters({
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <FilterIcon size={20} />
-              Filters
+              {t('customFilters.filters')}
             </h3>
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              aria-label="Close filters"
+              aria-label={t('customFilters.closeFilters')}
               className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
             >
               <XIcon size={22} />
@@ -226,14 +227,14 @@ export default function CustomFilters({
               disabled={!hasActiveFilters}
               className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
             >
-              Clear
+              {t('customFilters.clear')}
             </button>
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
             >
-              Show results
+              {t('customFilters.showResults')}
             </button>
           </div>
         </div>
@@ -244,14 +245,14 @@ export default function CustomFilters({
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <FilterIcon size={20} />
-            Filters
+            {t('customFilters.filters')}
           </h3>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
-              Clear all
+              {t('customFilters.clearAll')}
             </button>
           )}
         </div>

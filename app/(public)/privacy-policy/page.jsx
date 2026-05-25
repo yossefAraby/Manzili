@@ -1,129 +1,131 @@
 "use client";
 import { useState } from "react";
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 export default function PrivacyPolicy() {
+  const t = useTranslate()
   const [activeSection, setActiveSection] = useState("privacy");
 
   const sections = {
     privacy: {
-      title: "Privacy Policy",
+      title: t('privacyPolicy.privacyTab'),
       content: [
         {
-          heading: "1. Introduction",
-          text: "At Manzili, we are committed to protecting your privacy and ensuring you have a positive experience on our platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services.",
+          heading: t('privacyPolicy.p1h'),
+          text: t('privacyPolicy.p1t'),
         },
         {
-          heading: "2. Information We Collect",
-          text: "We collect information you provide directly to us, such as when you create an account, make a purchase, contact us, or subscribe to our newsletter. This may include:\n• Name and contact information\n• Email address and phone number\n• Billing and shipping addresses\n• Payment information\n• Profile information and preferences\n• Communications and inquiries\n\nWe also automatically collect certain information when you visit our website, including:\n• IP address and browser type\n• Pages visited and time spent\n• Referral sources\n• Device information\n• Cookies and tracking pixels",
+          heading: t('privacyPolicy.p2h'),
+          text: t('privacyPolicy.p2t'),
         },
         {
-          heading: "3. How We Use Your Information",
-          text: "We use the information we collect for various purposes, including:\n• Processing transactions and sending related information\n• Creating and managing your account\n• Sending promotional communications (with your consent)\n• Responding to your inquiries and customer service requests\n• Improving our website and services\n• Detecting and preventing fraud\n• Complying with legal obligations\n• Personalizing your shopping experience",
+          heading: t('privacyPolicy.p3h'),
+          text: t('privacyPolicy.p3t'),
         },
         {
-          heading: "4. Payment Processing & Seller Payments",
-          text: "Manzili uses Stripe Connect to process all customer payments securely. Here's how seller payments work:\n\n7-Day Hold Policy: When customers purchase items, payment is held for 7 days before being released to sellers. This holding period allows us to:\n• Process any customer returns or refunds automatically\n• Protect sellers from chargeback fraud\n• Ensure customer satisfaction before funds reach seller accounts\n• Automatically refund customers if returns occur during the hold period\n\nNo Stripe Account Required: Sellers do NOT need to create Stripe accounts. Instead:\n• Sellers provide bank account details via our secure website form\n• We use Stripe's Custom Account feature (you are never exposed to Stripe)\n• Bank details are stored securely and only shared with Stripe's API\n• Only the last 4 digits are displayed for reference\n\nAutomatic Return Processing: If a customer returns an item:\n• Customer receives their refund instantly\n• Seller's pending funds are automatically debited\n• No manual intervention required from the seller\n• Funds are only clawed back if still in the 7-day pending period\n\nPayout After Hold Expires: After 7 days:\n• Available funds appear in your wallet\n• You can request a payout to your bank account\n• Payouts are processed within 2-3 business days\n• You maintain full control over withdrawal timing",
+          heading: t('privacyPolicy.p4h'),
+          text: t('privacyPolicy.p4t'),
         },
         {
-          heading: "5. Information Sharing",
-          text: "We do not sell, trade, or rent your personal information to third parties. However, we may share your information with:\n• Stripe (payment processor) - for secure payment processing only\n• Service providers who assist us in operating our website and conducting business\n• Shipping partners to deliver your orders\n• Legal authorities when required by law\n• Third parties with your explicit consent",
+          heading: t('privacyPolicy.p5h'),
+          text: t('privacyPolicy.p5t'),
         },
         {
-          heading: "6. Data Security",
-          text: "We implement appropriate security measures to protect your personal information from unauthorized access, alteration, disclosure, or destruction. Bank account details are only stored in redacted form (last 4 digits visible) and are transmitted directly to Stripe via encrypted API connections. However, no method of transmission over the internet is completely secure, and we cannot guarantee absolute security.",
+          heading: t('privacyPolicy.p6h'),
+          text: t('privacyPolicy.p6t'),
         },
         {
-          heading: "7. Administrative Oversight & Chat Review",
-          text: "To maintain a safe, trustworthy platform, Manzili administrators have the ability to review collaboration chat messages and custom request conversations between buyers and sellers. This oversight is conducted:\n• Only when investigating a reported violation or dispute\n• By authorised Manzili administrators only\n• In compliance with applicable data protection laws\n\nBy using the collaboration and messaging features of Manzili, you acknowledge and consent to this potential review. All reviewed data is handled confidentially and used solely for platform moderation purposes.\n\nIf you have concerns about a conversation being reviewed, please contact us at manziliproject@gmail.com",
+          heading: t('privacyPolicy.p7h'),
+          text: t('privacyPolicy.p7t'),
         },
         {
-          heading: "8. Cookies and Tracking",
-          text: "Our website uses cookies and similar tracking technologies to enhance your browsing experience, remember your preferences, and analyze site traffic. You can control cookie settings through your browser, but disabling cookies may affect website functionality.",
+          heading: t('privacyPolicy.p8h'),
+          text: t('privacyPolicy.p8t'),
         },
         {
-          heading: "9. Your Rights",
-          text: "Depending on your location, you may have certain rights regarding your personal information, including:\n• Right to access your personal data\n• Right to correct inaccurate information\n• Right to delete your information\n• Right to opt-out of marketing communications\n• Right to data portability\n\nTo exercise these rights, please contact us at manziliproject@gmail.com",
+          heading: t('privacyPolicy.p9h'),
+          text: t('privacyPolicy.p9t'),
         },
         {
-          heading: "10. Children's Privacy",
-          text: "Manzili is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware of such collection, we will take steps to delete the information and terminate the child's account.",
+          heading: t('privacyPolicy.p10h'),
+          text: t('privacyPolicy.p10t'),
         },
         {
-          heading: "11. Changes to Privacy Policy",
-          text: "We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. We will notify you of any significant changes by posting the updated policy on our website and updating the 'Last Updated' date.",
+          heading: t('privacyPolicy.p11h'),
+          text: t('privacyPolicy.p11t'),
         },
         {
-          heading: "12. Contact Us",
-          text: "If you have questions or concerns about this Privacy Policy or our privacy practices, please contact us:\n\nEmail: manziliproject@gmail.com\nPhone: 01223755058\nWhatsApp: 01223755058",
+          heading: t('privacyPolicy.p12h'),
+          text: t('privacyPolicy.p12t'),
         },
       ],
     },
     terms: {
-      title: "Terms & Conditions",
+      title: t('privacyPolicy.termsTab'),
       content: [
         {
-          heading: "1. Agreement to Terms",
-          text: "By accessing and using Manzili, you agree to be bound by these Terms & Conditions. If you do not agree with any part of these terms, you may not use our website or services.",
+          heading: t('privacyPolicy.t1h'),
+          text: t('privacyPolicy.t1t'),
         },
         {
-          heading: "2. Use License",
-          text: "We grant you a limited, non-exclusive, non-transferable license to access and use Manzili for personal, non-commercial purposes. You agree not to:\n• Reproduce, duplicate, copy, or sell any content or services\n• Attempt to gain unauthorized access to our systems\n• Use automated tools to scrape or collect data\n• Engage in any illegal or unethical activities\n• Harass, abuse, or threaten other users or staff",
+          heading: t('privacyPolicy.t2h'),
+          text: t('privacyPolicy.t2t'),
         },
         {
-          heading: "3. Product Information",
-          text: "Manzili is a marketplace for handmade and artisanal products from verified local artisans. We strive to provide accurate product descriptions, images, and pricing. However:\n• We do not guarantee that product information is completely accurate or error-free\n• Products are subject to availability\n• Prices may change without notice\n• Product images are for illustrative purposes",
+          heading: t('privacyPolicy.t3h'),
+          text: t('privacyPolicy.t3t'),
         },
         {
-          heading: "4. Purchasing and Payment",
-          text: "When you make a purchase on Manzili:\n• You represent that you are legally able to enter into binding contracts\n• You agree to provide accurate billing and shipping information\n• Payment must be received before order processing\n• We accept various payment methods as displayed on our website\n• All sales are final unless otherwise specified in our refund policy",
+          heading: t('privacyPolicy.t4h'),
+          text: t('privacyPolicy.t4t'),
         },
         {
-          heading: "5. Shipping and Delivery",
-          text: "Manzili works with shipping partners to deliver your orders. Please note:\n• Delivery timeframes are estimates and not guarantees\n• Risk of loss transfers to you upon carrier pickup\n• We are not responsible for delays caused by carriers or circumstances beyond our control\n• You are responsible for providing accurate delivery addresses\n• Shipping costs are non-refundable",
+          heading: t('privacyPolicy.t5h'),
+          text: t('privacyPolicy.t5t'),
         },
         {
-          heading: "6. Returns and Refunds",
-          text: "Handmade products are unique and custom-made by artisans. Returns and refunds are subject to:\n• Product condition upon receipt\n• Compliance with our return policy timeframe (7-day return window)\n• Reason for return (damage, defect, or buyer's remorse)\n\nAutomatic Refund Processing: Returns are processed automatically without seller interaction:\n• If initiated within 7 days of delivery, funds are clawed back from seller's pending balance\n• Customers receive refunds directly to their payment method\n• Sellers are not charged additional fees for refunds during the hold period\n• If a return is requested after the 7-day hold expires, seller's available balance is debited\n\n• Refunds are processed within 7-14 business days\n• Return shipping costs may apply\n\nPlease contact us for specific return inquiries.",
+          heading: t('privacyPolicy.t6h'),
+          text: t('privacyPolicy.t6t'),
         },
         {
-          heading: "7. Intellectual Property Rights",
-          text: "All content on Manzili, including text, graphics, logos, images, and software, is the property of Manzili or our content suppliers and is protected by copyright and trademark laws. You may not reproduce or use our content without permission.",
+          heading: t('privacyPolicy.t7h'),
+          text: t('privacyPolicy.t7t'),
         },
         {
-          heading: "8. Seller Responsibilities & Payment Terms",
-          text: "For sellers on Manzili:\n• You are responsible for the accuracy of your product listings\n• You must comply with all applicable laws and regulations\n• You must provide quality products as described\n• You agree to the 7-day hold policy on all sales\n• Negative balances (from refunds after hold expires) must be settled before withdrawing future earnings\n• You are responsible for providing accurate bank account details via our secure form (never shared directly with Stripe)\n• Manzili reserves the right to remove listings or accounts that violate our policies\n\nPayment Account Setup: When you first request a payout, you'll be asked to provide:\n• Bank name and account holder name\n• Account number (IBAN or local account format)\n• Optional routing information\n\nThese details are stored securely and transmitted to Stripe only via encrypted API connections.\n\nPlatform Monitoring: Sellers acknowledge that collaboration chats and custom request messages may be reviewed by Manzili administrators for quality assurance and dispute resolution purposes.",
+          heading: t('privacyPolicy.t8h'),
+          text: t('privacyPolicy.t8t'),
         },
         {
-          heading: "9. User Accounts",
-          text: "If you create an account on Manzili:\n• You are responsible for maintaining the confidentiality of your password\n• You are responsible for all activities under your account\n• You agree to provide accurate and complete information\n• You must notify us immediately of any unauthorized access\n• We reserve the right to suspend or terminate accounts that violate our terms",
+          heading: t('privacyPolicy.t9h'),
+          text: t('privacyPolicy.t9t'),
         },
         {
-          heading: "10. Limitation of Liability",
-          text: "To the fullest extent permitted by law, Manzili and its officers, directors, employees, and agents are not liable for:\n• Indirect, incidental, special, consequential, or punitive damages\n• Loss of profits, data, or business opportunities\n• Any damages arising from your use of or inability to use our website or services\n• Third-party actions or content\n\nOur total liability shall not exceed the amount you paid for your purchase.",
+          heading: t('privacyPolicy.t10h'),
+          text: t('privacyPolicy.t10t'),
         },
         {
-          heading: "11. Disclaimer",
-          text: "Manzili is provided 'as is' and 'as available' without warranties of any kind, either express or implied. We do not guarantee that:\n• Our website will be uninterrupted or error-free\n• Defects will be corrected\n• Our website is free from viruses or harmful components\n• Results will meet your expectations",
+          heading: t('privacyPolicy.t11h'),
+          text: t('privacyPolicy.t11t'),
         },
         {
-          heading: "12. Indemnification",
-          text: "You agree to indemnify and hold harmless Manzili and its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including legal fees) arising from:\n• Your use of our website or services\n• Your violation of these Terms & Conditions\n• Your infringement of any third-party rights\n• Your user-generated content",
+          heading: t('privacyPolicy.t12h'),
+          text: t('privacyPolicy.t12t'),
         },
         {
-          heading: "13. Dispute Resolution",
-          text: "Any disputes arising from these Terms & Conditions or your use of Manzili shall be resolved through:\n• Negotiation and good faith discussion\n• Mediation if negotiation fails\n• Arbitration or legal proceedings as a last resort\n\nThese disputes shall be governed by the laws of Egypt.",
+          heading: t('privacyPolicy.t13h'),
+          text: t('privacyPolicy.t13t'),
         },
         {
-          heading: "14. Changes to Terms",
-          text: "Manzili reserves the right to modify these Terms & Conditions at any time. Changes will be effective upon posting to our website. Your continued use of our website constitutes acceptance of the updated terms.",
+          heading: t('privacyPolicy.t14h'),
+          text: t('privacyPolicy.t14t'),
         },
         {
-          heading: "15. Termination",
-          text: "Manzili may terminate or suspend your account and access to our website:\n• For violation of these Terms & Conditions\n• For illegal or unethical activities\n• For fraud or misrepresentation\n• For non-payment of amounts owed\n• At our sole discretion for any reason",
+          heading: t('privacyPolicy.t15h'),
+          text: t('privacyPolicy.t15t'),
         },
         {
-          heading: "16. Contact Information",
-          text: "For questions or concerns regarding these Terms & Conditions, please contact us:\n\nEmail: manziliproject@gmail.com\nPhone: 01223755058\nWhatsApp: 01223755058",
+          heading: t('privacyPolicy.t16h'),
+          text: t('privacyPolicy.t16t'),
         },
       ],
     },
@@ -138,10 +140,10 @@ export default function PrivacyPolicy() {
         <div className="mx-6">
           <div className="max-w-4xl mx-auto py-16 lg:py-24">
             <h1 className="text-4xl lg:text-5xl font-bold text-slate-800 text-center mb-4">
-              Legal Information
+              {t('privacyPolicy.legalInfo')}
             </h1>
             <p className="text-center text-slate-600 text-lg">
-              Understand our policies and terms that govern your use of Manzili
+              {t('privacyPolicy.legalSubtitle')}
             </p>
           </div>
         </div>
@@ -160,7 +162,7 @@ export default function PrivacyPolicy() {
                   : "text-slate-600 border-transparent hover:text-slate-800"
               }`}
             >
-              Privacy Policy
+              {t('privacyPolicy.privacyTab')}
             </button>
             <button
               onClick={() => setActiveSection("terms")}
@@ -170,7 +172,7 @@ export default function PrivacyPolicy() {
                   : "text-slate-600 border-transparent hover:text-slate-800"
               }`}
             >
-              Terms & Conditions
+              {t('privacyPolicy.termsTab')}
             </button>
           </div>
 
@@ -193,7 +195,7 @@ export default function PrivacyPolicy() {
 
             {/* Last Updated */}
             <div className="pt-8 border-t border-slate-200 text-sm text-slate-600">
-              <p>Last updated: May 2026</p>
+              <p>{t('privacyPolicy.lastUpdated', { date: 'May 2026' })}</p>
             </div>
           </div>
         </div>

@@ -1,12 +1,13 @@
 import React from 'react'
 import Title from './Title'
 import { ourSpecsData } from '@/assets/assets'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 const OurSpecs = () => {
 
     return (
         <div className='px-6 my-20 max-w-6xl mx-auto'>
-            <Title visibleButton={false} title='Dedicated to Artisans' description="A  hassle-free experience designed to handle the unique details of handmade goods and custom orders with ease." />
+            <Title visibleButton={false} title={t('ourSpec.title')} description={t('ourSpec.description')} />
 
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 gap-y-10 mt-26'>
                 {

@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 function SuccessInner() {
+    const t = useTranslate();
     const searchParams = useSearchParams();
     const sessionId = searchParams.get('session_id');
     const orderId = searchParams.get('order_id');
@@ -55,7 +57,7 @@ function SuccessInner() {
     if (status === 'loading') {
         return (
             <div className="min-h-[70vh] mx-6 flex items-center justify-center text-slate-500">
-                Confirming your test payment…
+                {t('common.loading')}
             </div>
         );
     }
@@ -63,9 +65,9 @@ function SuccessInner() {
     if (status === 'missing') {
         return (
             <div className="min-h-[70vh] mx-6 flex flex-col items-center justify-center gap-4 text-slate-600">
-                <p>No checkout session found.</p>
+                <p>{t('common.error')}</p>
                 <Link href="/cart" className="text-[#2582eb] hover:underline">
-                    Back to cart
+                    {t('common.back')}
                 </Link>
             </div>
         );
@@ -74,13 +76,13 @@ function SuccessInner() {
     if (status === 'failed') {
         return (
             <div className="min-h-[70vh] mx-6 flex flex-col items-center justify-center gap-4 text-slate-600">
-                <p>We could not verify this payment.</p>
+                <p>{t('common.error')}</p>
                 <button
                     type="button"
                     onClick={() => router.push('/cart')}
                     className="bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-900"
                 >
-                    Return to cart
+                    {t('common.back')}
                 </button>
             </div>
         );
@@ -88,14 +90,13 @@ function SuccessInner() {
 
     return (
         <div className="min-h-[70vh] mx-6 flex flex-col items-center justify-center gap-6 text-center max-w-lg mx-auto">
-            <h1 className="text-2xl font-semibold text-slate-800">Payment successful (test mode)</h1>
+            <h1 className="text-2xl font-semibold text-slate-800">{t('success.title')}</h1>
             <p className="text-slate-600 text-sm">
-                This was a Stripe test checkout — no real money was charged. Your cart has been
-                cleared.
+                {t('success.message')}
             </p>
             {orderId && (
                 <p className="text-xs text-slate-500">
-                    Order reference: <span className="font-mono">{orderId}</span>
+                    {t('orders.orderId', { id: orderId })}
                 </p>
             )}
             <div className="flex gap-3 flex-wrap justify-center">
@@ -103,10 +104,10 @@ function SuccessInner() {
                     href="/shop"
                     className="bg-slate-700 text-white px-5 py-2.5 rounded-lg hover:bg-slate-900 transition"
                 >
-                    Continue shopping
+                    {t('success.continueShopping')}
                 </Link>
                 <Link href="/orders" className="border border-slate-300 px-5 py-2.5 rounded-lg hover:bg-slate-50 transition">
-                    View orders
+                    {t('success.viewOrder')}
                 </Link>
             </div>
         </div>
@@ -114,11 +115,12 @@ function SuccessInner() {
 }
 
 export default function CartSuccessPage() {
+    const t = useTranslate();
     return (
         <Suspense
             fallback={
                 <div className="min-h-[70vh] mx-6 flex items-center justify-center text-slate-500">
-                    Loading…
+                    {t('common.loading')}
                 </div>
             }
         >

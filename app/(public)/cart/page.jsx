@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrencySymbol } from "@/lib/currency";
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 function formatLineTotal(value) {
     return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -17,6 +18,7 @@ function formatLineTotal(value) {
 export default function Cart() {
 
     const currency = getCurrencySymbol();
+    const t = useTranslate();
     
     const { cartItems } = useSelector(state => state.cart);
     const products = useSelector(state => state.product.list);
@@ -63,7 +65,7 @@ export default function Cart() {
         if (typeof window === 'undefined') return;
         const params = new URLSearchParams(window.location.search);
         if (params.get('payment') === 'canceled') {
-            toast('Stripe checkout was canceled');
+            toast(t('common.error'));
             window.history.replaceState({}, '', '/cart');
         }
     }, []);
@@ -71,7 +73,7 @@ export default function Cart() {
     if (!cartReady) {
         return (
             <div className="min-h-[50vh] mx-6 flex items-center justify-center text-slate-400 text-sm">
-                Loading cart…
+                {t('common.loading')}
             </div>
         );
     }
@@ -81,7 +83,7 @@ export default function Cart() {
 
             <div className="max-w-7xl mx-auto ">
                 {/* Title */}
-                <PageTitle heading="My Cart" text="items in your cart" linkText="Add more" />
+                <PageTitle heading={t('cart.title')} text="items in your cart" linkText="Add more" />
 
                 <div className="flex items-start justify-between gap-5 max-lg:flex-col">
 
@@ -91,7 +93,7 @@ export default function Cart() {
                                 <th className="text-left">Product</th>
                                 <th>Quantity</th>
                                 <th>Total Price</th>
-                                <th className="max-md:hidden">Remove</th>
+                                <th className="max-md:hidden">{t('cart.remove')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -128,7 +130,7 @@ export default function Cart() {
         </div>
     ) : (
         <div className="min-h-[80vh] mx-6 flex items-center justify-center text-slate-400">
-            <h1 className="text-2xl sm:text-4xl font-semibold">Your cart is empty</h1>
+            <h1 className="text-2xl sm:text-4xl font-semibold">{t('cart.empty')}</h1>
         </div>
     )
 }

@@ -8,24 +8,26 @@ import {
   markNotificationRead,
   removeNotification,
 } from "@/lib/features/notification/notificationSlice";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
-function formatRelative(iso) {
+function formatRelative(iso, t) {
   if (!iso) return "";
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return "";
   const diff = Math.max(0, Date.now() - then);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
+  if (min < 1) return t('notificationBell.justNow');
+  if (min < 60) return t('notificationBell.minutesAgo', { m: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t('notificationBell.hoursAgo', { h: hr });
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
+  if (day < 7) return t('notificationBell.daysAgo', { d: day });
   return new Date(iso).toLocaleDateString();
 }
 
 export default function NotificationBell({ compact = false }) {
   const dispatch = useDispatch();
+  const t = useTranslate();
   const list = useSelector((state) => state.notification.list);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
@@ -67,7 +69,7 @@ export default function NotificationBell({ compact = false }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Notifications"
+        aria-label={t('notificationBell.notifications')}
         className={
           compact
             ? "relative text-slate-700"
@@ -92,7 +94,7 @@ export default function NotificationBell({ compact = false }) {
         <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-white border border-slate-200 shadow-xl rounded-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <h4 className="text-sm font-semibold text-slate-800">
-              Notifications
+              {t('notificationBell.notifications')}
             </h4>
             {unreadCount > 0 && (
               <button
@@ -108,7 +110,7 @@ export default function NotificationBell({ compact = false }) {
           <div className="max-h-80 overflow-y-auto">
             {list.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-slate-500">
-                You&apos;re all caught up.
+                {t('notificationBell.allCaughtUp')}
               </div>
             ) : (
               list.map((n) => {
@@ -135,14 +137,14 @@ export default function NotificationBell({ compact = false }) {
                         </p>
                       )}
                       <p className="text-[10px] text-slate-400 mt-1">
-                        {formatRelative(n.createdAt)}
+                        {formatRelative(n.createdAt, t)}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={(e) => handleDismiss(e, n.id)}
                       className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-700 transition-opacity"
-                      aria-label="Dismiss notification"
+                      aria-label={t('notificationBell.dismiss')}
                     >
                       <X size={14} />
                     </button>

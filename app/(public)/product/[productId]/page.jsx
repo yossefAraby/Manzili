@@ -4,9 +4,11 @@ import ProductDetails from "@/components/ProductDetails";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 export default function Product() {
 
+    const t = useTranslate()
     const { productId } = useParams();
     const [product, setProduct] = useState();
     const products = useSelector(state => state.product.list);
@@ -29,7 +31,7 @@ export default function Product() {
 
                 {/* Breadcrums */}
                 <div className="  text-gray-600 text-sm mt-8 mb-5">
-                    Home / Products / {product?.category}
+                    {t('navbar.home')} / {t('shop.title')} / {product?.category}
                 </div>
 
                 {/* Product Details */}

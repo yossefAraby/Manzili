@@ -16,6 +16,7 @@ import {
     writeAuthUsers,
 } from '@/lib/services/localStateBootstrap'
 import { makeEntityId } from '@/lib/storage/localStorageEnvelope'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 export default function RegisterPage() {
     const router = useRouter()
@@ -26,10 +27,12 @@ export default function RegisterPage() {
     const [confirm, setConfirm] = useState('')
     const [acceptTerms, setAcceptTerms] = useState(false)
 
+    const t = useTranslate()
+
     const onRegister = (e) => {
         e.preventDefault()
         if (password !== confirm) {
-            alert('Passwords do not match')
+            alert(t('register.passwordsDontMatch'))
             return
         }
         if (!acceptTerms) {
@@ -74,14 +77,14 @@ export default function RegisterPage() {
                     <Image src={assets.logo} alt="Manzili Logo" width={80} height={80} className="object-contain" priority />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-800 mb-8 font-sans">Create account</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-8 font-sans">{t('register.title')}</h2>
 
                 <form className="w-full flex flex-col gap-4" onSubmit={onRegister}>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Full name"
+                        placeholder={t('register.name')}
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
                     />
@@ -89,7 +92,7 @@ export default function RegisterPage() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Email"
+                        placeholder={t('register.email')}
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
                     />
@@ -97,7 +100,7 @@ export default function RegisterPage() {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password"
+                        placeholder={t('register.password')}
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
                     />
@@ -105,7 +108,7 @@ export default function RegisterPage() {
                         type="password"
                         value={confirm}
                         onChange={(e) => setConfirm(e.target.value)}
-                        placeholder="Confirm password"
+                        placeholder={t('register.confirmPassword')}
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
                     />
@@ -139,14 +142,14 @@ export default function RegisterPage() {
                         type="submit"
                         className="w-full bg-gradient-to-r from-[#e67e22] to-[#d35400] text-white font-semibold rounded-full py-3.5 mt-2 shadow-md text-lg uppercase"
                     >
-                        Sign up
+                        {t('register.registerBtn')}
                     </button>
                 </form>
 
                 <p className="mt-8 text-slate-700 font-medium text-sm text-center">
-                    Already have an account?{' '}
+                    {t('register.haveAccount')}{' '}
                     <Link href="/login" className="text-[#d35400] font-bold hover:underline">
-                        Log in
+                        {t('register.login')}
                     </Link>
                 </p>
             </div>

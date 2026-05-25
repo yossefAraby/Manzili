@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 import {
   SendIcon,
   MicIcon,
@@ -55,21 +56,23 @@ function formatDate(value) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function formatCountdown(targetIso) {
+function formatCountdown(targetIso, t) {
   if (!targetIso) return null;
   const target = new Date(targetIso);
   if (Number.isNaN(target.getTime())) return null;
   const now = new Date();
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diffDays = Math.round((startOfDay(target) - startOfDay(now)) / 86_400_000);
-  if (diffDays === 0) return { label: "Due today", tone: "warn" };
-  if (diffDays < 0)
+  if (diffDays === 0) return { label: t("custom.negotiation.dueToday"), tone: "warn" };
+  if (diffDays < 0) {
+    const count = Math.abs(diffDays);
     return {
-      label: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"}`,
+      label: t(count === 1 ? "custom.negotiation.overdue" : "custom.negotiation.overduePlural", { count }),
       tone: "danger",
     };
+  }
   return {
-    label: `${diffDays} day${diffDays === 1 ? "" : "s"} left`,
+    label: t(diffDays === 1 ? "custom.negotiation.daysLeft" : "custom.negotiation.daysLeftPlural", { count: diffDays }),
     tone: diffDays <= 3 ? "warn" : "ok",
   };
 }
@@ -79,7 +82,7 @@ function hasDimensions(size) {
   return Boolean(size.length || size.width || size.height);
 }
 
-async function copyToClipboard(text) {
+async function copyToClipboard(text, t) {
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
@@ -93,9 +96,9 @@ async function copyToClipboard(text) {
       document.execCommand("copy");
       document.body.removeChild(ta);
     }
-    toast.success(`Copied ${text}`);
+    toast.success(t("custom.negotiation.copied", { text }));
   } catch {
-    toast.error("Couldn't copy.");
+    toast.error(t("custom.negotiation.couldNotCopy"));
   }
 }
 
@@ -122,6 +125,7 @@ export default function NegotiationPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const currency = "EGP";
+  const t = useTranslate();
 
   const session = useSelector((s) => s.auth.session);
   const sellerId = session?.userId || null;
@@ -191,7 +195,7 @@ export default function NegotiationPage() {
               id: "intro",
               sender: "buyer",
               type: "text",
-              text: mapped.description || "No description provided.",
+              text: mapped.description || t("custom.negotiation.noDescription"),
               time: "",
             },
             ...commentsToMessages(existing.comments),
@@ -208,7 +212,7 @@ export default function NegotiationPage() {
           ]);
         }
       } catch {
-        toast.error("Failed to load negotiation data.");
+        toast.error(t("custom.negotiation.failedToLoad"));
         setOrderDetails(null);
       } finally {
         if (!cancelled) setLoading(false);
@@ -258,8 +262,8 @@ export default function NegotiationPage() {
     isSuperseded;
 
   const countdown = useMemo(
-    () => (chatUnlocked ? formatCountdown(offer?.deliveryDate) : null),
-    [chatUnlocked, offer?.deliveryDate],
+    () => (chatUnlocked ? formatCountdown(offer?.deliveryDate, t) : null),
+    [chatUnlocked, offer?.deliveryDate, t],
   );
 
   const images = useMemo(() => {
@@ -271,18 +275,18 @@ export default function NegotiationPage() {
   // ---- handlers -------------------------------------------------------------
   const handleSendProposal = async () => {
     if (!sellerId) {
-      toast.error("Please sign in to send a proposal.");
+      toast.error(t("custom.negotiation.signInToSend"));
       return;
     }
     if (!proposedPrice || Number(proposedPrice) <= 0) {
-      toast.error("Please enter a valid price.");
+      toast.error(t("custom.negotiation.enterValidPrice"));
       return;
     }
     const finalDate = acceptBuyerDate
       ? orderDetails.buyerDeadline || proposedDate
       : proposedDate;
     if (!finalDate) {
-      toast.error("Please select a delivery date.");
+      toast.error(t("custom.negotiation.selectDeliveryDate"));
       return;
     }
     try {
@@ -310,9 +314,9 @@ export default function NegotiationPage() {
           currentUserId: sellerId,
         });
       }
-      toast.success(isResend ? "Proposal resent." : "Proposal sent.");
+      toast.success(isResend ? t("custom.negotiation.proposalResent") : t("custom.negotiation.proposalSent"));
     } catch {
-      toast.error("Failed to send proposal.");
+      toast.error(t("custom.negotiation.failedToSend"));
     } finally {
       setIsSending(false);
     }
@@ -339,9 +343,9 @@ export default function NegotiationPage() {
           currentUserId: sellerId,
         });
       }
-      toast.success("Marked as ready to ship.");
+      toast.success(t("custom.negotiation.markedReadyToShip"));
     } catch {
-      toast.error("Could not update the order.");
+      toast.error(t("custom.negotiation.couldNotUpdate"));
     } finally {
       setIsSending(false);
     }
@@ -353,7 +357,7 @@ export default function NegotiationPage() {
   const handleProgressUpload = async (e) => {
     if (e) e.preventDefault();
     if (!progressImage) {
-      toast.error("Please upload a halfway progress image.");
+      toast.error(t("custom.negotiation.uploadProgressImage"));
       return;
     }
     try {
@@ -363,15 +367,15 @@ export default function NegotiationPage() {
       // 2. Append progress comment with image to the chat history
       await appendOfferChatMessage(offer.id, {
         author: "seller",
-        text: progressNote.trim() ? `[Halfway Progress Update] ${progressNote}` : "Sent the halfway progress update image!",
+        text: progressNote.trim() ? `${t("custom.negotiation.halfwayProgressPrefix")} ${progressNote}` : t("custom.negotiation.sentProgressImage"),
         image: progressImage,
       });
       setOffer(updated);
       setProgressImage(null);
       setProgressNote("");
-      toast.success("Halfway progress update sent successfully!");
+      toast.success(t("custom.negotiation.progressUpdateSent"));
     } catch {
-      toast.error("Could not submit the progress update.");
+      toast.error(t("custom.negotiation.progressUpdateFailed"));
     } finally {
       setIsUploadingProgress(false);
     }
@@ -382,10 +386,10 @@ export default function NegotiationPage() {
       <div className="card-enter mt-2 mb-4 p-4 bg-amber-50/40 border border-amber-200 rounded-2xl flex flex-col gap-3">
         <p className="text-xs font-semibold text-[#1c355e] uppercase tracking-wider flex items-center gap-1.5">
           <CameraIcon size={14} className="text-[#e67e22]" />
-          Halfway Progress Update
+          {t("custom.negotiation.halfwayProgressUpdate")}
         </p>
         <p className="text-[11px] text-slate-500 leading-normal">
-          This order splits into three payments. You must upload a progress image to proceed.
+          {t("custom.negotiation.threePaymentsDescription")}
         </p>
         
         <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#e67e22] transition-colors rounded-xl p-4 cursor-pointer bg-white relative overflow-hidden group">
@@ -415,8 +419,8 @@ export default function NegotiationPage() {
           ) : (
             <div className="text-center flex flex-col items-center gap-1.5 py-2">
               <CameraIcon size={24} className="text-slate-400 group-hover:text-[#e67e22] transition-colors" />
-              <span className="text-xs font-medium text-slate-600">Upload progress image</span>
-              <span className="text-[10px] text-slate-400">PNG, JPG up to 512KB</span>
+              <span className="text-xs font-medium text-slate-600">{t("custom.negotiation.uploadProgressImage")}</span>
+              <span className="text-[10px] text-slate-400">{t("custom.negotiation.imageFormatHint")}</span>
             </div>
           )}
           <input
@@ -428,7 +432,7 @@ export default function NegotiationPage() {
               const file = e.target.files?.[0];
               if (!file) return;
               if (file.size > 512 * 1024) {
-                toast.error("Image must be under 512 KB");
+                toast.error(t("custom.negotiation.imageTooLarge"));
                 return;
               }
               const reader = new FileReader();
@@ -442,13 +446,13 @@ export default function NegotiationPage() {
 
         <div>
           <label className="block text-[10px] font-medium text-slate-500 mb-1">
-            Note to buyer
+            {t("custom.negotiation.noteToBuyer")}
           </label>
           <textarea
             rows={2}
             value={progressNote}
             onChange={(e) => setProgressNote(e.target.value.slice(0, 240))}
-            placeholder="Describe progress so far..."
+            placeholder={t("custom.negotiation.progressPlaceholder")}
             className="w-full p-2.5 rounded-xl border border-slate-300 text-xs resize-none outline-none focus:border-[#e67e22] focus:ring-1 focus:ring-[#e67e22] bg-white text-slate-800"
             disabled={isUploadingProgress}
           />
@@ -463,12 +467,12 @@ export default function NegotiationPage() {
           {isUploadingProgress ? (
             <>
               <LoaderIcon size={14} className="animate-spin" />
-              Sending Update...
+              {t("custom.negotiation.submittingUpdate")}
             </>
           ) : (
             <>
               <CheckCircle2Icon size={14} />
-              Submit Progress Update
+              {t("custom.negotiation.submitProgress")}
             </>
           )}
         </button>
@@ -504,13 +508,13 @@ export default function NegotiationPage() {
   if (!orderDetails)
     return (
       <div className="text-center mt-20 px-4">
-        <p className="text-slate-600 font-medium">Request not found.</p>
+        <p className="text-slate-600 font-medium">{t("custom.negotiation.requestNotFound")}</p>
         <button
           type="button"
           onClick={() => router.push("/custom")}
           className="mt-6 text-[#2582eb] font-medium hover:underline"
         >
-          Go to Custom Requests
+          {t("custom.negotiation.goToCustomRequests")}
         </button>
       </div>
     );
@@ -527,14 +531,14 @@ export default function NegotiationPage() {
             className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ChevronLeftIcon size={20} />
-            <span className="font-medium">Back to Requests</span>
+            <span className="font-medium">{t("custom.negotiation.backToRequests")}</span>
           </button>
 
           <ReportButton
             type="SELLER_MISCONDUCT"
             storeId={request?.storeId}
             storeOrderId={orderId}
-            label="Report"
+            label={t("custom.negotiation.report")}
             className="text-xs text-slate-400 hover:text-rose-500"
           />
         </div>
@@ -588,12 +592,12 @@ export default function NegotiationPage() {
 
               {isBlocked && (
                 <div className="card-enter mb-4 p-3 rounded-2xl bg-rose-50 text-rose-700 text-sm">
-                  The buyer has blocked further proposals for this request.
+                  {t("custom.negotiation.blockedDescription")}
                 </div>
               )}
               {isSuperseded && (
                 <div className="card-enter mb-4 p-3 rounded-2xl bg-slate-50 text-slate-600 text-sm">
-                  The buyer accepted a different proposal.
+                  {t("custom.negotiation.supersededDescription")}
                 </div>
               )}
 
@@ -608,7 +612,7 @@ export default function NegotiationPage() {
                 offer.comments.length > 0 && (
                   <div className="card-enter mb-4 flex flex-col gap-2">
                     <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                      Conversation
+                      {t("custom.negotiation.conversation")}
                     </p>
                     {offer.comments.map((c) => (
                       <div
@@ -620,7 +624,7 @@ export default function NegotiationPage() {
                         }`}
                       >
                         <p className="text-[10px] font-medium uppercase tracking-wide opacity-60 mb-1">
-                          {c.author === "seller" ? "You" : "Buyer"}
+                          {c.author === "seller" ? t("custom.negotiation.you") : t("custom.negotiation.buyer")}
                         </p>
                         {c.text}
                       </div>
@@ -693,9 +697,9 @@ export default function NegotiationPage() {
 
                 <div>
                   <label className="block text-[11px] font-medium text-slate-500 mb-1">
-                    Note to buyer{" "}
+                    {t("custom.negotiation.noteToBuyer")}{" "}
                     <span className="text-slate-400 font-normal">
-                      (similar color, different material, etc.)
+                      {t("custom.negotiation.noteHint")}
                     </span>
                   </label>
                   <textarea
@@ -704,7 +708,7 @@ export default function NegotiationPage() {
                     value={sellerComment}
                     onChange={(e) => setSellerComment(e.target.value.slice(0, 240))}
                     disabled={inputsLocked}
-                    placeholder="Optional — anything the buyer should know"
+                    placeholder={t("custom.negotiation.notePlaceholder")}
                     className={`w-full p-2.5 rounded-xl border text-xs leading-relaxed resize-none outline-none transition-colors ${
                       inputsLocked
                         ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
@@ -758,6 +762,7 @@ export default function NegotiationPage() {
 // --- sub-components --------------------------------------------------------
 
 function ChatCard({ orderDetails, offer, messages, messageInput, setMessageInput, onSubmit, currency }) {
+  const t = useTranslate();
   return (
     <div className="card-enter lg:col-span-2 bg-white rounded-3xl shadow-sm flex flex-col h-[600px] lg:h-[750px] overflow-hidden order-2 lg:order-1">
       <div className="p-5 border-b border-slate-100 flex items-center gap-3 bg-white z-10">
@@ -791,9 +796,9 @@ function ChatCard({ orderDetails, offer, messages, messageInput, setMessageInput
         >
           <CheckCircle2Icon size={12} />
           {offer.status === OFFER_STATUS.PAID
-            ? "Paid"
+            ? t("custom.negotiation.statusPaid")
             : offer.status === OFFER_STATUS.READY_TO_SHIP
-              ? "Ready to ship"
+              ? t("custom.negotiation.statusReadyToShip")
               : offer.status === OFFER_STATUS.PROGRESS_UPLOADED
                 ? "Halfway · pay 2nd"
                 : offer.status === OFFER_STATUS.SECOND_PAID
@@ -891,17 +896,18 @@ function CompactDetails({
   sizeKnown,
   isPackageSize,
 }) {
+  const t = useTranslate();
   return (
     <div className="p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3 mb-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Request details
+          {t("custom.negotiation.requestDetails")}
         </p>
         <Link
           href={`/custom/request-view/${orderId}`}
           className="inline-flex items-center gap-1 text-xs font-medium text-[#2582eb] hover:text-[#1c355e] transition-colors"
         >
-          Open full view
+          {t("custom.negotiation.openFullView")}
           <ArrowUpRightIcon size={14} />
         </Link>
       </div>
@@ -928,7 +934,7 @@ function CompactDetails({
                   : "bg-blue-100 text-blue-800"
               }`}
             >
-              {orderDetails.visibility === "private" ? "Private" : "Open"}
+              {orderDetails.visibility === "private" ? t("custom.negotiation.visibilityPrivate") : t("custom.negotiation.visibilityOpen")}
             </span>
             {orderDetails.category && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
@@ -956,7 +962,7 @@ function CompactDetails({
             </span>
             {orderDetails.updatedAt && orderDetails.updatedAt !== orderDetails.createdAt && (
               <span className="inline-flex items-center gap-1 text-slate-400 italic text-xs">
-                · Edited {formatDate(orderDetails.updatedAt)}
+                · {t("custom.negotiation.edited", { date: formatDate(orderDetails.updatedAt) })}
               </span>
             )}
           </div>
@@ -996,31 +1002,31 @@ function CompactDetails({
       )}
 
       <div className="pt-4 mt-4 border-t border-slate-100">
-        <p className="text-[11px] text-slate-400 mb-1">Description</p>
+        <p className="text-[11px] text-slate-400 mb-1">{t("custom.negotiation.description")}</p>
         <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap line-clamp-5">
           {orderDetails.description || "—"}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-3 mt-3 border-t border-slate-100 text-xs">
-        <Field label="Quantity" value={orderDetails.quantity} />
-        <Field label="Material" value={orderDetails.material} />
+        <Field label={t("custom.negotiation.quantity")} value={orderDetails.quantity} />
+        <Field label={t("custom.negotiation.material")} value={orderDetails.material} />
         {sizeKnown ? (
           <Field
-            label="Size (L×W×H)"
+            label={t("custom.negotiation.sizeLWH")}
             value={[orderDetails.size.length, orderDetails.size.width, orderDetails.size.height]
               .map((n) => (n !== "" && n != null ? n : "—"))
               .join(" × ")}
           />
         ) : isPackageSize ? (
-          <Field label="Shipping size" value={orderDetails.packageSize} />
+          <Field label={t("custom.negotiation.shippingSize")} value={orderDetails.packageSize} />
         ) : null}
-        <Field label="Delivery" value={formatDate(orderDetails.buyerDeadline)} />
+        <Field label={t("custom.negotiation.delivery")} value={formatDate(orderDetails.buyerDeadline)} />
       </div>
 
       {orderDetails.colors?.length > 0 && (
         <div className="pt-3 mt-3 border-t border-slate-100">
-          <p className="text-[11px] text-slate-400 mb-1.5">Colors</p>
+          <p className="text-[11px] text-slate-400 mb-1.5">{t("custom.negotiation.colors")}</p>
           <div className="flex flex-wrap gap-1.5">
             {orderDetails.colors.map((c, i) => (
               <ColorChip key={i} color={c} />
@@ -1031,7 +1037,7 @@ function CompactDetails({
 
       {orderDetails.voiceNoteUrl && (
         <div className="pt-3 mt-3 border-t border-slate-100">
-          <p className="text-[11px] text-slate-400 mb-1.5">Voice memo</p>
+          <p className="text-[11px] text-slate-400 mb-1.5">{t("custom.negotiation.voiceMemo")}</p>
           <audio controls src={orderDetails.voiceNoteUrl} className="w-full h-8" />
         </div>
       )}
@@ -1049,6 +1055,7 @@ function Field({ label, value }) {
 }
 
 function Countdown({ countdown, deliveryDate }) {
+  const t = useTranslate();
   return (
     <div
       className={`card-enter mb-4 p-3 rounded-2xl flex items-center gap-3 ${
@@ -1061,7 +1068,7 @@ function Countdown({ countdown, deliveryDate }) {
     >
       <ClockIcon size={18} className="shrink-0" />
       <div className="min-w-0">
-        <p className="text-xs font-medium opacity-80">Delivery deadline</p>
+        <p className="text-xs font-medium opacity-80">{t("custom.negotiation.deliveryDeadline")}</p>
         <p className="text-sm font-semibold truncate">
           {countdown.label}
           {deliveryDate ? (
@@ -1077,14 +1084,15 @@ function Countdown({ countdown, deliveryDate }) {
 }
 
 function ColorChip({ color }) {
+  const t = useTranslate();
   const hex = (color.hex || "#e5e7eb").toUpperCase();
-  const label = (color.name || color.description || "Color").trim() || "Color";
+  const label = (color.name || color.description || t("custom.negotiation.color")).trim() || t("custom.negotiation.color");
   return (
     <button
       type="button"
-      onClick={() => copyToClipboard(hex)}
+      onClick={() => copyToClipboard(hex, t)}
       className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#faf8f5] border border-slate-200 hover:border-[#e67e22] active:scale-95 transition-all"
-      title={`${hex} — tap to copy`}
+      title={t("custom.negotiation.tapToCopy", { hex })}
     >
       <span
         className="w-3 h-3 rounded-full border border-slate-300 shrink-0"
@@ -1097,28 +1105,29 @@ function ColorChip({ color }) {
 }
 
 function ProposalStatusBadge({ status }) {
+  const t = useTranslate();
   const meta = (() => {
     switch (status) {
       case OFFER_STATUS.PENDING:
-        return { label: "Awaiting buyer", className: "bg-blue-100 text-blue-700" };
+        return { label: t("custom.negotiation.statusAwaitingBuyer"), className: "bg-blue-100 text-blue-700" };
       case OFFER_STATUS.DECLINED:
-        return { label: "Declined", className: "bg-rose-100 text-rose-700" };
+        return { label: t("custom.negotiation.statusDeclined"), className: "bg-rose-100 text-rose-700" };
       case OFFER_STATUS.BLOCKED:
-        return { label: "Blocked", className: "bg-rose-100 text-rose-700" };
+        return { label: t("custom.negotiation.statusBlocked"), className: "bg-rose-100 text-rose-700" };
       case OFFER_STATUS.ACCEPTED:
-        return { label: "Accepted", className: "bg-emerald-100 text-emerald-700" };
+        return { label: t("custom.negotiation.statusAccepted"), className: "bg-emerald-100 text-emerald-700" };
       case OFFER_STATUS.FIRST_PAID:
-        return { label: "1st milestone paid", className: "bg-emerald-100 text-emerald-700" };
+        return { label: t("custom.negotiation.statusFirstMilestonePaid"), className: "bg-emerald-100 text-emerald-700" };
       case OFFER_STATUS.PROGRESS_UPLOADED:
-        return { label: "Progress uploaded", className: "bg-amber-100 text-amber-700" };
+        return { label: t("custom.negotiation.statusProgressUploaded"), className: "bg-amber-100 text-amber-700" };
       case OFFER_STATUS.SECOND_PAID:
-        return { label: "2nd milestone paid", className: "bg-emerald-100 text-emerald-700" };
+        return { label: t("custom.negotiation.statusSecondMilestonePaid"), className: "bg-emerald-100 text-emerald-700" };
       case OFFER_STATUS.READY_TO_SHIP:
         return { label: "Ready to ship", className: "bg-amber-100 text-amber-700" };
       case OFFER_STATUS.PAID:
         return { label: "Paid", className: "bg-emerald-100 text-emerald-700" };
       case OFFER_STATUS.SUPERSEDED:
-        return { label: "Closed", className: "bg-slate-100 text-slate-600" };
+        return { label: t("custom.negotiation.statusClosed"), className: "bg-slate-100 text-slate-600" };
       default:
         return null;
     }
@@ -1132,10 +1141,11 @@ function ProposalStatusBadge({ status }) {
 }
 
 function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, isThreePayments }) {
+  const t = useTranslate();
   const config = (() => {
     if (status === OFFER_STATUS.PENDING) {
       return {
-        label: "Pending response",
+        label: t("custom.negotiation.ctaPendingResponse"),
         onClick: null,
         className: "bg-slate-400 text-white cursor-default",
         icon: <LoaderIcon size={18} className="animate-spin" />,
@@ -1144,7 +1154,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.DECLINED) {
       return {
-        label: isSending ? "Sending..." : "Resend proposal",
+        label: isSending ? t("custom.negotiation.ctaSending") : t("custom.negotiation.ctaResendProposal"),
         onClick: onSend,
         className: "bg-[#1c355e] hover:bg-[#2582eb] text-white shadow-md",
         icon: <RotateCcwIcon size={18} />,
@@ -1153,7 +1163,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.BLOCKED) {
       return {
-        label: "Blocked by buyer",
+        label: t("custom.negotiation.ctaBlockedByBuyer"),
         onClick: null,
         className: "bg-rose-200 text-rose-700 cursor-not-allowed",
         icon: <XCircleIcon size={18} />,
@@ -1162,7 +1172,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.ACCEPTED) {
       return {
-        label: "Waiting for buyer's first payment",
+        label: t("custom.negotiation.ctaWaitingFirstPayment"),
         onClick: null,
         className: "bg-slate-200 text-slate-500 cursor-default",
         icon: <ClockIcon size={18} className="pulse-dot" />,
@@ -1171,7 +1181,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.PROGRESS_UPLOADED) {
       return {
-        label: "Waiting for buyer's halfway payment",
+        label: t("custom.negotiation.ctaWaitingHalfwayPayment"),
         onClick: null,
         className: "bg-amber-100 text-amber-700 cursor-default",
         icon: <ClockIcon size={18} className="pulse-dot" />,
@@ -1182,12 +1192,12 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
       const tapsRemaining = 3 - readyToShipTaps - 1; // taps after current click
       const armed = readyToShipTaps > 0;
       const label = isSending
-        ? "Updating..."
+        ? t("custom.negotiation.ctaUpdating")
         : armed
           ? tapsRemaining === 0
-            ? "Tap once more to confirm"
-            : "Tap twice more to confirm"
-          : "Order ready to ship";
+            ? t("custom.negotiation.ctaTapOnceMore")
+            : t("custom.negotiation.ctaTapTwiceMore")
+          : t("custom.negotiation.ctaOrderReadyToShip");
       return {
         label,
         onClick: onReadyToShip,
@@ -1200,7 +1210,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.READY_TO_SHIP) {
       return {
-        label: "Waiting for buyer payment",
+        label: t("custom.negotiation.ctaWaitingBuyerPayment"),
         onClick: null,
         className: "bg-amber-100 text-amber-700 cursor-default",
         icon: <ClockIcon size={18} className="pulse-dot" />,
@@ -1209,7 +1219,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.PAID) {
       return {
-        label: "Paid · ready to ship",
+        label: t("custom.negotiation.ctaPaidReadyToShip"),
         onClick: null,
         className: "bg-emerald-100 text-emerald-700 cursor-default",
         icon: <CheckCircle2Icon size={18} />,
@@ -1218,7 +1228,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
     }
     if (status === OFFER_STATUS.SUPERSEDED) {
       return {
-        label: "Buyer chose another proposal",
+        label: t("custom.negotiation.ctaBuyerChoseAnother"),
         onClick: null,
         className: "bg-slate-200 text-slate-600 cursor-not-allowed",
         icon: <XCircleIcon size={18} />,
@@ -1226,7 +1236,7 @@ function CtaButton({ status, isSending, readyToShipTaps, onSend, onReadyToShip, 
       };
     }
     return {
-      label: isSending ? "Sending..." : "Send Proposal",
+      label: isSending ? t("custom.negotiation.ctaSending") : t("custom.negotiation.ctaSendProposal"),
       onClick: onSend,
       className: "bg-[#b64b2b] hover:bg-[#9c4024] text-white shadow-md",
       icon: <SendIcon size={18} />,

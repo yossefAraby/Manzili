@@ -6,8 +6,10 @@ import { getCurrencySymbol } from "@/lib/currency";
 import Image from "next/image";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 export default function WishlistPage() {
+    const t = useTranslate();
     const dispatch = useDispatch();
     const currency = getCurrencySymbol();
 
@@ -20,9 +22,9 @@ export default function WishlistPage() {
         return (
             <div className="min-h-[70vh] mx-6">
                 <div className="max-w-7xl mx-auto">
-                    <PageTitle heading="My Wishlist" text="0 items saved" linkText="Continue shopping" path="/shop" />
+                    <PageTitle heading={t('wishlist.title')} text="0 items saved" linkText={t('cart.continueShopping')} path="/shop" />
                     <div className="border border-slate-200 rounded-xl p-8 text-slate-500">
-                        Your wishlist is empty.
+                        {t('wishlist.empty')}
                     </div>
                 </div>
             </div>
@@ -34,16 +36,16 @@ export default function WishlistPage() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-start justify-between gap-4">
                     <PageTitle
-                        heading="My Wishlist"
+                        heading={t('wishlist.title')}
                         text={`${wishlistedProducts.length} items saved`}
-                        linkText="Continue shopping"
+                        linkText={t('cart.continueShopping')}
                         path="/shop"
                     />
                     <button
                         onClick={() => dispatch(clearWishlist())}
                         className="mt-6 border border-slate-300 text-slate-600 px-4 py-2 rounded text-sm hover:bg-slate-50 transition"
                     >
-                        Clear all
+                        {t('common.clearAll')}
                     </button>
                 </div>
 
@@ -66,13 +68,13 @@ export default function WishlistPage() {
                                     onClick={() => dispatch(addToCart({ productId: item.id }))}
                                     className="border border-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-50 transition"
                                 >
-                                    Add to cart
+                                    {t('productDetails.addToCart')}
                                 </button>
                                 <button
                                     onClick={() => dispatch(removeFromWishlist({ productId: item.id }))}
                                     className="border border-slate-300 text-slate-500 px-3 py-2 rounded text-sm hover:bg-slate-50 transition"
                                 >
-                                    Remove
+                                    {t('cart.remove')}
                                 </button>
                             </div>
                         </div>

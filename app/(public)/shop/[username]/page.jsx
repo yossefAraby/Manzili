@@ -7,9 +7,11 @@ import Loading from "@/components/Loading"
 import Image from "next/image"
 import { readStoresList } from "@/lib/services/localStoreRegistry"
 import { useSelector } from "react-redux"
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 export default function StoreShop() {
 
+    const t = useTranslate()
     const { username } = useParams()
     const productList = useSelector((s) => s.product.list)
     const [products, setProducts] = useState([])
@@ -38,8 +40,7 @@ export default function StoreShop() {
             {/* Store Info Banner */}
             {!storeInfo ? (
                 <div className="max-w-7xl mx-auto mt-12 text-center text-slate-500 py-20">
-                    <p className="text-lg">No store found at this address.</p>
-                    <p className="text-sm mt-2">Check the link or browse the marketplace.</p>
+                    <p className="text-lg">{t('store.storeNotFound')}</p>
                 </div>
             ) : (
                 <>
@@ -70,10 +71,10 @@ export default function StoreShop() {
                 </div>
 
             <div className=" max-w-7xl mx-auto mb-40">
-                <h1 className="text-2xl mt-12">Shop <span className="text-slate-800 font-medium">Products</span></h1>
+                <h1 className="text-2xl mt-12">{t('shop.title')}</h1>
                 <div className="mt-5 grid grid-cols-2 sm:flex flex-wrap gap-6 xl:gap-12 mx-auto">
                     {products.length === 0 ? (
-                        <p className="text-slate-500 text-sm">No products listed yet.</p>
+                        <p className="text-slate-500 text-sm">{t('shop.noProducts')}</p>
                     ) : (
                         products.map((product) => <ProductCard key={product.id} product={product} />)
                     )}

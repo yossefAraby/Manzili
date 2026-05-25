@@ -1,6 +1,8 @@
 'use client'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 export default function Pagination({ currentPage, totalPages, onChange }) {
+    const t = useTranslate();
     if (totalPages <= 1) return null
 
     const pages = []
@@ -20,7 +22,7 @@ export default function Pagination({ currentPage, totalPages, onChange }) {
                 disabled={currentPage === 1}
                 className={`${btn} ${currentPage === 1 ? disabled : inactive}`}
             >
-                ← Prev
+                {t('pagination.prev')}
             </button>
 
             {start > 1 && (
@@ -49,10 +51,10 @@ export default function Pagination({ currentPage, totalPages, onChange }) {
                 disabled={currentPage === totalPages}
                 className={`${btn} ${currentPage === totalPages ? disabled : inactive}`}
             >
-                Next →
+                {t('pagination.next')}
             </button>
 
-            <span className="text-xs text-slate-400 ml-2">Page {currentPage} of {totalPages}</span>
+            <span className="text-xs text-slate-400 ml-2">{t('pagination.page', { current: currentPage, total: totalPages })}</span>
         </div>
     )
 }

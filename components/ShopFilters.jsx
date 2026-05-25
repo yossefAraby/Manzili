@@ -4,16 +4,9 @@ import { categories } from "@/assets/assets";
 import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCurrencySymbol } from "@/lib/currency";
+import { useTranslate } from "@/lib/i18n/LocaleContext";
 
 const currencySym = getCurrencySymbol();
-const priceRanges = [
-  { label: `Under 200 ${currencySym}`, min: 0, max: 200 },
-  { label: `200 - 400 ${currencySym}`, min: 200, max: 400 },
-  { label: `400 - 600 ${currencySym}`, min: 400, max: 600 },
-  { label: `600 - 1000 ${currencySym}`, min: 600, max: 1000 },
-  { label: `Over 1000 ${currencySym}`, min: 1000, max: Infinity },
-];
-
 const MIN_PRICE = 0;
 const MAX_PRICE = 1500;
 
@@ -24,6 +17,14 @@ export default function ShopFilters({
   onAvailabilityChange,
   initialCategories = [],
 }) {
+  const t = useTranslate();
+  const priceRanges = [
+    { label: `${t("shopFilters.underPrice", { price: 200 })} ${currencySym}`, min: 0, max: 200 },
+    { label: `200 - 400 ${currencySym}`, min: 200, max: 400 },
+    { label: `400 - 600 ${currencySym}`, min: 400, max: 600 },
+    { label: `600 - 1000 ${currencySym}`, min: 600, max: 1000 },
+    { label: `Over 1000 ${currencySym}`, min: 1000, max: Infinity },
+  ];
   const [selectedCategories, setSelectedCategories] =
     useState(initialCategories);
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
@@ -65,7 +66,7 @@ export default function ShopFilters({
       onPriceRangeChange?.(null);
     } else {
       const customRange = {
-        label: `Under ${value} EGP`,
+        label: `${t("shopFilters.underPrice", { price: value })} ${currencySym}`,
         min: MIN_PRICE,
         max: value,
       };
@@ -112,12 +113,12 @@ export default function ShopFilters({
     <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
       {/* Sort By */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-3">Sort By</h4>
+        <h4 className="font-medium text-slate-700 mb-3">{t("shopFilters.sortBy")}</h4>
         <div className="flex flex-wrap gap-2">
           {[
-            { value: "latest", label: "Latest" },
-            { value: "price_asc", label: "Price: Low to High" },
-            { value: "price_desc", label: "Price: High to Low" },
+            { value: "latest", label: t("shopFilters.latest") },
+            { value: "price_asc", label: t("shopFilters.priceLowToHigh") },
+            { value: "price_desc", label: t("shopFilters.priceHighToLow") },
           ].map((opt) => (
             <button
               key={opt.value}
@@ -137,12 +138,12 @@ export default function ShopFilters({
 
       {/* Availability */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-3">Availability</h4>
+        <h4 className="font-medium text-slate-700 mb-3">{t("shopFilters.availability")}</h4>
         <div className="flex flex-wrap gap-2">
           {[
-            { value: "all", label: "All" },
-            { value: "inStock", label: "In Stock" },
-            { value: "outOfStock", label: "Out of Stock" },
+            { value: "all", label: t("shopFilters.all") },
+            { value: "inStock", label: t("shopFilters.inStock") },
+            { value: "outOfStock", label: t("shopFilters.outOfStock") },
           ].map((opt) => (
             <button
               key={opt.value}
@@ -162,7 +163,7 @@ export default function ShopFilters({
 
       {/* Categories */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-3">Categories</h4>
+        <h4 className="font-medium text-slate-700 mb-3">{t("shopFilters.categories")}</h4>
         <div className="flex flex-wrap gap-2">
           {categories.map((cat) => (
             <button
@@ -183,15 +184,12 @@ export default function ShopFilters({
 
       {/* Price Range */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-3">Price Range</h4>
+        <h4 className="font-medium text-slate-700 mb-3">{t("shopFilters.priceRange")}</h4>
         {/* Slider */}
         <div className="mb-4">
           <div className="flex justify-between text-sm text-slate-600 mb-2">
-            <span>
-              Max price:{" "}
-              <strong>{`${getCurrencySymbol()} ${sliderMax}`}</strong>
-            </span>
-            <span>{`${getCurrencySymbol()} ${MIN_PRICE} - ${getCurrencySymbol()} ${MAX_PRICE}`}</span>
+            <span>{t("shopFilters.maxPrice", { price: `${getCurrencySymbol()} ${sliderMax}` })}</span>
+            <span>{t("shopFilters.priceRangeFormat", { min: `${getCurrencySymbol()} ${MIN_PRICE}`, max: `${getCurrencySymbol()} ${MAX_PRICE}` })}</span>
           </div>
           <input
             type="range"
@@ -225,18 +223,18 @@ export default function ShopFilters({
       {/* Active filters summary */}
       {hasActiveFilters && (
         <div className="mt-8 pt-6 border-t border-slate-200">
-          <p className="text-sm text-slate-600 mb-2">Active filters:</p>
+          <p className="text-sm text-slate-600 mb-2">{t("shopFilters.activeFilters")}</p>
           <div className="flex flex-wrap gap-2">
             {sortBy !== "latest" && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                 {sortBy === "price_asc"
-                  ? "Price: Low to High"
-                  : "Price: High to Low"}
+                  ? t("shopFilters.priceLowToHigh")
+                  : t("shopFilters.priceHighToLow")}
               </span>
             )}
             {stockFilter !== "all" && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                {stockFilter === "inStock" ? "In Stock" : "Out of Stock"}
+                {stockFilter === "inStock" ? t("shopFilters.inStock") : t("shopFilters.outOfStock")}
               </span>
             )}
             {selectedCategories.map((cat) => (
@@ -254,7 +252,7 @@ export default function ShopFilters({
             )}
             {sliderMax !== MAX_PRICE && !selectedPriceRange && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                Under ${sliderMax} EGP
+                {t("shopFilters.underPrice", { price: sliderMax })} {currencySym}
               </span>
             )}
           </div>
@@ -272,7 +270,7 @@ export default function ShopFilters({
         className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
       >
         <FilterIcon size={16} />
-        Filters
+        {t("shopFilters.filters")}
         {activeFilterCount > 0 && (
           <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
             {activeFilterCount}
@@ -295,7 +293,7 @@ export default function ShopFilters({
         />
         <div
           role="dialog"
-          aria-label="Filters"
+          aria-label={t("shopFilters.filters")}
           className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
             mobileOpen ? "translate-y-0" : "translate-y-full"
           }`}
@@ -303,12 +301,12 @@ export default function ShopFilters({
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <FilterIcon size={20} />
-              Filters
+              {t("shopFilters.filters")}
             </h3>
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              aria-label="Close filters"
+              aria-label={t("shopFilters.closeFilters")}
               className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
             >
               <XIcon size={22} />
@@ -322,14 +320,14 @@ export default function ShopFilters({
               disabled={!hasActiveFilters}
               className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
             >
-              Clear
+              {t("shopFilters.clear")}
             </button>
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
             >
-              Show results
+              {t("shopFilters.showResults")}
             </button>
           </div>
         </div>
@@ -340,14 +338,14 @@ export default function ShopFilters({
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <FilterIcon size={20} />
-            Filters
+            {t("shopFilters.filters")}
           </h3>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
-              Clear all
+              {t("shopFilters.clearAll")}
             </button>
           )}
         </div>

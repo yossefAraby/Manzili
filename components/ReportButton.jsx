@@ -1,40 +1,41 @@
 'use client'
 import { useState } from 'react'
 import { FlagIcon, XIcon } from 'lucide-react'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 const REASONS = {
     NON_HANDMADE_PRODUCT: [
-        'Product is not handmade / artisanal',
-        'Product appears mass-produced or factory-made',
-        'Product images are stock photos',
-        'Other',
+        'reportButton.notHandmade',
+        'reportButton.massProduced',
+        'reportButton.stockPhotos',
+        'reportButton.other',
     ],
     SELLER_MISCONDUCT: [
-        'Seller is unresponsive',
-        'Seller is rude or abusive',
-        'Suspected scam or fraud',
-        'Not fulfilling orders',
-        'Other',
+        'reportButton.sellerUnresponsive',
+        'reportButton.sellerRude',
+        'reportButton.suspectedScam',
+        'reportButton.notFulfilling',
+        'reportButton.other',
     ],
     UNFULFILLED_CUSTOM_REQUEST: [
-        'Seller is not responding to my request',
-        'Seller is not fulfilling agreed terms',
-        'Seller abandoned the collaboration',
-        'Other',
+        'reportButton.sellerNotResponding',
+        'reportButton.sellerNotFulfillingTerms',
+        'reportButton.sellerAbandoned',
+        'reportButton.other',
     ],
     GENERAL: [
-        'Platform policy violation',
-        'Inappropriate content',
-        'Spam',
-        'Other',
+        'reportButton.policyViolation',
+        'reportButton.inappropriateContent',
+        'reportButton.spam',
+        'reportButton.other',
     ],
 }
 
 const TYPE_LABELS = {
-    NON_HANDMADE_PRODUCT: 'Non-Handmade Product',
-    SELLER_MISCONDUCT: 'Seller Misconduct',
-    UNFULFILLED_CUSTOM_REQUEST: 'Unfulfilled Custom Request',
-    GENERAL: 'General Issue',
+    NON_HANDMADE_PRODUCT: 'reportButton.nonHandmadeProduct',
+    SELLER_MISCONDUCT: 'reportButton.sellerMisconduct',
+    UNFULFILLED_CUSTOM_REQUEST: 'reportButton.unfulfilledCustomRequest',
+    GENERAL: 'reportButton.generalIssue',
 }
 
 export default function ReportButton({
@@ -47,6 +48,7 @@ export default function ReportButton({
     label = 'Report',
     className = '',
 }) {
+    const t = useTranslate()
     const [open, setOpen] = useState(false)
     const [reason, setReason] = useState('')
     const [description, setDescription] = useState('')
@@ -75,10 +77,10 @@ export default function ReportButton({
                 }),
             })
             const data = await res.json()
-            if (!res.ok) throw new Error(data?.error || 'Failed to submit report')
+            if (!res.ok) throw new Error(data?.error || t('reportButton.failedToSubmit'))
             setState('done')
         } catch (err) {
-            setErrMsg(err?.message || 'Something went wrong. Please try again.')
+            setErrMsg(err?.message || t('reportButton.tryAgain'))
             setState('error')
         }
     }
@@ -110,8 +112,8 @@ export default function ReportButton({
                     >
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                             <div>
-                                <h2 className="text-base font-semibold text-slate-800">Submit a Report</h2>
-                                <p className="text-xs text-slate-500 mt-0.5">{TYPE_LABELS[type]}</p>
+                                <h2 className="text-base font-semibold text-slate-800">{t('reportButton.submitReport')}</h2>
+                                <p className="text-xs text-slate-500 mt-0.5">{t(TYPE_LABELS[type])}</p>
                             </div>
                             <button type="button" onClick={handleClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">
                                 <XIcon size={16} />
@@ -121,35 +123,35 @@ export default function ReportButton({
                         {state === 'done' ? (
                             <div className="p-6 text-center">
                                 <p className="text-2xl mb-2">✅</p>
-                                <p className="font-medium text-slate-800">Report submitted</p>
-                                <p className="text-sm text-slate-500 mt-1">Our team will review it shortly. Thank you for keeping Manzili safe.</p>
+                                <p className="font-medium text-slate-800">{t('reportButton.reportSubmitted')}</p>
+                                <p className="text-sm text-slate-500 mt-1">{t('reportButton.reviewMessage')}</p>
                                 <button onClick={handleClose} className="mt-5 px-6 py-2 bg-slate-800 text-white text-sm rounded-xl hover:bg-slate-900 transition">
-                                    Close
+                                    {t('reportButton.close')}
                                 </button>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
                                 <div>
-                                    <label className="block mb-1.5 text-slate-600 font-medium">Reason</label>
+                                    <label className="block mb-1.5 text-slate-600 font-medium">{t('reportButton.reason')}</label>
                                     <select
                                         value={reason}
                                         onChange={e => setReason(e.target.value)}
                                         required
                                         className="w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#2582eb] bg-[#faf8f5] text-slate-700 text-sm"
                                     >
-                                        <option value="">Select a reason…</option>
-                                        {reasons.map(r => <option key={r} value={r}>{r}</option>)}
+                                        <option value="">{t('reportButton.selectReason')}</option>
+                                        {reasons.map(r => <option key={r} value={r}>{t(r)}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block mb-1.5 text-slate-600 font-medium">
-                                        Additional details <span className="font-normal text-slate-400">(optional)</span>
+                                        {t('reportButton.additionalDetails')} <span className="font-normal text-slate-400">({t('reportButton.optional')})</span>
                                     </label>
                                     <textarea
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         rows={3}
-                                        placeholder="Describe the issue…"
+                                        placeholder={t('reportButton.describeIssue')}
                                         className="w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#2582eb] bg-[#faf8f5] text-slate-700 text-sm resize-none"
                                     />
                                 </div>
@@ -157,11 +159,11 @@ export default function ReportButton({
                                 <div className="flex gap-3 pt-1">
                                     <button type="button" onClick={handleClose}
                                         className="flex-1 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition">
-                                        Cancel
+                                        {t('reportButton.cancel')}
                                     </button>
                                     <button type="submit" disabled={state === 'loading' || !reason}
                                         className="flex-1 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-900 transition disabled:opacity-50">
-                                        {state === 'loading' ? 'Submitting…' : 'Submit Report'}
+                                        {state === 'loading' ? t('reportButton.submitting') : t('reportButton.submitReportBtn')}
                                     </button>
                                 </div>
                             </form>

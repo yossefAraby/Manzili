@@ -6,8 +6,10 @@ import Pagination from "@/components/Pagination";
 import { MoveLeftIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 function ShopContent() {
+  const t = useTranslate();
   // get query params ?search=abc&category=Woodwork
   const searchParams = useSearchParams();
   const search = searchParams.get("search");
@@ -139,7 +141,7 @@ function ShopContent() {
           className="text-2xl text-slate-500 my-6 flex items-center gap-2 cursor-pointer"
         >
           {search && <MoveLeftIcon size={20} />}
-          All <span className="text-slate-700 font-medium">Products</span>
+          {t('shop.title')}
         </h1>
 
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-12">
@@ -170,10 +172,7 @@ function ShopContent() {
               ) : (
                 <div className="col-span-full text-center py-12">
                   <p className="text-slate-500 text-lg">
-                    No products match your filters.
-                  </p>
-                  <p className="text-slate-400 mt-2">
-                    Try adjusting your search or filters.
+                    {t('shop.noProductsMatch')}
                   </p>
                 </div>
               )}
@@ -192,7 +191,7 @@ function ShopContent() {
 
 export default function Shop() {
   return (
-    <Suspense fallback={<div>Loading shop...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <ShopContent />
     </Suspense>
   );

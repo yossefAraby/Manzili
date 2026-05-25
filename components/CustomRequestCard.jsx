@@ -13,6 +13,7 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { selectIsSeller } from "@/lib/features/auth/authSlice";
 import ReportButton from "@/components/ReportButton";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 /**
  * Optional flags (used on /custom when the seller is viewing):
@@ -26,12 +27,13 @@ const CustomRequestCard = ({ request, pinned = false, accepted = false }) => {
   // exposes a "Show more" link back to the read view for sellers who want
   // the full spec sheet.
   const isSeller = useSelector(selectIsSeller);
+  const t = useTranslate();
   const href = isSeller
     ? `/custom/negotiation/${request.id}`
     : `/custom/request-view/${request.id}`;
   // Format date
   const formatDate = (dateString) => {
-    if (!dateString) return "No date";
+    if (!dateString) return t('customRequestCard.noDate');
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -92,7 +94,7 @@ const CustomRequestCard = ({ request, pinned = false, accepted = false }) => {
               {accepted ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow">
                   <CheckCircle2Icon size={11} />
-                  Accepted
+                  {t('customRequestCard.accepted')}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/95 text-[#e67e22] border border-[#e67e22]/40 shadow-sm">
@@ -106,7 +108,7 @@ const CustomRequestCard = ({ request, pinned = false, accepted = false }) => {
             <span
               className={`px-2 py-1 rounded-full text-xs font-medium ${request.visibility === "private" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"}`}
             >
-              {request.visibility === "private" ? "Private" : "Open"}
+              {request.visibility === "private" ? t('customRequestCard.private') : t('customRequestCard.open')}
             </span>
           </div>
         </div>
@@ -144,7 +146,7 @@ const CustomRequestCard = ({ request, pinned = false, accepted = false }) => {
         <ReportButton
           type="UNFULFILLED_CUSTOM_REQUEST"
           customRequestId={request.id}
-          label="Report request"
+          label={t('customRequestCard.reportRequest')}
         />
       </div>
     </div>

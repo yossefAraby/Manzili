@@ -1,4 +1,5 @@
 'use client'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 // Roles for each team member. Names render RTL so they look right; the role
 // itself stays LTR (English) since the team uses both languages day-to-day.
@@ -19,21 +20,20 @@ const team = [
 ]
 
 export default function AboutPage() {
+    const t = useTranslate()
+
     return (
         <div className="mx-6">
             <div className="max-w-3xl mx-auto py-12">
                 <h1 className="text-2xl text-slate-500 mb-8">
-                    About <span className="text-slate-800 font-medium">Manzili</span>
+                    {t('about.title')} <span className="text-slate-800 font-medium">Manzili</span>
                 </h1>
 
                 <p className="text-slate-700 leading-relaxed mb-10">
-                    Manzili is a multi-vendor marketplace dedicated to handmade products. Built as an MIS
-                    graduation project under the supervision of Dr. Abeer, it connects Egyptian artisans
-                    with buyers who value handcrafted work — through a curated gallery of ready-to-buy
-                    pieces and a custom-commission portal for bespoke requests.
+                    {t('about.description')}
                 </p>
 
-                <h2 className="text-lg font-medium text-slate-800 mb-4">Team</h2>
+                <h2 className="text-lg font-medium text-slate-800 mb-4">{t('about.team')}</h2>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {team.map(({ name, role }) => (
                         <li

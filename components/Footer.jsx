@@ -10,8 +10,10 @@ import {
   isValidEmail,
   subscribeEmail,
 } from "@/lib/services/localNewsletterService";
+import { useTranslate } from "@/lib/i18n/LocaleContext";
 
 const Footer = () => {
+  const t = useTranslate();
   const MailIcon = () => <Mail size={16} strokeWidth={1.5} />;
   const PhoneIcon = () => <Phone size={16} strokeWidth={1.5} />;
 
@@ -20,25 +22,25 @@ const Footer = () => {
 
   const linkSections = [
     {
-      title: "Who We Are",
+      title: t('footer.whoWeAre'),
       links: [
-        { text: "About Us", path: "/about", icon: null },
-        { text: "FAQs", path: "/faq", icon: null },
-        { text: "Contact Us", path: "/contact", icon: null },
-        { text: "Returns", path: "/returns", icon: null },
+        { text: t('footer.aboutUs'), path: "/about", icon: null },
+        { text: t('footer.faqs'), path: "/faq", icon: null },
+        { text: t('footer.contactUs'), path: "/contact", icon: null },
+        { text: t('footer.returns'), path: "/returns", icon: null },
       ],
     },
     {
-      title: "WEBSITE?",
+      title: t('footer.website'),
       links: [
-        { text: "Home", path: "/", icon: null },
-        { text: "Privacy Policy", path: "/privacy-policy", icon: null },
-        { text: "Request Bespoke Item", path: "/custom", icon: null },
-        { text: "Create Your Store", path: "/create-store", icon: null },
+        { text: t('footer.home'), path: "/", icon: null },
+        { text: t('footer.privacyPolicy'), path: "/privacy-policy", icon: null },
+        { text: t('footer.requestBespokeItem'), path: "/custom", icon: null },
+        { text: t('footer.createYourStore'), path: "/create-store", icon: null },
       ],
     },
     {
-      title: "CONTACT",
+      title: t('footer.contact'),
       links: [
         { text: "01223755058", path: "/", icon: PhoneIcon },
         { text: "manziliproject@gmail.com", path: "/", icon: MailIcon },
@@ -68,20 +70,20 @@ const Footer = () => {
     e.preventDefault();
     const email = newsletterEmail.trim();
     if (!isValidEmail(email)) {
-      toast.error("Please enter a valid email");
+      toast.error(t('common.error'));
       return;
     }
     setSubmitting(true);
     const result = subscribeEmail(email);
     setSubmitting(false);
     if (!result.ok) {
-      toast.error("Could not subscribe — please try again");
+      toast.error(t('common.error'));
       return;
     }
     if (result.alreadySubscribed) {
-      toast("You're already on the list", { icon: "✨" });
+      toast(t('footer.alreadySubscribed'), { icon: "✨" });
     } else {
-      toast.success("Subscribed — thanks for joining!");
+      toast.success(t('footer.subscribed'));
     }
     setNewsletterEmail("");
   };
@@ -112,11 +114,7 @@ const Footer = () => {
               />
             </Link>
             <p className="max-w-[410px] mt-6 text-sm">
-              Manzili, where real craft finds its home. We offer a dual-model
-              marketplace: browse our gallery of ready-to-buy artisanal items or
-              collaborate directly with makers to commission a one-of-a-kind
-              bespoke piece. No factory-made commodities—just unique items made
-              with love by verified local artisans.
+              {t('footer.description')}
             </p>
             <div className="flex items-center gap-3 mt-5">
               {socialIcons.map((item, i) => {
@@ -168,21 +166,21 @@ const Footer = () => {
                 type="email"
                 value={newsletterEmail}
                 onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="Join newsletter with your email"
-                aria-label="Email for newsletter"
+                placeholder={t('footer.newsletterPlaceholder')}
+                aria-label={t('footer.emailPlaceholder')}
               />
               <button
                 type="submit"
                 disabled={submitting}
                 className="font-medium bg-[#2582eb] text-white px-5 py-2 rounded-full hover:scale-103 active:scale-95 transition disabled:opacity-60"
               >
-                {submitting ? "..." : "Subscribe"}
+                {submitting ? t('footer.subscribing') : t('footer.subscribe')}
               </button>
             </form>
           </div>
         </div>
         <p className="py-4 text-sm text-slate-500">
-          Copyright 2026 © Manzili All Right Reserved.
+          {t('footer.copyright')}
         </p>
       </div>
     </footer>

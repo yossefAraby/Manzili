@@ -8,6 +8,7 @@ import { Suspense, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { setSession } from '@/lib/features/auth/authSlice'
 import { setAddressList } from '@/lib/features/address/addressSlice'
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 import {
     loadAddressesForUser,
     persistAuthSession,
@@ -22,12 +23,14 @@ function LoginInner() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
+    const t = useTranslate()
+
     const onLogin = (e) => {
         e.preventDefault()
         const users = readAuthUsers()
         const u = users.find((x) => String(x.email).toLowerCase() === email.trim().toLowerCase())
         if (!u || u.password !== password) {
-            alert('Invalid email or password')
+            alert(t('login.loginError'))
             return
         }
         const session = reconcileAuthSession({
@@ -54,15 +57,15 @@ function LoginInner() {
                     <Image src={assets.logo} alt="Manzili Logo" width={80} height={80} className="object-contain" priority />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-800 mb-1 font-sans">Welcome to Manzili</h2>
-                <h3 className="text-xl font-bold text-slate-800 mb-8 font-sans">Log In</h3>
+                <h2 className="text-2xl font-bold text-slate-800 mb-1 font-sans">{t('login.title')}</h2>
+                <h3 className="text-xl font-bold text-slate-800 mb-8 font-sans">{t('login.subtitle')}</h3>
 
                 <form className="w-full flex flex-col gap-4" onSubmit={onLogin}>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Email"
+                        placeholder={t('login.email')}
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] focus:border-transparent text-slate-700 bg-[#faf8f5] placeholder:text-slate-500 transition-all"
                     />
@@ -71,7 +74,7 @@ function LoginInner() {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password"
+                        placeholder={t('login.password')}
                         required
                         className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] focus:border-transparent text-slate-700 bg-[#faf8f5] placeholder:text-slate-500 transition-all"
                     />
@@ -80,14 +83,14 @@ function LoginInner() {
                         type="submit"
                         className="w-full bg-gradient-to-r from-[#e67e22] to-[#d35400] hover:scale-[1.02] active:scale-95 text-white font-semibold rounded-full py-3.5 mt-2 transition-all shadow-md text-lg"
                     >
-                        LOG IN
+                        {t('login.loginBtn')}
                     </button>
                 </form>
 
                 <p className="mt-8 text-slate-700 font-medium text-sm text-center">
-                    No account?{' '}
+                    {t('login.noAccount')}{' '}
                     <Link href="/register" className="text-[#d35400] font-bold hover:underline transition-all">
-                        Register
+                        {t('login.signUp')}
                     </Link>
                 </p>
             </div>
@@ -96,11 +99,12 @@ function LoginInner() {
 }
 
 export default function LoginPage() {
+    const t = useTranslate()
     return (
         <Suspense
             fallback={
                 <div className="min-h-screen flex items-center justify-center bg-[#f4efe4] p-4 text-slate-500 text-sm">
-                    Loading…
+                    {t('common.loading')}
                 </div>
             }
         >

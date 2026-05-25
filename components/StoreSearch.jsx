@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { SearchIcon, XIcon, StoreIcon } from "lucide-react";
 import { readStoresList } from "@/lib/services/localStoreRegistry";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
   const [query, setQuery] = useState("");
@@ -63,7 +64,7 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
   return (
     <div className={`relative ${className}`}>
       <label className="block mb-2 font-medium text-slate-700">
-        Select Store (for private requests)
+        {t('storeSearch.selectStore')}
       </label>
       <div className="relative">
         <div className="flex items-center border border-slate-300 rounded-xl bg-white focus-within:ring-2 focus-within:ring-[#2582eb] transition-all">
@@ -72,7 +73,7 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search stores by name or username..."
+            placeholder={t('storeSearch.searchPlaceholder')}
             className="w-full p-3 outline-none bg-transparent"
             onFocus={() => query.length > 1 && setIsOpen(true)}
           />
@@ -81,7 +82,7 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
               type="button"
               onClick={handleClear}
               className="p-2 mr-2 text-slate-400 hover:text-slate-600"
-              aria-label="Clear selection"
+              aria-label={t('storeSearch.clearSelection')}
             >
               <XIcon size={18} />
             </button>
@@ -91,7 +92,7 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
         {isOpen && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-slate-500">Loading...</div>
+              <div className="p-4 text-center text-slate-500">{t('storeSearch.loading')}</div>
             ) : suggestions.length > 0 ? (
               suggestions.map((store) => (
                 <button
@@ -110,7 +111,7 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
               ))
             ) : (
               <div className="p-4 text-center text-slate-500">
-                {query.length > 1 ? "No stores found" : "Type to search stores"}
+                {query.length > 1 ? t('storeSearch.noStoresFound') : t('storeSearch.typeToSearch')}
               </div>
             )}
           </div>
@@ -132,7 +133,7 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
               onClick={handleClear}
               className="text-blue-500 hover:text-blue-700 text-sm font-medium"
             >
-              Change
+              {t('storeSearch.change')}
             </button>
           </div>
         </div>

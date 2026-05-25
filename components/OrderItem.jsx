@@ -6,6 +6,7 @@ import Rating from "./Rating";
 import { useState } from "react";
 import RatingModal from "./RatingModal";
 import { getCurrencySymbol } from "@/lib/currency";
+import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 function getItemImage(item) {
   const fromProduct =
@@ -24,6 +25,7 @@ function formatStatus(status) {
 
 const OrderItem = ({ order }) => {
   const currency = getCurrencySymbol();
+  const t = useTranslate();
   const [ratingModal, setRatingModal] = useState(null);
   const [returnState, setReturnState] = useState("idle"); // 'idle' | 'confirming' | 'loading' | 'done' | 'error'
   const [returnError, setReturnError] = useState("");
@@ -38,14 +40,14 @@ const OrderItem = ({ order }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storeOrderId: order.id,
-          reason: "Customer requested return",
+          reason: t('orderItem.customerRequestedReturn'),
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Return failed");
+      if (!res.ok) throw new Error(data?.error || t('orderItem.somethingWentWrong'));
       setReturnState("done");
     } catch (err) {
-      setReturnError(err?.message || "Something went wrong");
+      setReturnError(err?.message || t('orderItem.somethingWentWrong'));
       setReturnState("error");
     }
   };
@@ -72,7 +74,7 @@ const OrderItem = ({ order }) => {
                   </p>
                   <p>
                     {currency}
-                    {item.price} Qty : {item.quantity}{" "}
+                    {item.price} {t('orderItem.qty', { qty: item.quantity })}
                   </p>
                   <p className="mb-1">
                     {new Date(order.createdAt).toDateString()}
@@ -103,7 +105,7 @@ const OrderItem = ({ order }) => {
                         }
                         className={`text-[#2582eb] hover:bg-[#2582eb]/10 transition ${order.status !== "DELIVERED" && "hidden"}`}
                       >
-                        Rate Product
+                        {t('orderItem.rateProduct')}
                       </button>
                     ) : null}
                   </div>
@@ -128,37 +130,36 @@ const OrderItem = ({ order }) => {
                     onClick={() => setReturnState("confirming")}
                     className="text-xs text-slate-500 border border-slate-200 rounded px-3 py-1 hover:bg-slate-50 transition"
                   >
-                    Request Return
+                    {t('orderItem.requestReturn')}
                   </button>
                 )}
                 {returnState === "confirming" && (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-slate-600">
-                      Are you sure?
+                      {t('orderItem.areYouSure')}
                     </span>
                     <button
                       onClick={handleReturn}
                       className="text-xs text-rose-600 border border-rose-200 rounded px-3 py-1 hover:bg-rose-50 transition"
                     >
-                      Yes, return
+                      {t('orderItem.yesReturn')}
                     </button>
                     <button
                       onClick={() => setReturnState("idle")}
                       className="text-xs text-slate-500 border border-slate-200 rounded px-3 py-1 hover:bg-slate-50 transition"
                     >
-                      Cancel
+                      {t('orderItem.cancel')}
                     </button>
                   </div>
                 )}
                 {returnState === "loading" && (
                   <span className="text-xs text-slate-400">
-                    Processing return…
+                    {t('orderItem.processingReturn')}
                   </span>
                 )}
                 {returnState === "done" && (
                   <span className="text-xs text-emerald-600">
-                    Return requested. Refund will be issued within 5–7 business
-                    days.
+                    {t('orderItem.returnRequested')}
                   </span>
                 )}
                 {returnState === "error" && (
@@ -197,7 +198,7 @@ const OrderItem = ({ order }) => {
           </div>
           {order?.shipment?.trackingNumber && (
             <div className="text-xs text-slate-500">
-              Tracking:{" "}
+              {t('orderItem.tracking')}{" "}
               <span className="font-mono">{order.shipment.trackingNumber}</span>
             </div>
           )}

@@ -3,14 +3,17 @@ import { ArrowRight, StarIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-
-const SHIPPING_SIZE_LABELS = {
-    SMALL: 'Small package',
-    MEDIUM: 'Medium package',
-    LARGE: 'Large package',
-}
+import { useTranslate } from '@/lib/i18n/LocaleContext'
 
 const ProductDescription = ({ product }) => {
+
+    const t = useTranslate();
+
+    const SHIPPING_SIZE_LABELS = {
+        SMALL: t('productDescription.smallPackage'),
+        MEDIUM: t('productDescription.mediumPackage'),
+        LARGE: t('productDescription.largePackage'),
+    }
 
     const [selectedTab, setSelectedTab] = useState('Description')
     const [apiRatings, setApiRatings] = useState([])
@@ -46,7 +49,7 @@ const ProductDescription = ({ product }) => {
             <div className="flex border-b border-slate-200 mb-6 max-w-2xl">
                 {['Description', 'Reviews'].map((tab, index) => (
                     <button className={`${tab === selectedTab ? 'border-b-[1.5px] font-semibold' : 'text-slate-400'} px-3 py-2 font-medium`} key={index} onClick={() => setSelectedTab(tab)}>
-                        {tab}
+                        {tab === 'Description' ? t('productDescription.description') : t('productDescription.reviews')}
                     </button>
                 ))}
             </div>
@@ -57,17 +60,17 @@ const ProductDescription = ({ product }) => {
                     <p>{product.description}</p>
                     {hasMaterialOrSize && (
                         <div className="mt-5 border-t border-slate-100 pt-4">
-                            <p className="font-semibold text-slate-700 mb-2">Material &amp; Size</p>
+                            <p className="font-semibold text-slate-700 mb-2">{t('productDescription.materialAndSize')}</p>
                             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-slate-600">
                                 {material && (
                                     <>
-                                        <dt className="text-slate-400">Material</dt>
+                                        <dt className="text-slate-400">{t('productDescription.material')}</dt>
                                         <dd>{material}</dd>
                                     </>
                                 )}
                                 {sizeLabel && (
                                     <>
-                                        <dt className="text-slate-400">Size</dt>
+                                        <dt className="text-slate-400">{t('productDescription.size')}</dt>
                                         <dd>{sizeLabel}</dd>
                                     </>
                                 )}
@@ -95,7 +98,7 @@ const ProductDescription = ({ product }) => {
                             </div>
                         </div>
                     )) : (
-                        <p className="text-slate-400">No reviews yet.</p>
+                        <p className="text-slate-400">{t('productDescription.noReviewsYet')}</p>
                     )}
                 </div>
             )}
@@ -105,13 +108,13 @@ const ProductDescription = ({ product }) => {
                 <div className="flex gap-3 mt-14">
                     <Image src={product.store.logo} alt="" className="size-11 rounded-full ring ring-slate-400" width={100} height={100} />
                     <div>
-                        <p className="font-medium text-slate-600">Product by {product.store.name}</p>
-                        <Link href={`/shop/${product.store.username}`} className="flex items-center gap-1.5 text-[#2582eb]"> view store <ArrowRight size={14} /></Link>
+                        <p className="font-medium text-slate-600">{t('productDescription.productBy', { store: product.store.name })}</p>
+                        <Link href={`/shop/${product.store.username}`} className="flex items-center gap-1.5 text-[#2582eb]"> {t('productDescription.viewStore')} <ArrowRight size={14} /></Link>
                     </div>
                 </div>
             ) : (
                 <div className="flex gap-3 mt-14">
-                    <p className="text-slate-400 text-sm">Store information unavailable</p>
+                    <p className="text-slate-400 text-sm">{t('productDescription.storeInfoUnavailable')}</p>
                 </div>
             )}
         </div>
