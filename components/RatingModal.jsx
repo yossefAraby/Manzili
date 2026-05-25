@@ -1,23 +1,40 @@
 'use client'
 
+import { addRating } from '@/lib/features/rating/ratingSlice';
 import { Star } from 'lucide-react';
 import React, { useState } from 'react'
 import { XIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useDispatch } from 'react-redux';
 
 const RatingModal = ({ ratingModal, setRatingModal }) => {
 
+    const { productId, orderId } = ratingModal || {};
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
+    const dispatch = useDispatch();
 
     const handleSubmit = async () => {
-        if (rating < 0 || rating > 5) {
+        if (rating < 1 || rating > 5) {
             return toast('Please select a rating');
         }
         if (review.length < 5) {
-            return toast('write a short review');
+            return toast('Write a short review (at least 5 characters)');
         }
 
+        const res = await fetch('/api/ratings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId, orderId, rating, review }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data?.error || 'Failed to submit rating');
+        }
+
+        dispatch(addRating(data.rating));
         setRatingModal(null);
     }
 

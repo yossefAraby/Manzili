@@ -13,7 +13,11 @@
       "Bash(npx --no-install next build)",
       "Bash(npm run *)",
       "Bash(curl *)",
-      "WebFetch(domain:js.puter.com)"
+      "WebFetch(domain:js.puter.com)",
+      "Bash(cmd.exe //c \"dir nul 2>&1\")",
+      "Bash(cmd.exe //c \"del \\\\\\\\\\\\\\\\?\\\\\\\\C:\\\\\\\\Users\\\\\\\\Admin\\\\\\\\Desktop\\\\\\\\Manzili\\\\\\\\nul\")",
+      "Bash(powershell.exe *)",
+      "Bash(grep -E \"\\(^|\\\\s\\)nul\\(\\\\s|$\\)\")"
     ]
   }
 }

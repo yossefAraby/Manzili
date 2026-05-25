@@ -3,9 +3,12 @@ import PageTitle from "@/components/PageTitle";
 import { useEffect, useState } from "react";
 import OrderItem from "@/components/OrderItem";
 import ReportButton from "@/components/ReportButton";
+import { useDispatch } from "react-redux";
+import { setRatings } from "@/lib/features/rating/ratingSlice";
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     let cancelled = false;
@@ -18,6 +21,21 @@ export default function Orders() {
       cancelled = true;
     };
   }, []);
+
+  // Load existing ratings from the API into Redux
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/ratings");
+      const data = await res.json();
+      if (!cancelled && Array.isArray(data?.ratings)) {
+        dispatch(setRatings(data.ratings));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
 
   return (
     <div className="min-h-[70vh] mx-6">

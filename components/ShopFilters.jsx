@@ -29,8 +29,7 @@ export default function ShopFilters({
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   const [sliderMax, setSliderMax] = useState(MAX_PRICE);
   const [sortBy, setSortBy] = useState("latest");
-  const [stockFilter, setStockFilter] = useState("all"); // 'all' | 'inStock' | 'outOfStock'
-  // Mobile drawer toggle. Inline sidebar on lg+; bottom-sheet otherwise.
+  const [stockFilter, setStockFilter] = useState("all");
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -54,19 +53,17 @@ export default function ShopFilters({
   const handlePriceRangeSelect = (range) => {
     const newRange = selectedPriceRange?.label === range.label ? null : range;
     setSelectedPriceRange(newRange);
-    setSliderMax(MAX_PRICE); // reset slider
+    setSliderMax(MAX_PRICE);
     onPriceRangeChange?.(newRange);
   };
 
   const handleSliderChange = (e) => {
     const value = parseInt(e.target.value);
     setSliderMax(value);
-    setSelectedPriceRange(null); // clear radio selection
+    setSelectedPriceRange(null);
     if (value === MAX_PRICE) {
-      // No filter when slider at max
       onPriceRangeChange?.(null);
     } else {
-      // Create a custom range object
       const customRange = {
         label: `Under ${value} EGP`,
         min: MIN_PRICE,
@@ -111,201 +108,84 @@ export default function ShopFilters({
     (sortBy !== "latest" ? 1 : 0) +
     (stockFilter !== "all" ? 1 : 0);
 
-  const body = (
-    <FilterBody
-      selectedCategories={selectedCategories}
-      handleCategoryToggle={handleCategoryToggle}
-      sliderMax={sliderMax}
-      handleSliderChange={handleSliderChange}
-      selectedPriceRange={selectedPriceRange}
-      handlePriceRangeSelect={handlePriceRangeSelect}
-      hasActiveFilters={hasActiveFilters}
-      sortBy={sortBy}
-      stockFilter={stockFilter}
-      handleSortChange={handleSortChange}
-      handleStockChange={handleStockChange}
-    />
-  );
-
-  return (
-    <>
-      {/* Mobile trigger pill — only renders below lg. */}
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
-      >
-        <FilterIcon size={16} />
-        Filters
-        {activeFilterCount > 0 && (
-          <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
-            {activeFilterCount}
-          </span>
-        )}
-      </button>
-
-      {/* Mobile bottom-sheet drawer. */}
-      <div
-        className={`lg:hidden fixed inset-0 z-[60] transition-opacity ${
-          mobileOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
-        aria-hidden={!mobileOpen}
-      >
-        <div
-          onClick={() => setMobileOpen(false)}
-          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-        />
-        <div
-          role="dialog"
-          aria-label="Filters"
-          className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
-            mobileOpen ? "translate-y-0" : "translate-y-full"
-          }`}
-        >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <FilterIcon size={20} />
-              Filters
-            </h3>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              aria-label="Close filters"
-              className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
-            >
-              <XIcon size={22} />
-            </button>
-          </div>
-          <div className="overflow-y-auto flex-1">{body}</div>
-          <div className="border-t border-slate-100 px-5 py-3 flex gap-2 sticky bottom-0 bg-white">
-            <button
-              type="button"
-              onClick={clearFilters}
-              disabled={!hasActiveFilters}
-              className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
-            >
-              Show results
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop inline sidebar. */}
-      <div className="hidden lg:block w-full p-4">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <FilterIcon size={20} />
-            Filters
-          </h3>
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-        {body}
-      </div>
-    </>
-  );
-}
-
-function FilterBody({
-  selectedCategories,
-  handleCategoryToggle,
-  sliderMax,
-  handleSliderChange,
-  selectedPriceRange,
-  handlePriceRangeSelect,
-  hasActiveFilters,
-  sortBy,
-  stockFilter,
-  handleSortChange,
-  handleStockChange,
-}) {
-  return (
+  const filterBody = (
     <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
-      {/* Sort By Section */}
+      {/* Sort By */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-4">Sort By</h4>
-        <div className="space-y-3">
+        <h4 className="font-medium text-slate-700 mb-3">Sort By</h4>
+        <div className="flex flex-wrap gap-2">
           {[
             { value: "latest", label: "Latest" },
             { value: "price_asc", label: "Price: Low to High" },
             { value: "price_desc", label: "Price: High to Low" },
           ].map((opt) => (
-            <label key={opt.value} className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="sortBy"
-                checked={sortBy === opt.value}
-                onChange={() => handleSortChange(opt.value)}
-                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-slate-700">{opt.label}</span>
-            </label>
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleSortChange(opt.value)}
+              className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                sortBy === opt.value
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {opt.label}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Availability Section */}
+      {/* Availability */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-4">Availability</h4>
-        <div className="space-y-3">
+        <h4 className="font-medium text-slate-700 mb-3">Availability</h4>
+        <div className="flex flex-wrap gap-2">
           {[
             { value: "all", label: "All" },
             { value: "inStock", label: "In Stock" },
             { value: "outOfStock", label: "Out of Stock" },
           ].map((opt) => (
-            <label key={opt.value} className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="stockFilter"
-                checked={stockFilter === opt.value}
-                onChange={() => handleStockChange(opt.value)}
-                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-slate-700">{opt.label}</span>
-            </label>
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleStockChange(opt.value)}
+              className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                stockFilter === opt.value
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {opt.label}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Categories Section */}
+      {/* Categories */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-4">Categories</h4>
-        <div className="space-y-3">
+        <h4 className="font-medium text-slate-700 mb-3">Categories</h4>
+        <div className="flex flex-wrap gap-2">
           {categories.map((cat) => (
-            <label key={cat} className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedCategories.includes(cat)}
-                onChange={() => handleCategoryToggle(cat)}
-                className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-slate-700">{cat}</span>
-            </label>
+            <button
+              key={cat}
+              type="button"
+              onClick={() => handleCategoryToggle(cat)}
+              className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                selectedCategories.includes(cat)
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {cat}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Price Range Section */}
+      {/* Price Range */}
       <div className="mb-8">
-        <h4 className="font-medium text-slate-700 mb-4">Price Range</h4>
-
+        <h4 className="font-medium text-slate-700 mb-3">Price Range</h4>
         {/* Slider */}
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="flex justify-between text-sm text-slate-600 mb-2">
             <span>
               Max price:{" "}
@@ -323,23 +203,21 @@ function FilterBody({
             className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600"
           />
         </div>
-
         {/* Predefined ranges */}
-        <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
           {priceRanges.map((range) => (
-            <label
+            <button
               key={range.label}
-              className="flex items-center cursor-pointer"
+              type="button"
+              onClick={() => handlePriceRangeSelect(range)}
+              className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                selectedPriceRange?.label === range.label
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
             >
-              <input
-                type="radio"
-                name="priceRange"
-                checked={selectedPriceRange?.label === range.label}
-                onChange={() => handlePriceRangeSelect(range)}
-                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-slate-700">{range.label}</span>
-            </label>
+              {range.label}
+            </button>
           ))}
         </div>
       </div>
@@ -383,5 +261,98 @@ function FilterBody({
         </div>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Mobile trigger */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden mb-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+      >
+        <FilterIcon size={16} />
+        Filters
+        {activeFilterCount > 0 && (
+          <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center bg-[#e67e22] text-white rounded-full text-[11px] font-semibold">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      {/* Mobile drawer */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[60] transition-opacity ${
+          mobileOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!mobileOpen}
+      >
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        />
+        <div
+          role="dialog"
+          aria-label="Filters"
+          className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl transition-transform duration-300 ${
+            mobileOpen ? "translate-y-0" : "translate-y-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <FilterIcon size={20} />
+              Filters
+            </h3>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close filters"
+              className="p-1.5 text-slate-600 hover:text-slate-900 active:scale-95 transition-transform"
+            >
+              <XIcon size={22} />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1">{filterBody}</div>
+          <div className="border-t border-slate-100 px-5 py-3 flex gap-2 sticky bottom-0 bg-white">
+            <button
+              type="button"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              className="flex-1 py-2.5 rounded-full border border-slate-200 text-slate-600 font-medium disabled:opacity-40 hover:bg-slate-50 transition-colors"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="flex-1 py-2.5 rounded-full bg-[#1c355e] hover:bg-[#2582eb] text-white font-medium transition-colors"
+            >
+              Show results
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block w-full p-4">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+            <FilterIcon size={20} />
+            Filters
+          </h3>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        {filterBody}
+      </div>
+    </>
   );
 }

@@ -31,7 +31,7 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState("latest");
   const [stockFilter, setStockFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 12;
+  const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
     setSelectedCategories(initialCategories);
@@ -73,9 +73,17 @@ function ShopContent() {
 
     // Availability filter
     if (stockFilter === "inStock") {
-      filtered = filtered.filter((p) => p.inStock !== false);
+      filtered = filtered.filter((p) => {
+        if (p.variants && p.variants.length > 0)
+          return p.variants.some((v) => v.stock > 0);
+        return p.stock > 0;
+      });
     } else if (stockFilter === "outOfStock") {
-      filtered = filtered.filter((p) => p.inStock === false);
+      filtered = filtered.filter((p) => {
+        if (p.variants && p.variants.length > 0)
+          return p.variants.every((v) => v.stock === 0);
+        return p.stock === 0;
+      });
     }
 
     // Sort
@@ -102,10 +110,14 @@ function ShopContent() {
     stockFilter,
   ]);
 
+  // Clamp currentPage when totalPages decreases (e.g. filtering reduces results)
   const totalPages = Math.max(
     1,
     Math.ceil(filteredProducts.length / ITEMS_PER_PAGE),
   );
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages));
+  }, [totalPages]);
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,

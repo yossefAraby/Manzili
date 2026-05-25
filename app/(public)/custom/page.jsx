@@ -53,7 +53,7 @@ function CustomProductsContent() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [sortBy, setSortBy] = useState("latest");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 12;
+  const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
     let cancelled = false;
@@ -181,6 +181,10 @@ function CustomProductsContent() {
     1,
     Math.ceil(filteredRequests.length / ITEMS_PER_PAGE),
   );
+  // Clamp currentPage when totalPages shrinks (e.g. filtering reduces results)
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages));
+  }, [totalPages]);
   const paginatedRequests = filteredRequests.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,

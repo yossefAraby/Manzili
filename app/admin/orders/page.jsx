@@ -19,7 +19,7 @@ export default function AdminOrders() {
     const [loading, setLoading]         = useState(true)
     const [selectedOrder, setSelectedOrder] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 15
+    const ITEMS_PER_PAGE = 5
 
     const totalPages = Math.max(1, Math.ceil(orders.length / ITEMS_PER_PAGE))
     const paginatedOrders = orders.slice(

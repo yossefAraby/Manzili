@@ -35,20 +35,22 @@ export default function Cart() {
         setTotalPrice(0);
         const cartArray = [];
         for (const [key, value] of Object.entries(cartItems)) {
-            const product = products.find(product => product.id === key);
+            const product = products.find(product => product.id === value.productId);
             if (product) {
                 cartArray.push({
                     ...product,
-                    quantity: value,
+                    cartKey: key,
+                    quantity: value.quantity,
+                    variants: value.variants,
                 });
-                setTotalPrice(prev => prev + product.price * value);
+                setTotalPrice(prev => prev + product.price * value.quantity);
             }
         }
         setCartArray(cartArray);
     }
 
-    const handleDeleteItemFromCart = (productId) => {
-        dispatch(deleteItemFromCart({ productId }))
+    const handleDeleteItemFromCart = (cartKey) => {
+        dispatch(deleteItemFromCart({ key: cartKey }))
     }
 
     useEffect(() => {
@@ -107,11 +109,11 @@ export default function Cart() {
                                             </div>
                                         </td>
                                         <td className="text-center">
-                                            <Counter productId={item.id} />
+                                            <Counter productId={item.id} cartKey={item.cartKey} />
                                         </td>
                                         <td className="text-center">{currency}{formatLineTotal(item.price * item.quantity)}</td>
                                         <td className="text-center max-md:hidden">
-                                            <button onClick={() => handleDeleteItemFromCart(item.id)} className=" text-red-500 hover:bg-red-50 p-2.5 rounded-full active:scale-95 transition-all">
+                                            <button onClick={() => handleDeleteItemFromCart(item.cartKey)} className=" text-red-500 hover:bg-red-50 p-2.5 rounded-full active:scale-95 transition-all">
                                                 <Trash2Icon size={18} />
                                             </button>
                                         </td>

@@ -14,7 +14,7 @@ export default function AdminProducts() {
     const [search, setSearch]               = useState('')
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 15
+    const ITEMS_PER_PAGE = 10
 
     const fetchProducts = async () => {
         try {

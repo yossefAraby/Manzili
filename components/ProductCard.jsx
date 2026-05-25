@@ -15,7 +15,9 @@ const ProductCard = ({ product }) => {
     const inWishlist = useSelector(state => Boolean(state.wishlist.wishlistItems[product.id]))
 
     // calculate the average rating of the product
-    const rating = Math.round(product.rating.reduce((acc, curr) => acc + curr.rating, 0) / product.rating.length);
+    const rating = (product.rating?.length > 0)
+        ? Math.round(product.rating.reduce((acc, curr) => acc + curr.rating, 0) / product.rating.length)
+        : 0;
 
     return (
         <Link href={`/product/${product.id}`} className=' group max-xl:mx-auto'>
@@ -42,6 +44,11 @@ const ProductCard = ({ product }) => {
                     </div>
                 </div>
                 <p>{currency}{product.price}</p>
+            </div>
+            <div className="mt-1">
+                {product.stock <= 0 && !(product.variants || []).some((v) => v.stock > 0) && (
+                    <span className="text-xs text-rose-500 font-medium">Out of Stock</span>
+                )}
             </div>
         </Link>
     )

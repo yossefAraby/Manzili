@@ -10,7 +10,7 @@ export default function AdminRequests() {
     const [selectedRequest, setSelectedRequest] = useState(null)
 
     const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 15
+    const ITEMS_PER_PAGE = 5
 
     const totalPages = Math.max(1, Math.ceil(requests.length / ITEMS_PER_PAGE))
     const paginatedRequests = requests.slice(

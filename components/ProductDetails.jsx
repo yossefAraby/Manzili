@@ -1,6 +1,6 @@
 "use client";
 
-import { addToCart } from "@/lib/features/cart/cartSlice";
+import { addToCart, makeCartKey } from "@/lib/features/cart/cartSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
 import {
   SparklesIcon,
@@ -19,6 +19,8 @@ import { getCurrencySymbol } from "@/lib/currency";
 /** sessionStorage key the customize CTA writes to; /custom/custom-form reads + clears it. */
 const CUSTOMIZE_SEED_KEY = "manzili_customize_seed_v1";
 
+const isColorType = (t) => /color|colour|colou?r/i.test(t);
+
 const ProductDetails = ({ product }) => {
   const productId = product.id;
   const currency = getCurrencySymbol();
@@ -35,13 +37,31 @@ const ProductDetails = ({ product }) => {
   const [selectedVariants, setSelectedVariants] = useState(() => {
     const init = {};
     (product.variants || []).forEach((v) => {
-      init[v.type] = v.options?.[0] ?? "";
+      // Each variant has its own type + name (flat format)
+      init[v.type] = v.name;
     });
     return init;
   });
+  const cartKey = makeCartKey(productId, selectedVariants);
+
+  // Check whether the currently selected variant(s) are out of stock
+  const selectedOutOfStock = (() => {
+    if (product.variants && product.variants.length > 0) {
+      for (const [type, name] of Object.entries(selectedVariants)) {
+        const variant = product.variants.find(
+          (v) => v.type === type && v.name === name,
+        );
+        if (!variant || variant.stock === 0) return true;
+      }
+      return false;
+    }
+    return product.stock !== undefined && product.stock === 0;
+  })();
 
   const addToCartHandler = () => {
-    dispatch(addToCart({ productId }));
+    // Guard — selected variant is out of stock
+    if (selectedOutOfStock) return;
+    dispatch(addToCart({ productId, variants: selectedVariants }));
   };
 
   const customizeThisItem = () => {
@@ -82,10 +102,31 @@ const ProductDetails = ({ product }) => {
     product.rating.length;
   const listPrice = Number(product.mrp);
   const salePrice = Number(product.price);
-  const hasListDiscount = listPrice > salePrice && listPrice > 0;
+
+  // Compute effective price from selected variant
+  let effectivePrice = salePrice;
+  let effectiveMrp = listPrice;
+  for (const [type, name] of Object.entries(selectedVariants)) {
+    const variant = (product.variants || []).find(
+      (v) => v.type === type && v.name === name,
+    );
+    if (variant) {
+      if (Number(variant.price)) effectivePrice = Number(variant.price);
+      if (Number(variant.mrp)) effectiveMrp = Number(variant.mrp);
+    }
+  }
+
+  const hasListDiscount = effectiveMrp > effectivePrice && effectivePrice > 0;
   const discountPercent = hasListDiscount
-    ? Math.round(((listPrice - salePrice) / listPrice) * 100)
+    ? Math.round(((effectiveMrp - effectivePrice) / effectiveMrp) * 100)
     : 0;
+
+  // Group variants by type for display
+  const variantsByType = {};
+  (product.variants || []).forEach((v) => {
+    if (!variantsByType[v.type]) variantsByType[v.type] = [];
+    variantsByType[v.type].push(v);
+  });
 
   return (
     <div className="flex max-lg:flex-col gap-12">
@@ -133,12 +174,12 @@ const ProductDetails = ({ product }) => {
         <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
           <p>
             {currency}
-            {salePrice}
+            {effectivePrice}
           </p>
           {hasListDiscount && (
             <p className="text-xl text-slate-500 line-through">
               {currency}
-              {listPrice}
+              {effectiveMrp}
             </p>
           )}
         </div>
@@ -148,53 +189,117 @@ const ProductDetails = ({ product }) => {
             <p>Save {discountPercent}% right now</p>
           </div>
         )}
+        {/* ── Selected variant labels ── */}
+        {Object.entries(selectedVariants).filter(([_, v]) => v).length > 0 && (
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 mb-1">
+            {Object.entries(selectedVariants).filter(([_, v]) => v).map(([type, val]) => (
+              <span key={type} className="text-sm text-slate-500">
+                {type}: <span className="font-medium text-slate-700">{val}</span>
+              </span>
+            ))}
+          </div>
+        )}
         {/* ── Variant selectors ── */}
-        {Array.isArray(product.variants) && product.variants.length > 0 && (
+        {Object.keys(variantsByType).length > 0 && (
           <div className="mt-6 space-y-4">
-            {product.variants.map((variant) => (
-              <div key={variant.id ?? variant.type}>
+            {Object.entries(variantsByType).map(([type, options]) => (
+              <div key={type}>
                 <p className="text-sm font-medium text-slate-700 mb-2">
-                  {variant.type}
+                  {type}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {variant.options.map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() =>
-                        setSelectedVariants((prev) => ({
-                          ...prev,
-                          [variant.type]: opt,
-                        }))
-                      }
-                      className={`px-3 py-1.5 text-sm border rounded-lg transition ${
-                        selectedVariants[variant.type] === opt
-                          ? "bg-slate-800 text-white border-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+                  {options.map((opt) => {
+                    const isColor = isColorType(type);
+                    const isSelected = selectedVariants[type] === opt.name;
+                    const outOfStock = opt.stock === 0;
+                    const lowStock = opt.stock > 0 && opt.stock < 5;
+                    return (
+                      <div
+                        key={opt.name}
+                        className="flex flex-col items-center gap-0.5"
+                      >
+                        <button
+                          type="button"
+                          onClick={
+                            outOfStock
+                              ? undefined
+                              : () => {
+                                  setSelectedVariants((prev) => ({
+                                    ...prev,
+                                    [type]: opt.name,
+                                  }));
+                                  if (opt.images?.[0])
+                                    setMainImage(opt.images[0]);
+                                }
+                          }
+                          title={isColor ? opt.name : undefined}
+                          disabled={outOfStock}
+                          className={
+                            isColor
+                              ? `size-9 rounded-full border-2 transition ${
+                                  isSelected
+                                    ? "border-slate-800 scale-110"
+                                    : "border-slate-200 hover:scale-105"
+                                } ${outOfStock ? "opacity-30 cursor-not-allowed" : ""}`
+                              : `px-3 py-1.5 text-sm border rounded-lg transition ${
+                                  isSelected
+                                    ? "bg-slate-800 text-white border-slate-800"
+                                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                                } ${outOfStock ? "opacity-50 cursor-not-allowed" : ""}`
+                          }
+                          style={
+                            isColor
+                              ? { backgroundColor: opt.swatch || "#ccc" }
+                              : undefined
+                          }
+                        >
+                          {isColor ? (
+                            <span className="block size-full rounded-full" />
+                          ) : (
+                            opt.name
+                          )}
+                        </button>
+                        {outOfStock && (
+                          <span className="text-[10px] text-rose-500 whitespace-nowrap">
+                            Out of Stock
+                          </span>
+                        )}
+                        {lowStock && !outOfStock && (
+                          <span className="text-[10px] text-amber-600 whitespace-nowrap">
+                            Only {opt.stock} left
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
         )}
         <div className="flex items-end gap-5 mt-10">
-          {cart[productId] && (
+          {cart[cartKey] && (
             <div className="flex flex-col gap-3">
               <p className="text-lg text-slate-800 font-semibold">Quantity</p>
-              <Counter productId={productId} />
+              <Counter productId={productId} cartKey={cartKey} />
             </div>
           )}
           <button
             onClick={() =>
-              !cart[productId] ? addToCartHandler() : router.push("/cart")
+              !cart[cartKey] ? addToCartHandler() : router.push("/cart")
             }
-            className="bg-slate-800 text-white px-10 py-3 text-sm font-medium rounded hover:bg-slate-900 active:scale-95 transition"
+            disabled={selectedOutOfStock}
+            className={`px-10 py-3 text-sm font-medium rounded transition ${
+              selectedOutOfStock
+                ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                : "bg-slate-800 text-white hover:bg-slate-900 active:scale-95"
+            }`}
           >
-            {!cart[productId] ? "Add to Cart" : "View Cart"}
+            {selectedOutOfStock
+              ? "Out of Stock"
+              : !cart[cartKey]
+                ? "Add to Cart"
+                : "View Cart"}
           </button>
           <button
             onClick={() => dispatch(toggleWishlist({ productId }))}

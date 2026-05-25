@@ -147,6 +147,10 @@
     button {
         cursor: pointer;
     }
+    input[type="radio"],
+    input[type="checkbox"] {
+        appearance: auto;
+    }
 }
 
 .no-scrollbar {

@@ -23,7 +23,7 @@ const Footer = () => {
       title: "Who We Are",
       links: [
         { text: "About Us", path: "/about", icon: null },
-        { text: "FAQs", path: "#", icon: null },
+        { text: "FAQs", path: "/faq", icon: null },
         { text: "Contact Us", path: "/contact", icon: null },
         { text: "Returns", path: "/returns", icon: null },
       ],

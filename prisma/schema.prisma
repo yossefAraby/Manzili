@@ -34,6 +34,7 @@ model Product {
     images      String[]
     category    String
     inStock     Boolean  @default(true)
+    stock       Int      @default(10)
     isDisabled   Boolean  @default(false)
     storeId     String
     shippingSize            ShippingSize         @default(MEDIUM)

@@ -17,7 +17,7 @@ export default function AdminStores() {
   const [selectedStore, setSelectedStore] = useState(null);
   const [actioning, setActioning] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  const ITEMS_PER_PAGE = 5;
 
   const fetchStores = async () => {
     try {
