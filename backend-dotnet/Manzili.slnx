@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Manzili.Api/Manzili.Api.csproj" />
+    <Project Path="src/Manzili.Application/Manzili.Application.csproj" />
+    <Project Path="src/Manzili.Domain/Manzili.Domain.csproj" />
+    <Project Path="src/Manzili.Infrastructure/Manzili.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Manzili.Tests/Manzili.Tests.csproj" />
+  </Folder>
+</Solution>
