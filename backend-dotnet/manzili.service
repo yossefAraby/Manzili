@@ -1,0 +1,42 @@
+# /etc/systemd/system/manzili.service
+#
+# Reference systemd unit for running the Manzili .NET API container on the EC2 box.
+# This REPLACES the old Node unit. The only real change vs. the Node version is the
+# container port: .NET listens on 8080 (Node used 3000). Host port stays 80.
+#
+# Install on the box:
+#   sudo cp manzili.service /etc/systemd/system/manzili.service   # or edit in place
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now manzili
+
+[Unit]
+Description=Manzili .NET API (container)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+# Image pulled by deploy.sh before each restart.
+Environment=IMAGE=055271832259.dkr.ecr.eu-central-1.amazonaws.com/manzili:latest
+
+# Clean up any previous container before (re)starting. The leading "-" means
+# "ignore failure" (e.g. when no container exists yet).
+ExecStartPre=-/usr/bin/docker stop manzili
+ExecStartPre=-/usr/bin/docker rm manzili
+
+# host:container  ->  80:8080  (was 80:3000 for the Node app)
+# ASPNETCORE_ENVIRONMENT=Production so it does NOT load appsettings.Development.json;
+# all real config comes from /etc/manzili.env (pushed by update-env.sh).
+ExecStart=/usr/bin/docker run --rm --name manzili \
+    --env-file /etc/manzili.env \
+    -e ASPNETCORE_ENVIRONMENT=Production \
+    -p 80:8080 \
+    ${IMAGE}
+
+ExecStop=/usr/bin/docker stop manzili
+
+[Install]
+WantedBy=multi-user.target

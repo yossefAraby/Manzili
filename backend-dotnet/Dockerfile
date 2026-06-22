@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restore (layer-cached on csproj changes)
-COPY Manzili.sln ./
+COPY Manzili.slnx ./
 COPY src/Manzili.Api/Manzili.Api.csproj src/Manzili.Api/
 COPY src/Manzili.Domain/Manzili.Domain.csproj src/Manzili.Domain/
 COPY src/Manzili.Application/Manzili.Application.csproj src/Manzili.Application/

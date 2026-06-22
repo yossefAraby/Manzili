@@ -1,0 +1,29 @@
+# Keep build context small and — critically — keep secrets OUT of the image.
+# The Dockerfile does `COPY . .`, so anything not excluded here is baked into a
+# layer that gets pushed to ECR. Config on the server comes from /etc/manzili.env.
+
+# Build output
+**/bin/
+**/obj/
+
+# IDE / VCS
+.vs/
+.idea/
+.git/
+.gitignore
+
+# Secrets — never bake these into the image (provided at runtime via --env-file)
+.env
+.env.*
+**/appsettings.Development.json
+**/appsettings.*.Development.json
+
+# Tests aren't needed in the runtime image
+tests/
+
+# Docs / scripts
+README.md
+DEPLOY.md
+deploy.sh
+update-env.sh
+*.service
