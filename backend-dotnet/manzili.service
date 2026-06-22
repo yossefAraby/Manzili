@@ -34,6 +34,7 @@ ExecStart=/usr/bin/docker run --rm --name manzili \
     --env-file /etc/manzili.env \
     -e ASPNETCORE_ENVIRONMENT=Production \
     -p 80:8080 \
+    -p 3000:8080 \
     ${IMAGE}
 
 ExecStop=/usr/bin/docker stop manzili
