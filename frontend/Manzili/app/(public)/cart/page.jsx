@@ -34,21 +34,35 @@ export default function Cart() {
         setCartReady(true);
     }, []);
 
+    // Sum of the selected variant options' surcharges (mirrors the server's price-delta charge).
+    const variantDelta = (product, selected) => {
+        if (!selected || !Array.isArray(product.variants)) return 0;
+        let d = 0;
+        for (const [type, name] of Object.entries(selected)) {
+            const v = product.variants.find((x) => x.type === type && x.name === name);
+            if (v) d += Number(v.priceDelta ?? v.price) || 0;
+        }
+        return d;
+    };
+
     const createCartArray = () => {
-        setTotalPrice(0);
+        let total = 0;
         const cartArray = [];
         for (const [key, value] of Object.entries(cartItems)) {
             const product = products.find(product => product.id === value.productId);
             if (product) {
+                const unitPrice = (Number(product.price) || 0) + variantDelta(product, value.variants);
                 cartArray.push({
                     ...product,
                     cartKey: key,
                     quantity: value.quantity,
                     variants: value.variants,
+                    unitPrice,
                 });
-                setTotalPrice(prev => prev + product.price * value.quantity);
+                total += unitPrice * value.quantity;
             }
         }
+        setTotalPrice(total);
         setCartArray(cartArray);
     }
 
@@ -111,13 +125,13 @@ export default function Cart() {
                                             <div>
                                                 <p className="max-sm:text-sm">{item.name}</p>
                                                 <p className="text-xs text-slate-500">{item.category}</p>
-                                                <p>{currency}{item.price}</p>
+                                                <p>{currency}{item.unitPrice ?? item.price}</p>
                                             </div>
                                         </td>
                                         <td className="text-center">
                                             <Counter productId={item.id} cartKey={item.cartKey} />
                                         </td>
-                                        <td className="text-center">{currency}{formatLineTotal(item.price * item.quantity)}</td>
+                                        <td className="text-center">{currency}{formatLineTotal((item.unitPrice ?? item.price) * item.quantity)}</td>
                                         <td className="text-center max-md:hidden">
                                             <button onClick={() => handleDeleteItemFromCart(item.cartKey)} className=" text-red-500 hover:bg-red-50 p-2.5 rounded-full active:scale-95 transition-all">
                                                 <Trash2Icon size={18} />

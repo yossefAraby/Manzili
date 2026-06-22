@@ -129,6 +129,7 @@ export async function quoteCheckout({ items, coupon = null, paymentMethod = 'STR
       items: (Array.isArray(items) ? items : []).map((it) => ({
         productId: String(it.productId ?? it.id),
         quantity: Number(it.quantity ?? 1),
+        variant: it.variant ?? it.variants ?? null,
       })),
       coupon: coupon ?? null,
       paymentMethod,

@@ -48,6 +48,7 @@ public sealed class OrderService
 
         var products = await _db.Products
             .Include(p => p.Seller)
+            .Include(p => p.ProductVariants).ThenInclude(v => v.VariantOptions)
             .Where(p => productIds.Contains(p.Productid))
             .ToListAsync();
         var productMap = products.ToDictionary(p => p.Productid);
@@ -78,8 +79,12 @@ public sealed class OrderService
                 sellerIndex[selId] = list;
                 sellerGroups.Add(new KeyValuePair<int, List<LineItem>>(selId, list));
             }
-            list.Add(new LineItem(product, pid, item.Quantity, item.Price));
-            subtotal += UnitPrice(product, item.Price) * item.Quantity;
+            // Effective unit price = base price + the selected variant options' surcharges. Resolved
+            // once here and carried on the line so the subtotal, per-store split and the
+            // price_at_purchase snapshot all charge the same (delta-inclusive) amount.
+            var unit = UnitPrice(product, item.Price) + VariantDelta(product, item.Variant);
+            list.Add(new LineItem(product, pid, item.Quantity, unit));
+            subtotal += unit * item.Quantity;
         }
 
         if (req.PaymentMethod is not ("COD" or "STRIPE" or "WALLET" or "FAWRY"))
@@ -128,7 +133,7 @@ public sealed class OrderService
 
             foreach (var (selId, sellerItems) in sellerGroups)
             {
-                var soSubtotal = sellerItems.Sum(i => UnitPrice(i.Product, i.FallbackPrice) * i.Quantity);
+                var soSubtotal = sellerItems.Sum(i => i.UnitPrice * i.Quantity);
                 var soDiscountRatio = subtotal > 0 ? soSubtotal / subtotal : 0m;
                 var soDiscount = Math.Round(discountAmount * soDiscountRatio, 2, MidpointRounding.AwayFromZero);
 
@@ -154,7 +159,7 @@ public sealed class OrderService
                         StoreOrderid = storeOrder.StoreOrderid,
                         Productid = i.Productid,
                         Quantity = i.Quantity,
-                        PriceAtPurchase = UnitPrice(i.Product, i.FallbackPrice),
+                        PriceAtPurchase = i.UnitPrice,
                         ProductName = i.Product.Productname,
                         ProductImageUrl = i.Product.CoverUrl,
                         ShippingSize = i.Product.ShippingSize,
@@ -306,7 +311,28 @@ public sealed class OrderService
 
     // ---------- Helpers ----------
 
-    private readonly record struct LineItem(Product Product, int Productid, int Quantity, decimal? FallbackPrice);
+    private readonly record struct LineItem(Product Product, int Productid, int Quantity, decimal UnitPrice);
+
+    /// <summary>
+    /// Sum of the selected variant options' price-deltas (Noon-style "+EGP for XL" surcharges).
+    /// Matches each {groupName: optionValue} against the product's variant groups/options
+    /// (case-insensitive). Returns 0 when the product has no variants or nothing is selected.
+    /// </summary>
+    private static decimal VariantDelta(Product product, IReadOnlyDictionary<string, string>? variant)
+    {
+        if (variant is null || variant.Count == 0 || product.ProductVariants is null) return 0m;
+        decimal sum = 0m;
+        foreach (var (groupName, value) in variant)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            var group = product.ProductVariants
+                .FirstOrDefault(g => string.Equals(g.VariantName, groupName, StringComparison.OrdinalIgnoreCase));
+            var opt = group?.VariantOptions
+                .FirstOrDefault(o => string.Equals(o.Value, value, StringComparison.OrdinalIgnoreCase));
+            if (opt is not null) sum += opt.PriceDelta;
+        }
+        return sum;
+    }
 
     /// <summary>Node: Number(product.price || item.price). JS `||` treats 0/null as falsy → fall back.</summary>
     private static decimal UnitPrice(Product product, decimal? fallback)

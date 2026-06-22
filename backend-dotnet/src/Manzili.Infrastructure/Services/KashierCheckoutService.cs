@@ -69,6 +69,7 @@ public sealed class KashierCheckoutService
                 ProductId = i.ProductId,
                 Quantity = i.Quantity,
                 Price = i.Price,
+                Variant = i.Variant,
             }).ToList(),
             Coupon = req.Coupon is null ? null : new CreateOrderCoupon
             {

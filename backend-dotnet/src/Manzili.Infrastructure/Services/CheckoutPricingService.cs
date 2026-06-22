@@ -1,6 +1,7 @@
 using Manzili.Application.Configuration;
 using Manzili.Application.Integrations;
 using Manzili.Infrastructure.Persistence;
+using Manzili.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -34,8 +35,8 @@ public sealed class CheckoutPricingService
             .ToList();
 
         var products = await _db.Products.AsNoTracking()
+            .Include(p => p.ProductVariants).ThenInclude(v => v.VariantOptions)
             .Where(p => productIds.Contains(p.Productid))
-            .Select(p => new { p.Productid, p.Price, p.Sellerid })
             .ToListAsync();
         var map = products.ToDictionary(p => p.Productid);
 
@@ -44,7 +45,12 @@ public sealed class CheckoutPricingService
         foreach (var item in items ?? new List<CheckoutItem>())
         {
             if (!int.TryParse(item.ProductId, out var pid) || !map.TryGetValue(pid, out var p)) continue;
-            var unit = (p.Price ?? 0m) != 0m ? p.Price!.Value : (item.Price ?? 0m);
+            // Base unit = sale price, else list/Mrp, else the client fallback (mirrors OrderService.UnitPrice),
+            // PLUS the selected variant options' price-deltas so the quote equals the charged total.
+            var baseUnit = (p.Price ?? 0m) != 0m ? p.Price!.Value
+                : (p.Mrp ?? 0m) != 0m ? p.Mrp!.Value
+                : (item.Price ?? 0m);
+            var unit = baseUnit + VariantDelta(p, item.Variant);
             subtotal += unit * item.Quantity;
             sellers.Add(p.Sellerid ?? 0);
         }
@@ -77,5 +83,22 @@ public sealed class CheckoutPricingService
             SellerNet = Math.Round(subtotal - commission - sellerShip, 2, MidpointRounding.AwayFromZero),
             Stores = stores,
         };
+    }
+
+    /// <summary>Sum of the selected variant options' price-deltas (same matching as OrderService).</summary>
+    private static decimal VariantDelta(Product product, IReadOnlyDictionary<string, string>? variant)
+    {
+        if (variant is null || variant.Count == 0 || product.ProductVariants is null) return 0m;
+        decimal sum = 0m;
+        foreach (var (groupName, value) in variant)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            var group = product.ProductVariants
+                .FirstOrDefault(g => string.Equals(g.VariantName, groupName, StringComparison.OrdinalIgnoreCase));
+            var opt = group?.VariantOptions
+                .FirstOrDefault(o => string.Equals(o.Value, value, StringComparison.OrdinalIgnoreCase));
+            if (opt is not null) sum += opt.PriceDelta;
+        }
+        return sum;
     }
 }

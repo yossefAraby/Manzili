@@ -34,6 +34,10 @@ public sealed class CheckoutItem
 
     /// <summary>Optional product name for the Stripe line item (falls back to "Product {productId}").</summary>
     public string? Name { get; set; }
+
+    /// <summary>Selected variant options as {groupName: optionValue} (e.g. {"Size":"XL"}) so the
+    /// server can add each option's price-delta surcharge to the charged unit price.</summary>
+    public Dictionary<string, string>? Variant { get; set; }
 }
 
 public sealed class CheckoutCoupon

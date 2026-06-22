@@ -28,6 +28,10 @@ public sealed class CreateOrderItem
 
     /// <summary>Fallback unit price used only when the product has no stored price (Node: product.price || item.price).</summary>
     public decimal? Price { get; set; }
+
+    /// <summary>Selected variant options as {groupName: optionValue} — the server adds each option's
+    /// price-delta surcharge to the unit price so a "+EGP for XL" option is actually charged.</summary>
+    public Dictionary<string, string>? Variant { get; set; }
 }
 
 /// <summary>Body for POST /api/v1/orders/{id}/return (buyer-initiated return).</summary>
