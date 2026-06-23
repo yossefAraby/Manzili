@@ -17,16 +17,24 @@ public sealed class ProductsController : ApiController
     }
 
     // GET /api/v1/products  (optionalAuth)
+    // Server-side filtering + pagination for the shop grid: category (one or several,
+    // comma-separated), free-text search, price band, stock, and sort — all applied in
+    // SQL so each page hits the DB for just that slice.
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] int? page,
         [FromQuery] int? limit,
         [FromQuery] string? category,
+        [FromQuery] string? search,
+        [FromQuery] decimal? minPrice,
+        [FromQuery] decimal? maxPrice,
+        [FromQuery] bool? inStock,
         [FromQuery] string? sortBy,
         [FromQuery] string? sortDir)
     {
         var pg = Pagination.Parse(page, limit);
-        var result = await _products.ListProductsAsync(pg, category, sortBy, sortDir, CurrentPersonId);
+        var filter = new ProductListFilter(category, search, minPrice, maxPrice, inStock, sortBy, sortDir);
+        var result = await _products.ListProductsAsync(pg, filter, CurrentPersonId);
         return PagedResponse(result);
     }
 

@@ -187,6 +187,7 @@ const ar = {
     prev: "→ السابق",
     next: "التالي ←",
     page: "صفحة {current} من {total}",
+    perPage: "لكل صفحة",
   },
 
   orderSummary: {
@@ -769,6 +770,7 @@ const ar = {
       estimatingPrice: "جارٍ تقدير نطاق سعري عادل...",
       priceEstimateReady: "إليك نطاقًا سعريًا مقترحًا",
       priceEstimateNeedsItem: "أضف اسم القطعة أولًا لتقدير السعر",
+      priceEstimateNeedsFields: "أضف اسم القطعة والتصنيف والوصف لتقدير السعر",
       priceEstimateFailed: "فشل تقدير السعر: {message}",
       estimatedPrice: "التقدير:",
       priceBasedOn: "بناءً على {count} قطعة مشابهة في الكتالوج",

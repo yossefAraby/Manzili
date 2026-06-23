@@ -201,10 +201,11 @@ export async function createOrder({ items, addressId, paymentMethod = 'COD', cou
 }
 
 /**
- * DEV-ONLY demo helper. POST /orders/{storeOrderId}/simulate-advance.
+ * Demo helper. POST /orders/{storeOrderId}/simulate-advance.
  * Advances the buyer's own store order one lifecycle step
- * (ORDER_PLACED/PROCESSING → SHIPPED → DELIVERED). The backend route 404s
- * outside Development. Returns the new status string (or null on failure).
+ * (ORDER_PLACED/PROCESSING → SHIPPED → DELIVERED) through the same path the Bosta
+ * webhook uses (wallet release + notifications fire). Lets a COD order — which is
+ * never paid online — be walked to Delivered. Returns the new status string (or null).
  */
 export async function simulateAdvanceOrder(storeOrderId) {
   if (!storeOrderId) throw new Error('Missing order id');

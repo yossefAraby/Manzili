@@ -82,19 +82,56 @@ public sealed class ProductService
             .Include(p => p.ReviewingAndRatings);
 
     public async Task<PagedProducts<ProductCardDto>> ListProductsAsync(
-        Pagination pg, string? category, string? sortBy, string? sortDir, int? userId)
+        Pagination pg, ProductListFilter filter, int? userId)
     {
-        var effectiveSortBy = string.IsNullOrEmpty(sortBy) ? "created_at" : sortBy;
-        var asc = sortDir == "asc";
+        var effectiveSortBy = string.IsNullOrEmpty(filter.SortBy) ? "created_at" : filter.SortBy;
+        var asc = filter.SortDir == "asc";
 
         var query = CardQuery().Where(p => p.IsDisabled != true && p.Seller != null && p.Seller.IsActive == true && p.Seller.StoreStatus == StatusMaps.StoreStatus.Approved);
-        if (!string.IsNullOrEmpty(category))
-            query = query.Where(p => p.Category != null && p.Category.CategoryName.ToLower() == category.ToLower());
+
+        // Category — one name or a comma-separated set (OR-matched, case-insensitive).
+        var categories = (filter.Category ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(c => c.ToLower())
+            .ToList();
+        if (categories.Count == 1)
+            query = query.Where(p => p.Category != null && p.Category.CategoryName.ToLower() == categories[0]);
+        else if (categories.Count > 1)
+            query = query.Where(p => p.Category != null && categories.Contains(p.Category.CategoryName.ToLower()));
+
+        // Free-text search over the product name.
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var q = filter.Search.Trim().ToLower();
+            query = query.Where(p => p.Productname != null && p.Productname.ToLower().Contains(q));
+        }
+
+        // Availability.
+        if (filter.InStock == true)
+            query = query.Where(p => p.InStock == true && (p.Stock ?? 0) > 0);
+        else if (filter.InStock == false)
+            query = query.Where(p => p.InStock != true || (p.Stock ?? 0) <= 0);
+
+        // Price band — on the EFFECTIVE selling price (a real discount when Price < Mrp,
+        // otherwise the list price), mirroring how the card/UI compute the displayed price.
+        if (filter.MinPrice is decimal lo)
+            query = query.Where(p =>
+                ((p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m)) >= lo);
+        if (filter.MaxPrice is decimal hi)
+            query = query.Where(p =>
+                ((p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m)) <= hi);
 
         if (effectiveSortBy == "price")
-            query = asc ? query.OrderBy(p => p.Price) : query.OrderByDescending(p => p.Price);
+        {
+            // Sort by the same effective selling price so price asc/desc matches the band filter.
+            query = asc
+                ? query.OrderBy(p => (p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m))
+                : query.OrderByDescending(p => (p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m));
+        }
         else
+        {
             query = asc ? query.OrderBy(p => p.CreatedAt) : query.OrderByDescending(p => p.CreatedAt);
+        }
 
         var total = await query.CountAsync();
         var products = await query.Skip(pg.Skip).Take(pg.Take).ToListAsync();

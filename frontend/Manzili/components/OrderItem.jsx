@@ -231,9 +231,12 @@ const OrderItem = ({ order, onAdvance }) => {
           {order?.shipment && (
             <TrackingTimeline shipment={order.shipment} />
           )}
-          {/* DEV-ONLY demo control: one click walks the order to Delivered. */}
-          {process.env.NODE_ENV !== "production" &&
-            order.status !== "DELIVERED" && (
+          {/* Demo control: one click walks the order to Delivered. Available on the live
+              site too, since COD orders are never "paid" online and would otherwise sit at
+              Order Placed — this lets a reviewer drive the full Bosta tracking lifecycle. */}
+          {order.status !== "DELIVERED" &&
+            order.status !== "CANCELED" &&
+            order.status !== "RETURNED" && (
               <button
                 onClick={handleSimulate}
                 disabled={simulating}

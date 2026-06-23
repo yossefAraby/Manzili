@@ -214,7 +214,9 @@ function adaptStoreOrder(o) {
   return {
     id: str(o.id),
     total: num(o.total, 0),
-    status: str(o.status, 'ORDER_PLACED'),
+    // The seller endpoint returns the status lower-cased; the UI compares against the
+    // canonical UPPER_SNAKE values (ORDER_PLACED, PROCESSING, SHIPPED…), so normalize here.
+    status: str(o.status, 'ORDER_PLACED').toUpperCase(),
     paymentMethod: str(o.paymentMethod, 'COD'),
     isPaid: !!o.isPaid,
     createdAt: o.createdAt || new Date().toISOString(),

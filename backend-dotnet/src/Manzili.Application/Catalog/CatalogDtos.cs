@@ -2,6 +2,20 @@ using System.Text.Json.Serialization;
 
 namespace Manzili.Application.Catalog;
 
+/// <summary>
+/// Storefront product-list filter (the shop grid). <paramref name="Category"/> may be a single
+/// category name or a comma-separated list (OR-matched). All fields are optional; a null/blank
+/// field means "no constraint". Applied in SQL so each page fetches only its slice.
+/// </summary>
+public readonly record struct ProductListFilter(
+    string? Category,
+    string? Search,
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    bool? InStock,
+    string? SortBy,
+    string? SortDir);
+
 // ---- Shared building blocks ----
 
 /// <summary>Image object as emitted by Node ({ src, width, height }).</summary>

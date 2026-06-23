@@ -339,14 +339,19 @@ public sealed class SellerService
     /// confirm an order for pickup (PROCESSING) — which hands it to Bosta. Everything after that
     /// (SHIPPED / IN_TRANSIT / DELIVERED) is driven automatically by Bosta webhooks, or forced by an
     /// admin. This prevents a seller from freely faking shipping/delivery states.</summary>
+    // A seller drives their own order through the fulfilment lifecycle:
+    // ORDER_PLACED → PROCESSING (confirm & request pickup) → SHIPPED → DELIVERED. This works for
+    // COD orders too (no online payment required to proceed — the courier settles the cash on
+    // delivery, at which point the order is marked paid and the wallet is released). Bosta webhooks
+    // drive the same transitions when configured; this lets the seller move it manually otherwise.
     private static readonly HashSet<string> SellerAllowedStatuses =
-        new(StringComparer.OrdinalIgnoreCase) { "PROCESSING" };
+        new(StringComparer.OrdinalIgnoreCase) { "PROCESSING", "SHIPPED", "DELIVERED" };
 
     public async Task<OrderStatusResult> UpdateOrderStatusAsync(int sellerid, int storeOrderId, string status)
     {
         if (!SellerAllowedStatuses.Contains((status ?? "").Trim()))
             throw new ForbiddenException(
-                "Sellers can only confirm an order for pickup. Shipping and delivery are updated automatically by Bosta (or by an admin).");
+                "A seller can move an order through Processing, Shipped and Delivered. Cancellations and returns are handled separately.");
 
         var newStatus = await _fulfillment.TransitionStoreOrderStatusAsync(storeOrderId, status, sellerid);
         return new OrderStatusResult { Id = storeOrderId.ToString(), Status = newStatus };

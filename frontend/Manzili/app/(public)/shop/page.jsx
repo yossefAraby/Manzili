@@ -6,8 +6,21 @@ import Pagination from "@/components/Pagination";
 import { MoveLeftIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts } from "@/lib/features/product/productSlice";
+import { fetchProducts as warmCatalog } from "@/lib/features/product/productSlice";
+import { fetchProducts as fetchProductsApi } from "@/lib/api/products";
 import { useTranslate } from '@/lib/i18n/LocaleContext'
+
+const PAGE_SIZE_OPTIONS = [12, 24, 48];
+const DEFAULT_PAGE_SIZE = 12;
+
+// Map the ShopFilters sort value onto the backend's sortBy/sortDir params.
+function sortParams(sortBy) {
+  switch (sortBy) {
+    case "price_asc": return { sortBy: "price", sortDir: "asc" };
+    case "price_desc": return { sortBy: "price", sortDir: "desc" };
+    default: return { sortBy: "created_at", sortDir: "desc" }; // latest
+  }
+}
 
 function ShopContent() {
   const t = useTranslate();
@@ -18,128 +31,92 @@ function ShopContent() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const products = useSelector((state) => state.product.list);
-
-  // Load the catalog from the API on mount. The thunk fails safe: on API error
-  // or an empty DB it leaves the existing local/dummy list in place.
+  // Keep the app-wide catalog warm once (home/cart/wishlist read state.product.list).
+  // This is a single background fetch — the shop grid itself paginates server-side below.
+  const catalogStatus = useSelector((state) => state.product.status);
   useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
+    if (catalogStatus === "idle") dispatch(warmCatalog());
+  }, [dispatch, catalogStatus]);
 
   // Seed category filter from the URL so links like /shop?category=Woodwork
-  // (from CategoriesMarquee) land on a pre-filtered grid. We keep this
-  // controllable from ShopFilters via a key reset whenever the param changes.
+  // (from CategoriesMarquee) land on a pre-filtered grid.
   const initialCategories = useMemo(
     () => (categoryParam ? [categoryParam] : []),
     [categoryParam],
   );
 
-  // Filter states
-  const [selectedCategories, setSelectedCategories] =
-    useState(initialCategories);
+  // Filter + paging state
+  const [selectedCategories, setSelectedCategories] = useState(initialCategories);
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   const [sortBy, setSortBy] = useState("latest");
   const [stockFilter, setStockFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 8;
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  // Server-paginated results for the current page only.
+  const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setSelectedCategories(initialCategories);
   }, [initialCategories]);
 
-  // Reset to page 1 whenever any filter/sort changes
+  // Reset to page 1 whenever a filter/sort/page-size changes (a new result set).
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategories, selectedPriceRange, sortBy, stockFilter]);
+  }, [search, selectedCategories, selectedPriceRange, sortBy, stockFilter, pageSize]);
 
-  // Apply filters
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    // Search filter
-    if (search) {
-      filtered = filtered.filter((product) =>
-        product.name.toLowerCase().includes(search.toLowerCase()),
-      );
-    }
-
-    // Category filter
-    if (selectedCategories.length > 0) {
-      const selectedLower = selectedCategories.map((c) => c.toLowerCase());
-      filtered = filtered.filter((product) =>
-        selectedLower.includes(product.category.toLowerCase()),
-      );
-    }
-
-    // Price range filter
-    if (selectedPriceRange) {
-      filtered = filtered.filter((product) => {
-        const price = product.price;
-        const { min, max } = selectedPriceRange;
-        if (max === Infinity) return price >= min;
-        return price >= min && price <= max;
-      });
-    }
-
-    // Availability filter
-    if (stockFilter === "inStock") {
-      filtered = filtered.filter((p) => {
-        if (p.variants && p.variants.length > 0)
-          return p.variants.some((v) => v.stock > 0);
-        return p.stock > 0;
-      });
-    } else if (stockFilter === "outOfStock") {
-      filtered = filtered.filter((p) => {
-        if (p.variants && p.variants.length > 0)
-          return p.variants.every((v) => v.stock === 0);
-        return p.stock === 0;
-      });
-    }
-
-    // Sort
-    switch (sortBy) {
-      case "price_asc":
-        filtered = [...filtered].sort((a, b) => a.price - b.price);
-        break;
-      case "price_desc":
-        filtered = [...filtered].sort((a, b) => b.price - a.price);
-        break;
-      default:
-        filtered = [...filtered].sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
-        );
-    }
-
-    return filtered;
-  }, [
-    products,
-    search,
-    selectedCategories,
-    selectedPriceRange,
-    sortBy,
-    stockFilter,
-  ]);
-
-  // Clamp currentPage when totalPages decreases (e.g. filtering reduces results)
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredProducts.length / ITEMS_PER_PAGE),
-  );
+  // Fetch the current page server-side. Debounced so dragging the price slider (or
+  // typing) doesn't fire a request per tick. Each page loads its own slice from the DB.
   useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages));
-  }, [totalPages]);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+    let cancelled = false;
+    setLoading(true);
+    const handle = setTimeout(async () => {
+      const { sortBy: apiSortBy, sortDir } = sortParams(sortBy);
+      const inStock =
+        stockFilter === "inStock" ? true : stockFilter === "outOfStock" ? false : undefined;
+      try {
+        const res = await fetchProductsApi({
+          page: currentPage,
+          limit: pageSize,
+          category: selectedCategories.length > 0 ? selectedCategories : undefined,
+          search: search || undefined,
+          minPrice: selectedPriceRange?.min,
+          maxPrice:
+            selectedPriceRange && Number.isFinite(selectedPriceRange.max)
+              ? selectedPriceRange.max
+              : undefined,
+          inStock,
+          sortBy: apiSortBy,
+          sortDir,
+        });
+        if (cancelled) return;
+        setProducts(res.items);
+        setTotal(res.total);
+      } catch {
+        if (cancelled) return;
+        setProducts([]);
+        setTotal(0);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [search, selectedCategories, selectedPriceRange, sortBy, stockFilter, currentPage, pageSize]);
 
-  const handleCategoryChange = (categories) => {
-    setSelectedCategories(categories);
-  };
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const handlePriceRangeChange = (range) => {
-    setSelectedPriceRange(range);
-  };
+  // Clamp the page if the result set shrank (e.g. a filter narrowed it).
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [totalPages, currentPage]);
+
+  const handleCategoryChange = (categories) => setSelectedCategories(categories);
+  const handlePriceRangeChange = (range) => setSelectedPriceRange(range);
 
   return (
     <div className="min-h-[70vh] mx-6">
@@ -173,8 +150,16 @@ function ShopContent() {
           {/* Products grid - left side */}
           <div className="lg:flex-1 lg:order-1">
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 xl:gap-8 mb-32">
-              {paginatedProducts.length > 0 ? (
-                paginatedProducts.map((product) => (
+              {loading ? (
+                // Lightweight skeletons sized to the page so the layout doesn't jump.
+                Array.from({ length: pageSize }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse rounded-xl bg-slate-100 aspect-[3/4]"
+                  />
+                ))
+              ) : products.length > 0 ? (
+                products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))
               ) : (
@@ -189,6 +174,9 @@ function ShopContent() {
               currentPage={currentPage}
               totalPages={totalPages}
               onChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
             />
           </div>
         </div>

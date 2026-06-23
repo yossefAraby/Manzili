@@ -187,6 +187,7 @@ const en = {
     prev: "← Prev",
     next: "Next →",
     page: "Page {current} of {total}",
+    perPage: "Per page",
   },
 
   orderSummary: {
@@ -775,6 +776,7 @@ const en = {
       estimatingPrice: "Estimating a fair price range...",
       priceEstimateReady: "Here's a suggested price range",
       priceEstimateNeedsItem: "Add an item name first to estimate a price",
+      priceEstimateNeedsFields: "Add the item name, category and description to estimate a price",
       priceEstimateFailed: "Price estimate failed: {message}",
       estimatedPrice: "Estimated:",
       priceBasedOn: "Based on {count} similar item(s) in the catalog",

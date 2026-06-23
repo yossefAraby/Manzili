@@ -265,11 +265,21 @@ function PrintableSlip({ order, storeName }) {
 }
 
 // ─── Per-order card ─────────────────────────────────────────────────────────────
+// The seller drives an order forward one step at a time. COD orders are NOT gated on payment —
+// the courier collects the cash on delivery, so the seller can confirm pickup and walk the order
+// to Delivered regardless of the "paid" flag. Each step maps to the status the backend accepts.
+const NEXT_STEP = {
+    ORDER_PLACED: { to: "PROCESSING", label: "Confirm & request pickup" },
+    PROCESSING: { to: "SHIPPED", label: "Mark as shipped" },
+    SHIPPED: { to: "DELIVERED", label: "Mark as delivered" },
+}
+
 function OrderCard({ order, index, onConfirm, confirming }) {
     const address = order.order?.address
     const itemCount = order.orderItems.reduce((n, it) => n + (it.quantity || 0), 0)
-    const isPlaced = order.status === "ORDER_PLACED"
-    const bostaDriven = order.status !== "PENDING_PAYMENT" && order.status !== "CANCELED" && !isPlaced
+    const nextStep = NEXT_STEP[order.status]
+    const isTerminal = order.status === "DELIVERED" || order.status === "CANCELED" || order.status === "RETURNED"
+    const awaitingPayment = order.status === "PENDING_PAYMENT"
 
     // Print only this order's slip: mark <html> + the chosen slip so the
     // print-only CSS reveals just that waybill, then restore after printing.
@@ -413,21 +423,29 @@ function OrderCard({ order, index, onConfirm, confirming }) {
                         </div>
                     </div>
 
-                    {/* Confirm & request pickup — the ONLY seller fulfilment action.
-                        After this, Bosta drives shipping/delivery automatically. */}
-                    {isPlaced ? (
+                    {/* Fulfilment action — one step at a time (Confirm → Shipped → Delivered).
+                        COD orders are NOT blocked by payment; the courier settles on delivery. */}
+                    {nextStep ? (
                         <button
                             type="button"
-                            onClick={() => onConfirm(order.id, "PROCESSING")}
+                            onClick={() => onConfirm(order.id, nextStep.to)}
                             disabled={confirming}
                             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#e67e22] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#d35400] disabled:opacity-60 disabled:cursor-not-allowed transition"
                         >
                             <TruckIcon size={16} />
-                            {confirming ? "Requesting…" : "Confirm & request pickup"}
+                            {confirming ? "Updating…" : nextStep.label}
                         </button>
-                    ) : bostaDriven ? (
+                    ) : awaitingPayment ? (
                         <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-3 py-2 text-center text-xs text-slate-400">
-                            Fulfilment is now driven by Bosta — status updates automatically.
+                            Awaiting the customer's online payment before fulfilment can start.
+                        </p>
+                    ) : isTerminal ? (
+                        <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-3 py-2 text-center text-xs text-slate-400">
+                            {order.status === "DELIVERED"
+                                ? "Delivered — this order is complete."
+                                : order.status === "RETURNED"
+                                    ? "This order was returned."
+                                    : "This order was canceled."}
                         </p>
                     ) : null}
 

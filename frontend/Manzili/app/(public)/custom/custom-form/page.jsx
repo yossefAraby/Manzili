@@ -1250,9 +1250,15 @@ function CustomOrderPageInner() {
   // We only require an item name to run — category/material/size sharpen it.
   const handlePriceEstimate = async () => {
     if (priceEstimating) return;
-    if (!formData.itemName.trim()) {
-      flashField("itemName");
-      toast(t('custom.form.priceEstimateNeedsItem'));
+    // Category + description are REQUIRED: the estimate is grounded in real prices of
+    // similar items in the SAME category, so without them it can't compare like-for-like.
+    const missing = [];
+    if (!formData.itemName.trim()) missing.push("itemName");
+    if (!formData.category) missing.push("category");
+    if (!formData.description.trim()) missing.push("description");
+    if (missing.length > 0) {
+      missing.forEach(flashField);
+      toast(t('custom.form.priceEstimateNeedsFields'));
       return;
     }
     setPriceEstimating(true);

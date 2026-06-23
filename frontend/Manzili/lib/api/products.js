@@ -165,11 +165,27 @@ export function adaptProductDetail(dto) {
  * Fetch a page of products. Returns { items, total, page, limit } where items are UI products.
  * Throws ApiError on failure.
  */
-export async function fetchProducts({ page = 1, limit = 20, category, sortBy, sortDir } = {}) {
+export async function fetchProducts({
+  page = 1,
+  limit = 20,
+  category,
+  search,
+  minPrice,
+  maxPrice,
+  inStock,
+  sortBy,
+  sortDir,
+} = {}) {
   const params = new URLSearchParams();
   params.set('page', String(page));
   params.set('limit', String(limit));
-  if (category) params.set('category', category);
+  // category may be a single name or a comma-separated list (the backend OR-matches).
+  if (category) params.set('category', Array.isArray(category) ? category.join(',') : category);
+  if (search) params.set('search', search);
+  if (minPrice != null && Number.isFinite(Number(minPrice))) params.set('minPrice', String(minPrice));
+  if (maxPrice != null && Number.isFinite(Number(maxPrice))) params.set('maxPrice', String(maxPrice));
+  if (inStock === true) params.set('inStock', 'true');
+  else if (inStock === false) params.set('inStock', 'false');
   if (sortBy) params.set('sortBy', sortBy);
   if (sortDir) params.set('sortDir', sortDir);
   const r = await apiGet(`/products?${params.toString()}`);

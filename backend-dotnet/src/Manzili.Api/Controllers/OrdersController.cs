@@ -4,9 +4,7 @@ using Manzili.Application.Common;
 using Manzili.Application.Orders;
 using Manzili.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Hosting;
 
 namespace Manzili.Api.Controllers;
 
@@ -18,14 +16,12 @@ public sealed class OrdersController : ApiController
     private readonly OrderService _orders;
     private readonly FulfillmentService _fulfillment;
     private readonly IValidator<CreateOrderRequest> _createValidator;
-    private readonly IWebHostEnvironment _env;
 
-    public OrdersController(OrderService orders, FulfillmentService fulfillment, IValidator<CreateOrderRequest> createValidator, IWebHostEnvironment env)
+    public OrdersController(OrderService orders, FulfillmentService fulfillment, IValidator<CreateOrderRequest> createValidator)
     {
         _orders = orders;
         _fulfillment = fulfillment;
         _createValidator = createValidator;
-        _env = env;
     }
 
     [HttpPost]
@@ -52,16 +48,15 @@ public sealed class OrdersController : ApiController
         return ApiOk(data);
     }
 
-    // POST /api/v1/orders/{storeOrderId}/simulate-advance — DEV-ONLY demo button. Advances the
-    // buyer's own store order one step (PROCESSING → SHIPPED → DELIVERED) through the same
-    // FulfillmentService path the Bosta webhook uses, so wallet release + notifications fire.
-    // Returns 404 outside Development so it can never be reached in production.
+    // POST /api/v1/orders/{storeOrderId}/simulate-advance — demo control. Advances the buyer's own
+    // store order one step (PROCESSING → SHIPPED → DELIVERED) through the same FulfillmentService
+    // path the Bosta webhook uses, so wallet release + notifications fire. This is the mechanism
+    // that lets a COD order (which is never "paid" online) be walked all the way to Delivered for
+    // the demo — settlement happens on delivery. Ownership is enforced in the service, so a buyer
+    // can only advance their own order.
     [HttpPost("{storeOrderId:int}/simulate-advance")]
     public async Task<IActionResult> SimulateAdvance(int storeOrderId)
     {
-        if (!_env.IsDevelopment())
-            throw new NotFoundException("Not found");
-
         var status = await _fulfillment.SimulateAdvanceStoreOrderAsync(RequirePersonId, storeOrderId);
         return ApiOk(new { id = storeOrderId.ToString(), status });
     }

@@ -1,9 +1,18 @@
 'use client'
 import { useTranslate } from '@/lib/i18n/LocaleContext'
 
-export default function Pagination({ currentPage, totalPages, onChange }) {
+export default function Pagination({
+    currentPage,
+    totalPages,
+    onChange,
+    pageSize,
+    onPageSizeChange,
+    pageSizeOptions = [12, 24, 48],
+}) {
     const t = useTranslate();
-    if (totalPages <= 1) return null
+    const showPageSize = typeof onPageSizeChange === 'function' && pageSize != null
+    // Nothing to page through AND no page-size control → render nothing.
+    if (totalPages <= 1 && !showPageSize) return null
 
     const pages = []
     const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4))
@@ -14,6 +23,32 @@ export default function Pagination({ currentPage, totalPages, onChange }) {
     const active = 'bg-slate-800 text-white border-slate-800'
     const inactive = 'border-slate-200 text-slate-600 hover:bg-slate-50'
     const disabled = 'border-slate-100 text-slate-300 cursor-not-allowed'
+
+    // Page-size selector — lets the shopper change how many items load per page,
+    // right at the navigator. Each change refetches just that page from the server.
+    const pageSizeControl = showPageSize ? (
+        <label className="flex items-center gap-2 text-xs text-slate-500">
+            {t('pagination.perPage')}
+            <select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+            >
+                {pageSizeOptions.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                ))}
+            </select>
+        </label>
+    ) : null
+
+    // When there's only a single page, just show the page-size selector (no page buttons).
+    if (totalPages <= 1) {
+        return (
+            <div className="flex items-center justify-center gap-1.5 mt-10 mb-8 flex-wrap">
+                {pageSizeControl}
+            </div>
+        )
+    }
 
     return (
         <div className="flex items-center justify-center gap-1.5 mt-10 mb-8 flex-wrap">

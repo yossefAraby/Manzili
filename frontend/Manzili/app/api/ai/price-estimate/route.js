@@ -18,6 +18,19 @@ import { groqChat } from "@/lib/ai/groq";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5080/api/v1";
 
+// This route runs SERVER-SIDE, so the catalog base MUST be absolute. In production
+// NEXT_PUBLIC_API_BASE_URL is the RELATIVE "/api/v1" (a same-origin proxy for the
+// browser) — a relative URL can't be fetched server-side. Resolve it against the
+// incoming request's origin so the call goes through the same /api/v1 proxy
+// (Cloudflare-tunnel-preferred → IP fallback). An already-absolute base (local dev,
+// e.g. http://localhost:5080/api/v1) is used as-is.
+function resolveCatalogBase(request) {
+  const base = API_BASE.replace(/\/$/, "");
+  if (/^https?:\/\//i.test(base)) return base;
+  const origin = new URL(request.url).origin;
+  return `${origin}${base.startsWith("/") ? base : `/${base}`}`;
+}
+
 // Resolve the selling price from a catalog DTO the same way the products adapter
 // does: the "offer" price only counts when it's a real discount (positive and
 // below the list price); otherwise the list price is what the item sells for.
@@ -47,11 +60,11 @@ function median(sorted) {
 
 // Fetch one catalog URL with a short timeout and return the parsed envelope, or
 // null on any error/timeout — a missing backend must never sink the estimate.
-async function fetchCatalog(path) {
+async function fetchCatalog(base, path) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${base}${path}`, {
       signal: controller.signal,
       headers: { Accept: "application/json" },
     });
@@ -64,45 +77,85 @@ async function fetchCatalog(path) {
   }
 }
 
-// Collect comparable prices from both the category listing and the name search,
-// deduping by product id so an item appearing in both isn't double-counted.
-async function gatherComparablePrices({ category, itemName }) {
-  const seen = new Map(); // id -> price
+// Collect comparable items from BOTH the same-category listing (the primary signal)
+// and the name search, deduping by product id. We keep each item's name + price (not
+// just the price) so we can (a) compute price stats and (b) surface the few items that
+// are textually closest to the requested piece — "really checking similar items".
+async function gatherComparables({ base, category, itemName }) {
+  const seen = new Map(); // id -> { name, price, fromCategory }
 
-  const absorb = (list) => {
+  const absorb = (list, fromCategory) => {
     if (!Array.isArray(list)) return;
     for (const dto of list) {
       const id = String(dto?.id ?? "");
       const price = priceFromDto(dto);
-      if (price > 0 && !seen.has(id)) seen.set(id, price);
+      const name = String(dto?.name ?? "");
+      if (!id || price <= 0) continue;
+      // Prefer the category match when an item shows up in both lists.
+      if (!seen.has(id)) seen.set(id, { name, price, fromCategory });
+      else if (fromCategory) seen.get(id).fromCategory = true;
     }
   };
 
   const tasks = [];
+  // Same-category listing is the main comparable source — pull a wide slice (cap 100).
   if (category) {
     tasks.push(
-      fetchCatalog(`/products?category=${encodeURIComponent(category)}&limit=50`).then(
-        (j) => absorb(j?.data?.productCards || j?.data?.ProductCards),
+      fetchCatalog(base, `/products?category=${encodeURIComponent(category)}&limit=100`).then(
+        (j) => absorb(j?.data?.productCards || j?.data?.ProductCards, true),
       ),
     );
   }
+  // Name search widens the net to similarly-named items in other categories too.
   if (itemName) {
     tasks.push(
-      fetchCatalog(`/search?q=${encodeURIComponent(itemName)}&limit=50`).then((j) =>
-        absorb(j?.data?.products),
+      fetchCatalog(base, `/search?q=${encodeURIComponent(itemName)}&limit=50`).then((j) =>
+        absorb(j?.data?.products, false),
       ),
     );
   }
   await Promise.all(tasks);
 
-  const prices = [...seen.values()].sort((a, b) => a - b);
-  if (prices.length === 0) return { count: 0, min: 0, median: 0, max: 0 };
-  return {
-    count: prices.length,
-    min: Math.round(prices[0]),
-    median: median(prices),
-    max: Math.round(prices[prices.length - 1]),
-  };
+  const items = [...seen.values()];
+  const prices = items.map((i) => i.price).sort((a, b) => a - b);
+  const stats =
+    prices.length === 0
+      ? { count: 0, min: 0, median: 0, max: 0, categoryCount: 0 }
+      : {
+          count: prices.length,
+          min: Math.round(prices[0]),
+          median: median(prices),
+          max: Math.round(prices[prices.length - 1]),
+          categoryCount: items.filter((i) => i.fromCategory).length,
+        };
+  return { items, stats };
+}
+
+// Tokenize a name into meaningful lowercase words (drop tiny stop-ish fragments).
+function tokenize(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9؀-ۿ\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3);
+}
+
+// Rank comparable items by token overlap with the requested item name/description and
+// return the closest few as concrete "similar item" examples for the model to anchor on.
+function pickSimilar(items, { itemName, description }, n = 5) {
+  const wanted = new Set([...tokenize(itemName), ...tokenize(description)]);
+  if (wanted.size === 0) return items.slice(0, n);
+  const scored = items.map((it) => {
+    const toks = tokenize(it.name);
+    let overlap = 0;
+    for (const w of toks) if (wanted.has(w)) overlap += 1;
+    // Category matches get a small boost so same-category items lead when names tie.
+    return { ...it, score: overlap + (it.fromCategory ? 0.5 : 0) };
+  });
+  return scored
+    .sort((a, b) => b.score - a.score || a.price - b.price)
+    .slice(0, n)
+    .filter((s) => s.score > 0 || s.fromCategory);
 }
 
 // Typical price band (EGP) for a HANDMADE, made-to-order piece in Egypt, per
@@ -145,14 +198,15 @@ function looksLarge(text) {
 const SYSTEM =
   "You are a pricing expert for MANZILI, an Egyptian marketplace for HANDMADE, made-to-order items, quoting in Egyptian Pounds (EGP), 2026. " +
   "Every item is hand-crafted by an artisan — it is NOT a cheap factory/mass-market product, so price it for skilled labour + materials + the hours of work + small-batch reality. " +
-  "You are given a TYPICAL handmade price band for the item's category in Egypt (your primary anchor) and, when available, REAL price stats from comparable catalog items. " +
-  "Choose a sensible range INSIDE or around the category band, then adjust UP for: premium/heavy materials (solid wood, leather, metal, gold/silver), large physical size, fine detail, and made-to-order/bespoke work (custom pieces cost more than ready-made). Bigger functional pieces (furniture, a desk, a wardrobe) sit near the TOP of the band, not the bottom. " +
+  "Your MOST IMPORTANT input is the list of REAL comparable items already selling in the SAME category on Manzili (with their actual prices). Anchor your range on those similar items first — they reflect what Egyptian buyers actually pay for this kind of handmade piece. " +
+  "Also use the TYPICAL handmade price band for the category as a secondary sanity check. " +
+  "Starting from the similar items' prices, adjust UP for: premium/heavy materials (solid wood, leather, metal, gold/silver), larger physical size, finer detail, and made-to-order/bespoke work (a custom one-off costs more than a ready-made equivalent — usually at or above the median of the comparables). Bigger functional pieces (furniture, a desk, a wardrobe) sit near the TOP of the range, not the bottom. " +
   "You quote the TOTAL for the whole order (quantity × per-unit, with a mild bulk discount for large quantities). " +
-  "Never produce an unrealistically cheap range for a handmade good (e.g. a wooden desk is never tens of EGP). When unsure, prefer the middle of the band and widen the range. " +
-  "Return ONLY compact JSON: {\"low\": <int EGP>, \"high\": <int EGP>, \"note\": \"<one short, specific sentence of reasoning>\"}. " +
+  "Never produce an unrealistically cheap range for a handmade good (e.g. a wooden desk is never tens of EGP). When the comparables are thin, lean on the category band and widen the range. " +
+  "Return ONLY compact JSON: {\"low\": <int EGP>, \"high\": <int EGP>, \"note\": \"<one short, specific sentence of reasoning that references the similar items or category>\"}. " +
   "low must be < high, both positive integers, no currency symbols, no markdown, no extra keys.";
 
-function buildUserPrompt({ details, stats, anchor, large }) {
+function buildUserPrompt({ details, stats, anchor, large, similar }) {
   const lines = [];
   lines.push(`Requested item: ${details.itemName || "(unspecified)"}`);
   lines.push(`Category: ${details.category || "(unspecified)"}`);
@@ -161,20 +215,28 @@ function buildUserPrompt({ details, stats, anchor, large }) {
   if (details.size) lines.push(`Size: ${typeof details.size === "string" ? details.size : JSON.stringify(details.size)}`);
   lines.push(`Quantity: ${details.quantity || 1}`);
   lines.push("");
-  lines.push(
-    `Typical handmade price band for this category in Egypt: ~${anchor[0]} to ${anchor[1]} EGP per piece. Treat this as your main reference.`,
-  );
-  if (large) {
-    lines.push("This looks like a LARGE functional piece — price it in the upper part of the band.");
+
+  // Concrete similar items lead the prompt — this is the "really check similar items" signal.
+  if (Array.isArray(similar) && similar.length > 0) {
+    lines.push("Similar items already on Manzili (name — selling price EGP), most relevant first:");
+    for (const s of similar) lines.push(`  - ${s.name || "item"} — ${Math.round(s.price)}`);
+    lines.push("");
   }
-  // Only trust catalog comparables when there are enough of them; one stray item
-  // is noise that would skew the estimate.
-  if (stats.count >= 3) {
+
+  // Aggregate stats over ALL comparables found (≥2 is enough to be informative here).
+  if (stats.count >= 2) {
     lines.push(
-      `Real comparable catalog prices (EGP) from ${stats.count} similar items: min ${stats.min}, median ${stats.median}, max ${stats.max}. A bespoke made-to-order version usually sits at or above the median.`,
+      `Across ${stats.count} comparable catalog items (${stats.categoryCount} in the same category): min ${stats.min}, median ${stats.median}, max ${stats.max} EGP. A bespoke made-to-order version usually sits at or above the median.`,
     );
   } else {
-    lines.push("No reliable catalog comparables — rely on the category band and the item's specifics.");
+    lines.push("Few/no catalog comparables were found — lean on the category band and the item's specifics.");
+  }
+
+  lines.push(
+    `Typical handmade price band for this category in Egypt: ~${anchor[0]} to ${anchor[1]} EGP per piece (secondary sanity check).`,
+  );
+  if (large) {
+    lines.push("This looks like a LARGE functional piece — price it in the upper part of the range.");
   }
   lines.push("");
   lines.push("Return the JSON object only.");
@@ -225,24 +287,36 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const details = {
-      itemName: body?.itemName || "",
-      category: body?.category || "",
-      description: body?.description || "",
+      itemName: (body?.itemName || "").trim(),
+      category: (body?.category || "").trim(),
+      description: (body?.description || "").trim(),
       material: body?.material || "",
       size: body?.size || "",
       quantity: body?.quantity || 1,
     };
 
-    // 1) Real catalog stats + a category price anchor + a large-piece hint.
-    const stats = await gatherComparablePrices({
+    // Category + description are REQUIRED so the estimate can compare against similar
+    // items in the same category (not guess blind). The form enforces this too.
+    if (!details.itemName || !details.category || !details.description) {
+      return NextResponse.json(
+        { error: "itemName, category and description are required to estimate a price" },
+        { status: 400 },
+      );
+    }
+
+    // 1) Real same-category comparables (+ name-search), the closest similar examples,
+    //    a category price anchor, and a large-piece hint.
+    const { items, stats } = await gatherComparables({
+      base: resolveCatalogBase(request),
       category: details.category,
       itemName: details.itemName,
     });
+    const similar = pickSimilar(items, details, 5);
     const anchor = anchorFor(details.category);
     const large = looksLarge(`${details.itemName} ${details.description}`);
 
-    // 2) AI range anchored on the category band (and real stats when reliable).
-    const userPrompt = buildUserPrompt({ details, stats, anchor, large });
+    // 2) AI range anchored on the real similar items first, then the category band.
+    const userPrompt = buildUserPrompt({ details, stats, anchor, large, similar });
     const tiers = [
       {
         name: "bluesminds",
@@ -308,12 +382,14 @@ export async function POST(request) {
     if (!estimate) throw lastErr || new Error("all price-estimate tiers failed");
     estimate = applyFloor(estimate, anchor, large);
 
-    const grounded = stats.count >= 3;
+    // Grounded once we have at least a couple of real comparables to anchor on.
+    const grounded = stats.count >= 2;
     return NextResponse.json({
       low: estimate.low,
       high: estimate.high,
       currency: "EGP",
       count: stats.count,
+      similarCount: similar.length,
       basis: grounded ? "catalog" : "ai-only",
       lowConfidence: !grounded,
       note: estimate.note || "",
