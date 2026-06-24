@@ -21,6 +21,7 @@ public sealed class UserService
         Id = p.Personid.ToString(),
         Name = FullName(p),
         Email = p.Email,
+        Image = p.ImageUrl,
         HasStore = hasStore,
         CreatedAt = p.CreatedAt?.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
     };
@@ -50,6 +51,11 @@ public sealed class UserService
         }
         if (!string.IsNullOrEmpty(req.Email))
             person.Email = req.Email;
+
+        // Persist the avatar so it survives a reload (was previously dropped, resetting to the
+        // initial-letter default on every refresh). null = unchanged; "" = clear the photo.
+        if (req.Image != null)
+            person.ImageUrl = string.IsNullOrWhiteSpace(req.Image) ? null : req.Image.Trim();
 
         await _db.SaveChangesAsync();
 
