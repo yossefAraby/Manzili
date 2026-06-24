@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import PageTitle from "@/components/PageTitle";
 import OrderItem from "@/components/OrderItem";
@@ -8,10 +9,13 @@ import ReportButton from "@/components/ReportButton";
 import { useTranslate } from '@/lib/i18n/LocaleContext'
 import { fetchOrders } from "@/lib/api/orders";
 import { confirmCheckout, confirmKashier } from "@/lib/api/checkout";
+import { clearCart } from "@/lib/features/cart/cartSlice";
 import { selectSession, selectAuthBootstrapped } from "@/lib/features/auth/authSlice";
 
 export default function Orders() {
   const t = useTranslate();
+  const dispatch = useDispatch();
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   // Gate the first fetch on the cookie-session having rehydrated, so /orders doesn't render
@@ -32,6 +36,9 @@ export default function Orders() {
   // is created before we render the list (works even without an inbound webhook).
   useEffect(() => {
     if (!bootstrapped) return undefined; // wait for the session cookie to rehydrate first
+    // Orders are per-user — a guest has none. Once the session has settled and there's still no
+    // user, send them to login (the backend already scopes orders to the authenticated buyer).
+    if (!session?.userId) { router.replace('/login?next=/orders'); return undefined; }
     let cancelled = false;
     (async () => {
       try {
@@ -44,8 +51,15 @@ export default function Orders() {
             // Pass the RAW query string so the backend can verify over the original param order.
             const result = await confirmKashier(window.location.search).catch(() => null);
             if (!cancelled) {
-              if (result?.status === "paid") toast.success("Payment confirmed — your order is being prepared.");
-              else toast.error("Payment failed or canceled — the order was not completed.");
+              if (result?.status === "paid") {
+                dispatch(clearCart()); // order paid → empty the cart immediately (backend clears the server copy)
+                toast.success("Payment confirmed — your order is being prepared.");
+              } else if (result) {
+                toast.error("Payment failed or canceled — the order was not completed.");
+              } else {
+                // confirm threw (not an explicit unpaid) — never hard-fail an approved payment.
+                toast("We're confirming your payment — it'll appear here shortly.");
+              }
             }
             const url = new URL(window.location.href);
             ["session_id", "checkout", "gateway", "paymentStatus", "merchantOrderId", "orderId",
@@ -54,8 +68,12 @@ export default function Orders() {
           } else if (sessionId) {
             const result = await confirmCheckout(sessionId).catch(() => null);
             if (!cancelled) {
-              if (result?.status === "paid") toast.success("Payment confirmed — your order is being prepared.");
-              else if (result) toast("Finishing up your order…");
+              if (result?.status === "paid") {
+                dispatch(clearCart()); // order paid → empty the cart immediately (backend clears the server copy)
+                toast.success("Payment confirmed — your order is being prepared.");
+              } else if (result) {
+                toast("Finishing up your order…");
+              }
             }
             // Clean the query params so a refresh doesn't re-confirm.
             const url = new URL(window.location.href);

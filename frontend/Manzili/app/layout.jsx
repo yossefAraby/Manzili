@@ -12,6 +12,13 @@ export const metadata = {
     description: "Manzili, where real craft finds its home.",
 };
 
+// Without this, Android browsers default to a ~980px layout viewport, so Tailwind's
+// responsive breakpoints mis-fire on phones (e.g. the seller top navbar stays visible).
+export const viewport = {
+    width: "device-width",
+    initialScale: 1,
+};
+
 export default function RootLayout({ children }) {
     return (
         <html lang="en" dir="ltr" suppressHydrationWarning>

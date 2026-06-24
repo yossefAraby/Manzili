@@ -440,6 +440,21 @@ const ar = {
     registerSuccess: "تم إنشاء الحساب بنجاح",
     passwordsDontMatch: "كلمتا المرور غير متطابقتين",
     passwordTooShort: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+    passwordHint: "6 أحرف على الأقل",
+    err: {
+      nameRequired: "الاسم مطلوب",
+      nameShort: "يجب أن يكون الاسم حرفين على الأقل",
+      nameLong: "يجب ألا يتجاوز الاسم 100 حرف",
+      emailRequired: "البريد الإلكتروني مطلوب",
+      emailInvalid: "أدخل بريدًا إلكترونيًا صحيحًا (مثال: you@example.com)",
+      emailLong: "البريد الإلكتروني طويل جدًا (100 حرف كحد أقصى)",
+      passwordRequired: "كلمة المرور مطلوبة",
+      passwordShort: "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+      passwordLong: "يجب ألا تتجاوز كلمة المرور 50 حرفًا",
+      confirmRequired: "يرجى إعادة إدخال كلمة المرور",
+      passwordsDontMatch: "كلمتا المرور غير متطابقتين",
+      termsRequired: "يرجى قبول الشروط والأحكام للمتابعة",
+    },
   },
 
   profile: {

@@ -193,7 +193,10 @@ public sealed class AuthService
     public async Task<LoginResult> LoginAdminAsync(AdminLoginRequest req)
     {
         var username = (req.Username ?? "").Trim();
-        var person = await _db.People.FirstOrDefaultAsync(p => p.Email == username)
+        // Match the admin username case-insensitively (Person.Email stores it). Admins type a
+        // handle like "smak", not an email, so casing/whitespace shouldn't read as wrong credentials.
+        var lowered = username.ToLowerInvariant();
+        var person = await _db.People.FirstOrDefaultAsync(p => p.Email != null && p.Email.ToLower() == lowered)
             ?? throw new UnauthorizedException("Invalid admin credentials");
 
         if (!_passwords.Verify(req.Password ?? "", person.Password))

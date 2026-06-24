@@ -54,6 +54,11 @@ public sealed class CouponService
             Storeid = sellerid,
             MaxUsers = body.MaxUsers ?? 100,
             ExpiredDate = ParseDate(body.ExpiryDate),
+            // Without Status=true the coupon is created but ValidateCouponAsync's `Status == true`
+            // filter rejects it — so seller coupons could never be applied. (Admin create already
+            // sets this; matching it here is the core seller-coupon fix.)
+            Status = true,
+            UsedCount = 0,
             // coupons.created_at is `timestamp without time zone` → use Unspecified Kind.
             CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
         };

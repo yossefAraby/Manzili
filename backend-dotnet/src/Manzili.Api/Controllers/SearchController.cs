@@ -53,7 +53,8 @@ public sealed class SearchController : ApiController
     [HttpGet("recommend")]
     public async Task<IActionResult> Recommend(
         [FromQuery] string? seeds,
-        [FromQuery] int? limit)
+        [FromQuery] int? limit,
+        [FromQuery] bool? taste)
     {
         var count = Math.Clamp(limit ?? 4, 1, 12);
         var seedIds = (seeds ?? "")
@@ -63,7 +64,10 @@ public sealed class SearchController : ApiController
             .Distinct()
             .Take(50)
             .ToList();
-        var products = await _semantic.RecommendByVectorAsync(seedIds, count, CurrentPersonId);
+        // taste=1 (the home "For You" rail) blends in the shopper's recently-viewed products so the
+        // rail is personal even with no explicit seeds. The product-page rail omits it to stay
+        // anchored on the viewed product ("more like this").
+        var products = await _semantic.RecommendByVectorAsync(seedIds, count, CurrentPersonId, includeTasteSeeds: taste == true);
         return ApiOk(new { productCards = products });
     }
 }

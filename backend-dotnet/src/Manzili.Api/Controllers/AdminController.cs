@@ -147,6 +147,9 @@ public sealed class AdminController : ApiController
     [HttpGet("coupons")]
     public async Task<IActionResult> ListCoupons()
     {
+        // Gate the list on the coupons section like create/delete, so a moderator's access is
+        // consistent across the whole page (no "can see but 403 on every action" mismatch).
+        await _admin.EnsureSectionAsync(RequirePersonId, "coupons");
         var coupons = await _admin.ListCouponsAsync();
         return ApiOk(new { coupons });
     }

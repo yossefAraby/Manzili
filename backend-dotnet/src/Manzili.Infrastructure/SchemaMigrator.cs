@@ -53,5 +53,19 @@ public static class SchemaMigrator
             "ALTER TABLE manzili.promotion ADD COLUMN IF NOT EXISTS payment_method varchar(20) NOT NULL DEFAULT 'WALLET';");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE manzili.promotion ADD COLUMN IF NOT EXISTS payment_ref text;");
+
+        // Recently-viewed products: a lightweight per-buyer browsing signal that feeds the
+        // "Recommended for you" / "For You" taste centroid, so a shopper who only browses (never
+        // orders/carts/wishlists) still gets personalized recs instead of the generic popular list.
+        // One row per (person, product); a re-view just refreshes viewed_at (most-recent-first).
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS manzili.product_views (
+                personid   int NOT NULL,
+                productid  int NOT NULL,
+                viewed_at  timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (personid, productid)
+            );");
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_product_views_person ON manzili.product_views (personid, viewed_at DESC);");
     }
 }

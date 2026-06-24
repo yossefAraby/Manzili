@@ -30,6 +30,7 @@ public sealed class FulfillmentService
     private readonly WalletService _wallet;
     private readonly NotificationService _notify;
     private readonly BostaClient _bosta;
+    private readonly CartService _cart;
     private readonly BostaOptions _bostaOptions;
     private readonly FeesOptions _fees;
     private readonly ILogger<FulfillmentService> _log;
@@ -39,6 +40,7 @@ public sealed class FulfillmentService
         WalletService wallet,
         NotificationService notify,
         BostaClient bosta,
+        CartService cart,
         IOptions<AppOptions> options,
         ILogger<FulfillmentService> log)
     {
@@ -46,6 +48,7 @@ public sealed class FulfillmentService
         _wallet = wallet;
         _notify = notify;
         _bosta = bosta;
+        _cart = cart;
         _bostaOptions = options.Value.Bosta;
         _fees = options.Value.Fees;
         _log = log;
@@ -68,13 +71,31 @@ public sealed class FulfillmentService
             order.Paymentstatus = 1;
             if (!string.IsNullOrWhiteSpace(paymentIntentId)) order.StripePaymentIntentId = paymentIntentId;
             await _db.SaveChangesAsync();
+
+            // Empty the buyer's account cart now that their order is paid — ONLY on the first paid
+            // transition, so a double-confirm (redirect + webhook) never wipes a cart the buyer has
+            // since refilled. (Never clear on order CREATION — the buyer may abandon the payment page.)
+            if (order.Enduserid is int euid)
+            {
+                var personId = await _db.Endusers.AsNoTracking()
+                    .Where(e => e.Enduserid == euid).Select(e => (int?)e.Personid).FirstOrDefaultAsync();
+                if (personId is int pid)
+                {
+                    try { await _cart.ClearCartAsync(pid); }
+                    catch (Exception ex) { _log.LogWarning(ex, "Cart clear after payment failed for order {OrderId}", orderId); }
+                }
+            }
         }
 
         await _db.StoreOrders
             .Where(so => so.Orderid == orderId && !so.IsPaid)
             .ExecuteUpdateAsync(s => s.SetProperty(so => so.IsPaid, true));
 
-        await FulfillPaidOrderAsync(orderId);
+        // Fulfillment (Bosta booking) must NEVER make an APPROVED payment look failed. The order is
+        // already marked paid above; if shipment creation hiccups, log and move on — the synthetic
+        // fallback covers the demo and the webhook/retry can still book a real shipment later.
+        try { await FulfillPaidOrderAsync(orderId); }
+        catch (Exception ex) { _log.LogError(ex, "Fulfillment after payment failed for order {OrderId} (payment still recorded)", orderId); }
     }
 
     /// <summary>Creates shipments for every not-yet-fulfilled store order in a paid order.</summary>
@@ -98,9 +119,11 @@ public sealed class FulfillmentService
     }
 
     /// <summary>
-    /// Creates a Bosta delivery + Shipment row for one store order, credits the seller wallet,
-    /// and notifies both parties. Bosta is REQUIRED — if it isn't connected or the API call fails,
-    /// this throws (no synthetic/fake tracking): a shipment only ever reflects a real Bosta delivery.
+    /// Creates a shipment + Shipment row for one store order, credits the seller wallet, and notifies
+    /// both parties. Attempts a REAL Bosta delivery first; if Bosta isn't connected or the API call
+    /// fails (expired key, missing zone/district on the address, outage), it falls back to a SYNTHETIC
+    /// shipment (DEMO- tracking) so the order lifecycle — paid checkout, COD, and the buyer
+    /// simulate-delivery demo — always completes. Real tracking is used whenever Bosta succeeds.
     /// </summary>
     public async Task<Shipment> CreateShipmentForStoreOrderAsync(Order order, StoreOrder so)
     {
@@ -113,30 +136,32 @@ public sealed class FulfillmentService
         var codAmount = isCod ? so.Total : 0m;
         var size = ResolveSize(so);
 
-        // Bosta must be connected. No fake fallback — if shipping can't be booked, error loudly.
-        if (!_bosta.IsConfigured)
-            throw new AppException(
-                "Bosta is not connected — the shipment cannot be created.", 503, "BOSTA_NOT_CONNECTED");
-
-        string? trackingNumber;
-        string? bostaDeliveryId;
-        try
+        // Try a real Bosta delivery; on any failure fall back to a synthetic shipment so the order
+        // can still move through its lifecycle (rather than dead-ending checkout / the demo button).
+        string? trackingNumber = null;
+        string? bostaDeliveryId = null;
+        if (_bosta.IsConfigured)
         {
-            var payload = await BuildDeliveryPayloadAsync(order, so, codAmount, size);
-            var resp = await _bosta.CreateDeliveryAsync(payload);
-            (trackingNumber, bostaDeliveryId) = ReadDeliveryIds(resp);
-        }
-        catch (AppException) { throw; }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "Bosta create-delivery failed for store order {StoreOrderId}", so.StoreOrderid);
-            throw new AppException(
-                "Bosta create-delivery failed — the shipment was not created.", 502, "BOSTA_DELIVERY_FAILED");
+            try
+            {
+                var payload = await BuildDeliveryPayloadAsync(order, so, codAmount, size);
+                var resp = await _bosta.CreateDeliveryAsync(payload);
+                (trackingNumber, bostaDeliveryId) = ReadDeliveryIds(resp);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex,
+                    "Bosta create-delivery failed for store order {StoreOrderId} — using a synthetic shipment",
+                    so.StoreOrderid);
+            }
         }
 
-        if (string.IsNullOrWhiteSpace(trackingNumber))
-            throw new AppException(
-                "Bosta did not return a tracking number — the shipment was not created.", 502, "BOSTA_NO_TRACKING");
+        var synthetic = string.IsNullOrWhiteSpace(trackingNumber);
+        if (synthetic)
+        {
+            trackingNumber = $"DEMO-{so.StoreOrderid}";
+            bostaDeliveryId = null;
+        }
 
         var shipment = new Shipment
         {
@@ -154,7 +179,9 @@ public sealed class FulfillmentService
         await _db.SaveChangesAsync();
         so.Shipment = shipment;
 
-        AddEvent(shipment, "CREATED", "Order confirmed — Bosta pickup requested from the seller.");
+        AddEvent(shipment, "CREATED", synthetic
+            ? "Order confirmed — your shipment is being prepared."
+            : "Order confirmed — Bosta pickup requested from the seller.");
         so.Status = "PROCESSING";
         so.ShippingTotal = shippingCost;
         so.UpdatedAt = DateTime.UtcNow;

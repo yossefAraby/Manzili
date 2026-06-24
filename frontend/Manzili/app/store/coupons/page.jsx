@@ -105,11 +105,11 @@ export default function StoreCoupons() {
         setNewCoupon({ ...newCoupon, [name]: value })
     }
 
-    const deleteCoupon = async (code) => {
+    const deleteCoupon = async (id) => {
         if (!storeId) return
-        // Delete via the .NET backend. Throws bubble to the toast.promise wrapper.
-        await apiDeleteCoupon(code)
-        setCoupons((prev) => prev.filter((coupon) => coupon.code !== code))
+        // Delete via the .NET backend (by numeric coupon id). Throws bubble to the toast.promise wrapper.
+        await apiDeleteCoupon(id)
+        setCoupons((prev) => prev.filter((coupon) => coupon.id !== id))
         toast.success("Coupon deleted")
     }
 
@@ -206,7 +206,7 @@ export default function StoreCoupons() {
                                     <td className="py-3 px-4 text-slate-800">{coupon.maxUsers}</td>
                                     <td className="py-3 px-4 text-slate-800">{coupon.usedCount || 0}</td>
                                     <td className="py-3 px-4 text-slate-800">
-                                        <DeleteIcon onClick={() => toast.promise(deleteCoupon(coupon.code), { loading: "Deleting coupon..." })} className="w-5 h-5 text-red-500 hover:text-red-800 cursor-pointer" />
+                                        <DeleteIcon onClick={() => toast.promise(deleteCoupon(coupon.id), { loading: "Deleting coupon..." })} className="w-5 h-5 text-red-500 hover:text-red-800 cursor-pointer" />
                                     </td>
                                 </tr>
                             ))}

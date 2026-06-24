@@ -30,6 +30,7 @@ public sealed class EmbeddingService
 
     public bool IsConfigured => _opts.IsConfigured;
     public int Dimensions => _opts.Dimensions;
+    public double MaxDistance => _opts.MaxDistance;
 
     /// <summary>Embed texts. <paramref name="isQuery"/> selects the retrieval.query vs retrieval.passage
     /// task (queries and documents are embedded asymmetrically). Jina → Cohere fallback; null on total failure.</summary>

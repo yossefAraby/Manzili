@@ -445,6 +445,21 @@ const en = {
     registerSuccess: "Account created successfully",
     passwordsDontMatch: "Passwords don't match",
     passwordTooShort: "Password must be at least 6 characters",
+    passwordHint: "At least 6 characters",
+    err: {
+      nameRequired: "Name is required",
+      nameShort: "Name must be at least 2 characters",
+      nameLong: "Name must be at most 100 characters",
+      emailRequired: "Email is required",
+      emailInvalid: "Enter a valid email (e.g. you@example.com)",
+      emailLong: "Email is too long (max 100 characters)",
+      passwordRequired: "Password is required",
+      passwordShort: "Password must be at least 6 characters",
+      passwordLong: "Password must be at most 50 characters",
+      confirmRequired: "Please re-enter your password",
+      passwordsDontMatch: "Passwords don't match",
+      termsRequired: "Please accept the Terms & Conditions to continue",
+    },
   },
 
   profile: {

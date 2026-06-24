@@ -116,24 +116,36 @@ public sealed class SemanticSearchService
         var take = pg.Take;
         var skip = pg.Skip;
 
-        // Rank by cosine distance in the DB. Only embedded, enabled products from active+approved
-        // sellers. <=> is pgvector's cosine-distance operator (smaller = closer).
+        // Rank by cosine distance in the DB (<=> = pgvector cosine distance, smaller = closer), then
+        // make the result COUNT relevance-dynamic with a RELATIVE gap: keep only products within
+        // `relGap` of the BEST match. This adapts to the query — a precise query (best ~0.4) returns a
+        // tight set, a vague-but-valid one (best ~0.8) still returns its near-neighbours — instead of a
+        // fixed absolute cutoff, which was simultaneously too strict for vague queries and too loose for
+        // precise ones. `maxDistance` is just a hard ceiling: if even the closest product is beyond it,
+        // the query matches nothing. Computed entirely in SQL so it's one round-trip.
+        var maxDistance = _embeddings.MaxDistance;
+        const double relGap = 0.25;
         var ids = await _db.Database.SqlQuery<int>(
-            $@"SELECT p.productid AS ""Value""
-               FROM manzili.products p
-               JOIN manzili.seller s ON s.sellerid = p.sellerid
-               WHERE p.embedding IS NOT NULL
-                 AND p.is_disabled IS NOT TRUE
-                 AND s.is_active = TRUE
-                 AND s.store_status = {approved}
-               ORDER BY p.embedding <=> {literal}::vector
-               LIMIT {take} OFFSET {skip}").ToListAsync(ct);
+            $@"WITH ranked AS (
+                   SELECT p.productid AS pid, (p.embedding <=> {literal}::vector) AS dist
+                   FROM manzili.products p
+                   JOIN manzili.seller s ON s.sellerid = p.sellerid
+                   WHERE p.embedding IS NOT NULL
+                     AND p.is_disabled IS NOT TRUE
+                     AND s.is_active = TRUE
+                     AND s.store_status = {approved}
+                     AND (p.embedding <=> {literal}::vector) < {maxDistance}
+                   ORDER BY dist
+                   LIMIT {take} OFFSET {skip}
+               )
+               SELECT pid AS ""Value"" FROM ranked
+               WHERE dist <= (SELECT MIN(dist) FROM ranked) + {relGap}
+               ORDER BY dist").ToListAsync(ct);
 
+        // Nothing within the hard ceiling → honest empty (not lexical noise) so the UI/blurb can say
+        // "no close matches" rather than padding with unrelated keyword hits.
         if (ids.Count == 0)
-        {
-            var (lex, lexTotal) = await _lexical.SearchAsync(q, pg, userId);
-            return (lex, lexTotal, "lexical-empty");
-        }
+            return (new List<SearchProductDto>(), 0, "semantic-empty");
 
         var products = await _db.Products.AsNoTracking()
             .Include(p => p.Category)
@@ -162,9 +174,21 @@ public sealed class SemanticSearchService
     /// seed) or popular (no/zero useful seeds). Returns shop-card DTOs.
     /// </summary>
     public async Task<IReadOnlyList<ProductCardDto>> RecommendByVectorAsync(
-        IReadOnlyList<int> seedIds, int count, int? userId, CancellationToken ct = default)
+        IReadOnlyList<int> seedIds, int count, int? userId, bool includeTasteSeeds = false, CancellationToken ct = default)
     {
-        var seeds = (seedIds ?? Array.Empty<int>()).Where(id => id > 0).Distinct().ToArray();
+        var seedList = (seedIds ?? Array.Empty<int>()).Where(id => id > 0).Distinct().ToList();
+
+        // Blend in the shopper's recently-viewed products as extra taste seeds (home rail only).
+        // This is the core "feels dumb" fix: a browse-only shopper passes no seeds, so without this
+        // the centroid query is skipped and everyone gets the same popular list.
+        if (includeTasteSeeds && userId is int pid)
+        {
+            var viewed = await _products.GetRecentlyViewedIdsAsync(pid, 10);
+            foreach (var v in viewed)
+                if (v > 0 && !seedList.Contains(v)) seedList.Add(v);
+        }
+
+        var seeds = seedList.ToArray();
 
         if (_embeddings.IsConfigured && seeds.Length > 0)
         {

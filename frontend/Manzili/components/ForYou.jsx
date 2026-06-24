@@ -28,7 +28,9 @@ const ForYou = () => {
     let alive = true
     setLoading(true)
     const seeds = seedsKey ? seedsKey.split(',') : []
-    fetchRecommended(seeds, COUNT)
+    // taste:true → backend also seeds from the shopper's recently-viewed products, so the rail is
+    // personalized even when they haven't ordered/carted/wishlisted anything yet.
+    fetchRecommended(seeds, COUNT, true)
       .then((list) => { if (alive) setItems(list) })
       .catch(() => { if (alive) setItems([]) })
       .finally(() => { if (alive) setLoading(false) })

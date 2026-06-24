@@ -33,6 +33,8 @@ public sealed class StoreRefDto
     public string Name { get; set; } = "";
     /// <summary>Store handle — powers the "View store" → /shop/{username} link on product pages.</summary>
     public string? Username { get; set; }
+    /// <summary>Store logo URL (Seller.LogoUrl); null when the seller hasn't uploaded one — the UI shows a letter avatar then.</summary>
+    public string? Logo { get; set; }
     /// <summary>Seller's city (from their default pickup warehouse, falling back to free-text address).
     /// Lets the recommender favour items physically NEAR the buyer. Null when the seller has no address.</summary>
     public string? City { get; set; }

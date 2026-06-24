@@ -27,6 +27,11 @@ export default function StoreProvider({ children }) {
   useEffect(() => {
     const store = storeRef.current
     let cancelled = false
+    // True while the cold-load session rehydration is in flight. A post-payment redirect lands on a
+    // fresh page whose access cookie may be expired; the refresh + concurrent calls can momentarily
+    // 401. We must NOT drop the session for a transient race during this window (the bug where the
+    // navbar shows logged-out until a manual refresh).
+    let bootstrapping = true
 
     // Load the catalog ONCE on app start so every page that reads state.product.list
     // (home Latest/Best-selling, cart, wishlist) has products immediately — no longer
@@ -39,23 +44,28 @@ export default function StoreProvider({ children }) {
     // returns null for guests (and never clears the cart). reconcile re-derives the
     // seller role in case a store was approved/disabled since the cookie was minted.
     ;(async () => {
-      const session = await fetchSession()
-      if (cancelled) return
-      // Guests have no account cart to load — mark the cart hydrated so the cart page
-      // shows its empty state (not a perpetual loader).
-      if (!session) { store.dispatch(markBootstrapped()); store.dispatch(markCartHydrated()); return }
-      store.dispatch(setSession(session))
-      // Load the saved address book platform-wide (not just on the profile page),
-      // so an address added at checkout is still there everywhere after a reload.
-      store.dispatch(hydrateAddresses())
-      // Load the account cart (authoritative for a logged-in buyer) so it follows the
-      // account across devices and survives logout — the cart is no longer browser-local.
-      // Always mark hydrated when done (even on empty/error) so the page stops loading.
-      fetchServerCart()
-        .then((c) => { if (cancelled) return; if (c) store.dispatch(hydrateCart(c)); else store.dispatch(markCartHydrated()) })
-        .catch(() => { if (!cancelled) store.dispatch(markCartHydrated()) })
-      const next = await reconcileSession(session)
-      if (!cancelled && next && next !== session) store.dispatch(setSession(next))
+      try {
+        const session = await fetchSession()
+        if (cancelled) return
+        // Guests have no account cart to load — mark the cart hydrated so the cart page
+        // shows its empty state (not a perpetual loader).
+        if (!session) { store.dispatch(markBootstrapped()); store.dispatch(markCartHydrated()); return }
+        store.dispatch(setSession(session))
+        // Load the saved address book platform-wide (not just on the profile page),
+        // so an address added at checkout is still there everywhere after a reload.
+        store.dispatch(hydrateAddresses())
+        // Load the account cart (authoritative for a logged-in buyer) so it follows the
+        // account across devices and survives logout — the cart is no longer browser-local.
+        // Awaited inside the bootstrap window so a transient refresh race during it can't trip
+        // the auth-expired guard below. Always mark hydrated when done (even on empty/error).
+        await fetchServerCart()
+          .then((c) => { if (cancelled) return; if (c) store.dispatch(hydrateCart(c)); else store.dispatch(markCartHydrated()) })
+          .catch(() => { if (!cancelled) store.dispatch(markCartHydrated()) })
+        const next = await reconcileSession(session)
+        if (!cancelled && next && next !== session) store.dispatch(setSession(next))
+      } finally {
+        bootstrapping = false
+      }
     })()
 
     let prevCart = store.getState().cart.cartItems
@@ -81,7 +91,13 @@ export default function StoreProvider({ children }) {
     // When an authenticated call hits an unrecoverable 401 (cookie refresh failed),
     // the API client fires this event; drop the in-memory session + cart so the UI
     // reflects logged-out immediately.
-    const onAuthExpired = () => { store.dispatch(clearSession()); store.dispatch(clearCart()) }
+    const onAuthExpired = () => {
+      // Ignore a 401 fired DURING bootstrap — a cold post-payment load can momentarily race the
+      // token refresh; clearing here would strand the navbar logged-out until a manual refresh.
+      // Real expiries after bootstrap still drop the session.
+      if (bootstrapping) return
+      store.dispatch(clearSession()); store.dispatch(clearCart())
+    }
     window.addEventListener('manzili:auth-expired', onAuthExpired)
 
     return () => {

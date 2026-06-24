@@ -11,7 +11,7 @@
 //   me         -> { data: { user: {...} } }
 // We map the user onto the app's session shape { userId, name, email, storeId, role }.
 
-import { apiGet, apiPost } from './client';
+import { apiGet, apiPost, refreshSession } from './client';
 
 /** Map a backend user object to the app's session shape. */
 function toSession(user) {
@@ -69,9 +69,11 @@ export async function fetchSession() {
     return toSession(r.data.user);
   } catch (e) {
     if (e?.status !== 401) return null;
-    // Access cookie may have expired — try a cookie refresh once, then re-probe.
+    // Access cookie may have expired — refresh once (via the shared singleton, so we don't race a
+    // second concurrent /auth/refresh and rotate the single-use token out from under it), then re-probe.
     try {
-      await apiPost('/auth/refresh', null, { auth: false });
+      const ok = await refreshSession();
+      if (!ok) return null;
       const r2 = await apiGet('/auth/me', { auth: false });
       return toSession(r2.data.user);
     } catch {

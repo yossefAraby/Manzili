@@ -8,7 +8,7 @@
 // Fail-safe note: these functions THROW on network/API error (ApiError). Callers
 // (the slice thunk / pages) are expected to catch and fall back to local/dummy data.
 
-import { apiGet } from './client';
+import { apiGet, apiPost } from './client';
 
 /** Map an API image (either a string or { src, width, height }) to a URL string. */
 function imageUrl(img) {
@@ -57,7 +57,7 @@ export function adaptProductCard(dto) {
     mrp: Number(dto.price) || 0,
     category: categoryToString(dto.category),
     storeId: dto.store?.id ? String(dto.store.id) : (dto.storeId ? String(dto.storeId) : null),
-    store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null } : null,
+    store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null, logo: dto.store.logo || null } : null,
     inStock: dto.inStock !== false,
     stock: dto.inStock === false ? 0 : (dto.stock ?? 10),
     rating: [], // card DTO only carries an aggregate number; UI tolerates an empty array
@@ -78,7 +78,7 @@ export function adaptSearchProduct(dto) {
     mrp: Number(dto.price) || 0,
     category: categoryToString(dto.category),
     storeId: dto.store?.id ? String(dto.store.id) : null,
-    store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null } : null,
+    store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null, logo: dto.store.logo || null } : null,
     inStock: dto.inStock !== false,
     stock: dto.inStock === false ? 0 : (dto.stock ?? 10),
     rating: [],
@@ -152,7 +152,7 @@ export function adaptProductDetail(dto) {
     category: categoryToString(dto.category),
     size: Array.isArray(dto.size) ? dto.size : [],
     storeId: dto.store?.id ? String(dto.store.id) : null,
-    store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null } : null,
+    store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null, logo: dto.store.logo || null } : null,
     inStock: dto.inStock !== false,
     stock: dto.stock != null ? Number(dto.stock) : (dto.inStock === false ? 0 : 10),
     rating: reviewItems,
@@ -254,17 +254,53 @@ export async function searchProductsSemantic(q, limit = 6) {
  * tokens). Product page → seed with the viewed product; home "For You" → seed with the shopper's
  * engaged products. Empty seeds → the backend returns popular items. Fail-safe to empty.
  */
-export async function fetchRecommended(seedIds, limit = 4) {
+export async function fetchRecommended(seedIds, limit = 4, taste = false) {
   const seeds = (Array.isArray(seedIds) ? seedIds : [seedIds])
     .map((s) => String(s ?? '').trim())
     .filter(Boolean);
   try {
     const params = new URLSearchParams({ seeds: seeds.join(','), limit: String(limit) });
+    // taste=1 → the backend blends in the shopper's recently-viewed products (home "For You" rail),
+    // so it's personalized even when there are no explicit seeds.
+    if (taste) params.set('taste', 'true'); // ASP.NET bool binding accepts true/false, not 1/0
     const r = await apiGet(`/search/recommend?${params.toString()}`);
     const cards = r?.data?.productCards || r?.data?.ProductCards || [];
     return cards.map(adaptProductCard).filter(Boolean);
   } catch {
     return [];
+  }
+}
+
+/**
+ * POST /products/{id}/view — record a recently-viewed taste signal for recommendations.
+ * No-op for guests (backend gates on the session); fire-and-forget so it never blocks the page.
+ */
+export async function recordProductView(id) {
+  try { await apiPost(`/products/${encodeURIComponent(id)}/view`); } catch { /* non-fatal taste signal */ }
+}
+
+/**
+ * POST /api/ai/search-intro → a one-line LLM blurb over the semantic search results. This hits the
+ * Next.js AI route (NOT the .NET backend), so it uses a plain fetch. Returns '' on any failure so
+ * the search dropdown always renders its products even when the blurb can't be generated.
+ */
+export async function fetchSearchIntro(query, products) {
+  try {
+    const res = await fetch('/api/ai/search-intro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        products: (Array.isArray(products) ? products : [])
+          .slice(0, 6)
+          .map((p) => ({ name: p?.name, category: p?.category })),
+      }),
+    });
+    if (!res.ok) return '';
+    const j = await res.json();
+    return typeof j?.intro === 'string' ? j.intro : '';
+  } catch {
+    return '';
   }
 }
 

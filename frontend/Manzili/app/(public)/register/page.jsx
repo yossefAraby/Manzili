@@ -25,6 +25,8 @@ function RegisterInner() {
     const [confirm, setConfirm] = useState('')
     const [acceptTerms, setAcceptTerms] = useState(false)
     const [submitting, setSubmitting] = useState(false)
+    const [touched, setTouched] = useState({})
+    const [attempted, setAttempted] = useState(false)
 
     const t = useTranslate()
 
@@ -36,22 +38,45 @@ function RegisterInner() {
             ? nextParam
             : '/'
 
+    // Mirror the backend RegisterRequestValidator EXACTLY (AuthValidators.cs):
+    //   name 2–100, valid email ≤100, password 6–50. Plus confirm-match + terms (client-only).
+    // Validating here means the generic backend "Validation failed" 400 is never the first thing
+    // the user sees — they get a clear per-field reason and a disabled button until it's all good.
+    const nameTrim = name.trim()
+    const emailTrim = email.trim()
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)
+    const errors = {
+        name: !nameTrim ? t('register.err.nameRequired')
+            : nameTrim.length < 2 ? t('register.err.nameShort')
+            : nameTrim.length > 100 ? t('register.err.nameLong') : '',
+        email: !emailTrim ? t('register.err.emailRequired')
+            : !emailOk ? t('register.err.emailInvalid')
+            : emailTrim.length > 100 ? t('register.err.emailLong') : '',
+        password: !password ? t('register.err.passwordRequired')
+            : password.length < 6 ? t('register.err.passwordShort')
+            : password.length > 50 ? t('register.err.passwordLong') : '',
+        confirm: !confirm ? t('register.err.confirmRequired')
+            : confirm !== password ? t('register.err.passwordsDontMatch') : '',
+        terms: !acceptTerms ? t('register.err.termsRequired') : '',
+    }
+    const isValid = !errors.name && !errors.email && !errors.password && !errors.confirm && !errors.terms
+    // Show a field's error only once the user has touched it (or tried to submit) — no red on first paint.
+    const showErr = (field) => (touched[field] || attempted) && errors[field]
+    const markTouched = (field) => setTouched((prev) => ({ ...prev, [field]: true }))
+    const inputClass = (field) =>
+        `w-full border rounded-full px-6 py-3.5 outline-none focus:ring-2 bg-[#faf8f5] text-slate-700 ${
+            showErr(field) ? 'border-red-400 focus:ring-red-300' : 'border-[#d6a87c] focus:ring-[#e67e22]'
+        }`
+
     const onRegister = async (e) => {
         e.preventDefault()
         if (submitting) return
-        if (password !== confirm) {
-            alert(t('register.passwordsDontMatch'))
-            return
-        }
-        if (!acceptTerms) {
-            alert('Please accept the Terms & Conditions to continue')
-            return
-        }
+        if (!isValid) { setAttempted(true); return } // reveal all field errors; button is also disabled
         setSubmitting(true)
         try {
             const session = await apiRegister({
-                name: name.trim(),
-                email: email.trim().toLowerCase(),
+                name: nameTrim,
+                email: emailTrim.toLowerCase(),
                 password,
             })
             dispatch(setSession(session))
@@ -76,47 +101,60 @@ function RegisterInner() {
 
                 <h2 className="text-2xl font-bold text-slate-800 mb-8 font-sans">{t('register.title')}</h2>
 
-                <form className="w-full flex flex-col gap-4" onSubmit={onRegister}>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder={t('register.name')}
-                        required
-                        className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
-                    />
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder={t('register.email')}
-                        required
-                        className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
-                    />
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder={t('register.password')}
-                        required
-                        className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
-                    />
-                    <input
-                        type="password"
-                        value={confirm}
-                        onChange={(e) => setConfirm(e.target.value)}
-                        placeholder={t('register.confirmPassword')}
-                        required
-                        className="w-full border border-[#d6a87c] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-[#e67e22] bg-[#faf8f5] text-slate-700"
-                    />
+                <form className="w-full flex flex-col gap-4" onSubmit={onRegister} noValidate>
+                    <div>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            onBlur={() => markTouched('name')}
+                            placeholder={t('register.name')}
+                            className={inputClass('name')}
+                        />
+                        {showErr('name') && <p className="text-xs text-red-500 px-3 mt-1">{errors.name}</p>}
+                    </div>
+                    <div>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            onBlur={() => markTouched('email')}
+                            placeholder={t('register.email')}
+                            className={inputClass('email')}
+                        />
+                        {showErr('email') && <p className="text-xs text-red-500 px-3 mt-1">{errors.email}</p>}
+                    </div>
+                    <div>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onBlur={() => markTouched('password')}
+                            placeholder={t('register.password')}
+                            className={inputClass('password')}
+                        />
+                        {showErr('password')
+                            ? <p className="text-xs text-red-500 px-3 mt-1">{errors.password}</p>
+                            : <p className="text-xs text-slate-400 px-3 mt-1">{t('register.passwordHint')}</p>}
+                    </div>
+                    <div>
+                        <input
+                            type="password"
+                            value={confirm}
+                            onChange={(e) => setConfirm(e.target.value)}
+                            onBlur={() => markTouched('confirm')}
+                            placeholder={t('register.confirmPassword')}
+                            className={inputClass('confirm')}
+                        />
+                        {showErr('confirm') && <p className="text-xs text-red-500 px-3 mt-1">{errors.confirm}</p>}
+                    </div>
 
                     <label className="flex items-start gap-2 text-sm text-slate-600 px-1">
                         <input
                             type="checkbox"
                             checked={acceptTerms}
-                            onChange={(e) => setAcceptTerms(e.target.checked)}
+                            onChange={(e) => { setAcceptTerms(e.target.checked); markTouched('terms') }}
                             className="accent-[#e67e22] mt-0.5"
-                            required
                         />
                         <span>
                             I agree to Manzili&apos;s{' '}
@@ -126,6 +164,7 @@ function RegisterInner() {
                             .
                         </span>
                     </label>
+                    {showErr('terms') && <p className="text-xs text-red-500 px-1 -mt-2">{errors.terms}</p>}
 
                     <p className="text-xs text-slate-500 px-1 -mt-1">
                         Are you an artisan? You can apply to open a store any time from{' '}
@@ -137,9 +176,14 @@ function RegisterInner() {
 
                     <button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-[#e67e22] to-[#d35400] text-white font-semibold rounded-full py-3.5 mt-2 shadow-md text-lg uppercase"
+                        disabled={!isValid || submitting}
+                        className={`w-full font-semibold rounded-full py-3.5 mt-2 shadow-md text-lg uppercase text-white transition ${
+                            !isValid || submitting
+                                ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                                : 'bg-gradient-to-r from-[#e67e22] to-[#d35400]'
+                        }`}
                     >
-                        {t('register.registerBtn')}
+                        {submitting ? t('common.loading') : t('register.registerBtn')}
                     </button>
                 </form>
 

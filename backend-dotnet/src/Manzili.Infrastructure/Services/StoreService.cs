@@ -11,11 +11,13 @@ public sealed class StoreService
 {
     private readonly ManziliDbContext _db;
     private readonly ProductService _products;
+    private readonly EmbeddingService _embeddings;
 
-    public StoreService(ManziliDbContext db, ProductService products)
+    public StoreService(ManziliDbContext db, ProductService products, EmbeddingService embeddings)
     {
         _db = db;
         _products = products;
+        _embeddings = embeddings;
     }
 
     public async Task<StoreDetailDto> GetStoreByIdAsync(string storeId)
@@ -62,27 +64,95 @@ public sealed class StoreService
     public async Task<IReadOnlyList<StoreSearchItemDto>> SearchStoresAsync(string? q, int limit = 20)
     {
         var query = (q ?? "").Trim().ToLower();
-        var sellers = _db.Sellers.AsNoTracking()
-            .Where(s => s.IsActive == true && s.StoreStatus == StatusMaps.StoreStatus.Approved);
+        limit = Math.Clamp(limit, 1, 50);
 
-        if (query.Length > 0)
-            sellers = sellers.Where(s =>
+        var approved = StatusMaps.StoreStatus.Approved;
+        var baseQ = _db.Sellers.AsNoTracking()
+            .Where(s => s.IsActive == true && s.StoreStatus == approved);
+
+        // Empty query → just list active approved stores.
+        if (query.Length == 0)
+            return await baseQ.OrderBy(s => s.Storename).Take(limit).Select(MapItem).ToListAsync();
+
+        // 1) SEMANTIC: stores that OWN products matching the query's MEANING (reuses the product
+        //    pgvector embeddings — stores themselves aren't embedded). "candles", "cozy desk piece",
+        //    etc. surface the artisans who actually make such things. Empty when embeddings are off.
+        var semanticIds = await SemanticSellerIdsAsync(query, limit);
+
+        // 2) LEXICAL (broadened): match store name / @username / description, OR a store that owns a
+        //    product whose name or category contains the query. This is why "store not found" used to
+        //    fire — the old search only matched name/username, missing what the store actually sells.
+        var lexicalIds = await baseQ
+            .Where(s =>
                 (s.Storename != null && s.Storename.ToLower().Contains(query)) ||
-                (s.Username != null && s.Username.ToLower().Contains(query)));
-
-        return await sellers
+                (s.Username != null && s.Username.ToLower().Contains(query)) ||
+                (s.StoreDescription != null && s.StoreDescription.ToLower().Contains(query)) ||
+                _db.Products.Any(p => p.Sellerid == s.Sellerid && p.IsDisabled != true &&
+                    (p.Productname.ToLower().Contains(query) ||
+                     (p.Category != null && p.Category.CategoryName.ToLower().Contains(query)))))
             .OrderBy(s => s.Storename)
-            .Take(Math.Clamp(limit, 1, 50))
-            .Select(s => new StoreSearchItemDto
-            {
-                Id = s.Sellerid.ToString(),
-                Name = s.Storename ?? "",
-                Username = s.Username,
-                Description = s.StoreDescription ?? "",
-                Logo = s.LogoUrl,
-            })
+            .Take(limit)
+            .Select(s => s.Sellerid)
             .ToListAsync();
+
+        // 3) Merge: semantic matches first (best meaning first), then lexical not already included.
+        var orderedIds = new List<int>();
+        var seen = new HashSet<int>();
+        foreach (var id in semanticIds) if (seen.Add(id)) orderedIds.Add(id);
+        foreach (var id in lexicalIds) if (seen.Add(id)) orderedIds.Add(id);
+        orderedIds = orderedIds.Take(limit).ToList();
+        if (orderedIds.Count == 0) return Array.Empty<StoreSearchItemDto>();
+
+        // Load the matched sellers (re-checking active+approved) and return them in the merged order.
+        var sellers = await _db.Sellers.AsNoTracking()
+            .Where(s => orderedIds.Contains(s.Sellerid) && s.IsActive == true && s.StoreStatus == approved)
+            .ToListAsync();
+        var map = sellers.ToDictionary(s => s.Sellerid);
+        return orderedIds.Where(map.ContainsKey).Select(id => MapItemFor(map[id])).ToList();
     }
+
+    /// <summary>Seller ids whose products are the closest semantic matches to the query (best-first),
+    /// reusing the product embeddings. Empty when embeddings aren't configured / the query embed fails.</summary>
+    private async Task<IReadOnlyList<int>> SemanticSellerIdsAsync(string query, int limit)
+    {
+        if (!_embeddings.IsConfigured) return Array.Empty<int>();
+        var qvec = await _embeddings.EmbedOneAsync(query, isQuery: true);
+        if (qvec is null) return Array.Empty<int>();
+
+        var literal = EmbeddingService.ToPgVector(qvec);
+        var approved = StatusMaps.StoreStatus.Approved;
+        var maxDistance = _embeddings.MaxDistance;
+        return await _db.Database.SqlQuery<int>(
+            $@"SELECT s.sellerid AS ""Value""
+               FROM manzili.products p
+               JOIN manzili.seller s ON s.sellerid = p.sellerid
+               WHERE p.embedding IS NOT NULL AND p.is_disabled IS NOT TRUE
+                 AND s.is_active = TRUE AND s.store_status = {approved}
+                 AND (p.embedding <=> {literal}::vector) < {maxDistance}
+               GROUP BY s.sellerid
+               ORDER BY MIN(p.embedding <=> {literal}::vector)
+               LIMIT {limit}").ToListAsync();
+    }
+
+    // EF projection (for IQueryable) + in-memory mapper (for loaded entities) — same shape.
+    private static readonly System.Linq.Expressions.Expression<Func<Seller, StoreSearchItemDto>> MapItem =
+        s => new StoreSearchItemDto
+        {
+            Id = s.Sellerid.ToString(),
+            Name = s.Storename ?? "",
+            Username = s.Username,
+            Description = s.StoreDescription ?? "",
+            Logo = s.LogoUrl,
+        };
+
+    private static StoreSearchItemDto MapItemFor(Seller s) => new()
+    {
+        Id = s.Sellerid.ToString(),
+        Name = s.Storename ?? "",
+        Username = s.Username,
+        Description = s.StoreDescription ?? "",
+        Logo = s.LogoUrl,
+    };
 
     private async Task<StoreDetailDto> BuildStoreDetailAsync(Seller seller)
     {

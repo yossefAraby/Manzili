@@ -17,6 +17,7 @@
 // The API client returns the FULL envelope `{ success, data, ...meta }`.
 
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from './client';
+import { adaptCoupon } from './couponShared';
 
 // ─── small helpers ───────────────────────────────────────────────────────────
 const arr = (v) => (Array.isArray(v) ? v : []);
@@ -284,25 +285,9 @@ function adaptStoreOrder(o) {
   };
 }
 
-// ─── Coupon adapter (UI Coupon shape) ──────────────────────────────────────────
-// UI shape: { code, description, discount, scope, storeId, productIds:[],
-//   expiresAt, maxUsers, usedCount, createdBy, createdAt }
-function adaptCoupon(c) {
-  if (!c || typeof c !== 'object') return null;
-  return {
-    code: str(c.code).toUpperCase(),
-    description: str(c.description),
-    discount: num(c.discount, 0),
-    scope: str(c.scope, 'STORE'),
-    storeId: c.storeId != null ? str(c.storeId) : null,
-    productIds: arr(c.productIds).map(str),
-    expiresAt: c.expiresAt || c.expiry || null,
-    maxUsers: num(c.maxUsers, 0),
-    usedCount: num(c.usedCount, 0),
-    createdBy: str(c.createdBy, 'STORE'),
-    createdAt: c.createdAt || new Date().toISOString(),
-  };
-}
+// ─── Coupon adapter ─────────────────────────────────────────────────────────────
+// Shared with the admin dashboard — see lib/api/couponShared.js (imported above).
+// It now carries `id` (needed to delete by id) and `active`.
 
 // ─── Wallet adapter (UI wallet page shape) ─────────────────────────────────────
 // UI reads wallet.{ availableBalance, pendingBalance, currency } and a flat
@@ -422,19 +407,31 @@ export async function fetchCoupons() {
   return list.map(adaptCoupon).filter(Boolean);
 }
 
+// POST /seller/coupons (plural) — maps the UI coupon shape onto the backend
+// CreateCouponRequest keys (discount, expiryDate, productIds).
 export async function createCoupon(payload) {
-  const r = await apiPost('/seller/coupon', payload);
+  const r = await apiPost('/seller/coupons', {
+    code: payload?.code,
+    description: payload?.description,
+    discount: Number(payload?.discount) || 0,
+    scope: payload?.scope || 'STORE',
+    maxUsers: payload?.maxUsers != null && payload?.maxUsers !== '' ? Number(payload.maxUsers) : null,
+    expiryDate: payload?.expiresAt || null,
+    productIds: Array.isArray(payload?.productIds) ? payload.productIds.map(String) : [],
+  });
   return adaptCoupon(r?.data) || adaptCoupon(payload);
 }
 
-export async function deleteCoupon(code) {
-  // Backend exposes a singular `/seller/coupon` route; delete by code.
-  await apiDelete(`/seller/coupon/${encodeURIComponent(code)}`);
-  return { code: str(code).toUpperCase() };
+// DELETE /seller/coupons/{id} — the backend deletes by numeric coupon id, not code.
+export async function deleteCoupon(id) {
+  await apiDelete(`/seller/coupons/${encodeURIComponent(id)}`);
+  return { id: str(id) };
 }
 
+// POST /coupons/validate { code } — buyer-accessible (the seller validate route is
+// seller-role-locked, but checkout runs as the buyer). Used by OrderSummary.
 export async function validateCoupon(code) {
-  const r = await apiGet(`/seller/coupon?code=${encodeURIComponent(code)}`);
+  const r = await apiPost('/coupons/validate', { code });
   return adaptCoupon(r?.data);
 }
 

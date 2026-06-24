@@ -19,14 +19,26 @@ public sealed class CreateCustomRequestRequest
     public IReadOnlyList<string>? Images { get; set; }
     public string? VoiceMemoUrl { get; set; }
     public string? StoreId { get; set; }
+    public IReadOnlyList<CustomColorInput>? Colors { get; set; }
 }
 
-/// <summary>Body for PUT /custom/requests/{id}. All optional (partial update).</summary>
+/// <summary>Body for PUT /custom/requests/{id}. All optional — a null field means "leave unchanged".
+/// The edit form re-submits the full request (including its existing images/voice memo), so every
+/// field the buyer can edit must be here, mirroring CreateCustomRequestRequest.</summary>
 public sealed class UpdateCustomRequestRequest
 {
     public string? ItemName { get; set; }
     public string? Description { get; set; }
     public string? Visibility { get; set; }            // "open" | "private"
+    public string? Category { get; set; }
+    public int? Quantity { get; set; }
+    public CustomSizeInput? Size { get; set; }
+    public string? Material { get; set; }
+    public string? DeliveryDate { get; set; }          // ISO date string
+    public IReadOnlyList<string>? Images { get; set; }
+    public string? VoiceMemoUrl { get; set; }
+    public string? StoreId { get; set; }
+    public IReadOnlyList<CustomColorInput>? Colors { get; set; }
 }
 
 public sealed class CustomSizeInput
@@ -34,6 +46,13 @@ public sealed class CustomSizeInput
     public double? Length { get; set; }
     public double? Width { get; set; }
     public double? Height { get; set; }
+}
+
+/// <summary>A requested colour: a hex swatch + an optional human description ("warm terracotta").</summary>
+public sealed class CustomColorInput
+{
+    public string? Hex { get; set; }
+    public string? Description { get; set; }
 }
 
 /// <summary>Body for POST /custom/offers/{id}/messages.</summary>
@@ -76,6 +95,12 @@ public sealed class CustomSizeDto
     [JsonPropertyName("height")] public double? Height { get; set; }
 }
 
+public sealed class CustomColorDto
+{
+    [JsonPropertyName("hex")] public string Hex { get; set; } = "";
+    [JsonPropertyName("description")] public string? Description { get; set; }
+}
+
 public sealed class CustomUserDto
 {
     [JsonPropertyName("id")] public string Id { get; set; } = "";
@@ -109,6 +134,7 @@ public sealed class CustomRequestDetailDto
     [JsonPropertyName("description")] public string Description { get; set; } = "";
     [JsonPropertyName("category")] public string Category { get; set; } = "";
     [JsonPropertyName("images")] public IReadOnlyList<string> Images { get; set; } = [];
+    [JsonPropertyName("colors")] public IReadOnlyList<CustomColorDto> Colors { get; set; } = [];
     [JsonPropertyName("voiceMemo")] public string? VoiceMemo { get; set; }
     [JsonPropertyName("quantity")] public int Quantity { get; set; }
     [JsonPropertyName("material")] public string? Material { get; set; }

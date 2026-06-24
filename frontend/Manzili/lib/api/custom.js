@@ -201,7 +201,9 @@ export function adaptRequestDetail(dto) {
     size,
     sizeMode: 'dimensions',
     packageSize: null,
-    colors: [],
+    colors: Array.isArray(pick(dto, 'colors', null))
+      ? pick(dto, 'colors', []).map((c) => ({ hex: pick(c, 'hex', '') || '', description: pick(c, 'description', '') || '' }))
+      : [],
     deliveryDate: pick(dto, 'deliveryDate', '') || '',
     visibility: pick(dto, 'visibility', 'open') || 'open',
     store: store ? { id: asString(pick(store, 'id', '')), name: pick(store, 'name', '') || '' } : null,
@@ -387,17 +389,39 @@ export async function createRequest(payload) {
     images: Array.isArray(payload?.images) ? payload.images : [],
     voiceMemoUrl: payload?.voiceMemoUrl || null,
     storeId: payload?.storeId || null,
+    colors: Array.isArray(payload?.colors)
+      ? payload.colors.filter((c) => c && (c.hex || c.description)).map((c) => ({ hex: c.hex || '', description: c.description || '' }))
+      : [],
   };
   const r = await apiPost('/custom/requests', body);
   return adaptRequestDetail(r?.data ?? null);
 }
 
-/** PUT /custom/requests/{id} → adapted detail. Rethrows on failure. */
+/**
+ * PUT /custom/requests/{id} → adapted detail. Rethrows on failure.
+ * Sends the FULL request body (same shape as createRequest) so an edit persists every
+ * field, not just name/description/visibility. The edit form re-loads the existing images
+ * + voice memo before submit, so they're re-sent here and preserved. Omitting a field
+ * (undefined) tells the backend to leave it unchanged.
+ */
 export async function updateRequest(id, payload) {
+  const num = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
+  const rawSize = payload?.size || {};
   const body = {
     itemName: payload?.itemName,
     description: payload?.description,
+    category: payload?.category,
     visibility: payload?.visibility,
+    quantity: payload?.quantity,
+    size: { length: num(rawSize.length), width: num(rawSize.width), height: num(rawSize.height) },
+    material: payload?.material,
+    deliveryDate: payload?.deliveryDate || null,
+    images: Array.isArray(payload?.images) ? payload.images : undefined,
+    voiceMemoUrl: payload?.voiceMemoUrl ?? undefined,
+    storeId: payload?.storeId ?? undefined,
+    colors: Array.isArray(payload?.colors)
+      ? payload.colors.filter((c) => c && (c.hex || c.description)).map((c) => ({ hex: c.hex || '', description: c.description || '' }))
+      : undefined,
   };
   const r = await apiPut(`/custom/requests/${encodeURIComponent(id)}`, body);
   return adaptRequestDetail(r?.data ?? null);

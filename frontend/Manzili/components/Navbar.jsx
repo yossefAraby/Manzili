@@ -11,7 +11,7 @@ import { setAddressList } from "@/lib/features/address/addressSlice";
 import { clearCart } from "@/lib/features/cart/cartSlice";
 import { hydrateWishlist, clearWishlist } from "@/lib/features/wishlist/wishlistSlice";
 import { apiLogout } from "@/lib/api/auth";
-import { searchProductsSemantic } from "@/lib/api/products";
+import { searchProductsSemantic, fetchSearchIntro } from "@/lib/api/products";
 import { getCurrencySymbol } from "@/lib/currency";
 import NotificationBell from "./NotificationBell";
 import { useLocale, useTranslate } from "@/lib/i18n/LocaleContext";
@@ -32,6 +32,9 @@ const Navbar = () => {
   const [aiResults, setAiResults] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPersona, setAiPersona] = useState("");
+  // One-line LLM blurb introducing the AI search results (generated client-side from the result
+  // names via /api/ai/search-intro). Empty when there are no semantic results or no AI provider.
+  const [aiIntro, setAiIntro] = useState("");
   const aiBoxRef = useRef(null);
   const currency = getCurrencySymbol();
 
@@ -142,21 +145,35 @@ const Navbar = () => {
   useEffect(() => {
     if (!aiOpen) {
       setAiResults([]);
+      setAiIntro("");
       setAiLoading(false);
       return undefined;
     }
     const q = search.trim();
     if (q.length < 5) {
       setAiResults([]);
+      setAiIntro("");
       setAiLoading(false);
       return undefined;
     }
     let alive = true;
     setAiLoading(true);
+    setAiIntro("");
     const handle = setTimeout(() => {
       searchProductsSemantic(q, 6)
-        .then(({ items }) => { if (alive) setAiResults(items); })
-        .catch(() => { if (alive) setAiResults([]); })
+        .then(({ items, mode }) => {
+          if (!alive) return;
+          setAiResults(items);
+          // Generate a warm one-line intro ONLY over genuinely-semantic results (skip the lexical
+          // fallback / empty so we never claim AI when it isn't). The blurb streams in after the
+          // product rows — it never blocks them.
+          if (items.length > 0 && mode === "semantic") {
+            fetchSearchIntro(q, items).then((intro) => { if (alive) setAiIntro(intro); });
+          } else {
+            setAiIntro("");
+          }
+        })
+        .catch(() => { if (alive) { setAiResults([]); setAiIntro(""); } })
         .finally(() => { if (alive) setAiLoading(false); });
     }, 800);
     return () => { alive = false; clearTimeout(handle); };
@@ -277,6 +294,13 @@ const Navbar = () => {
                     <Sparkles size={12} />
                     {t('searchAi.poweredBy')}
                   </div>
+
+                  {/* AI one-line intro over the results (streams in after the rows; hidden while empty). */}
+                  {!aiLoading && aiIntro && (
+                    <p className="text-[12px] leading-snug text-slate-600 px-1 pb-2 mb-2 border-b border-slate-100">
+                      {aiIntro}
+                    </p>
+                  )}
 
                   {aiLoading ? (
                     <div className="flex items-center gap-2 text-sm text-slate-500 px-1 py-3">

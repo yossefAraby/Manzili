@@ -1,7 +1,7 @@
 "use client";
 
 import { addToCart, makeCartKey } from "@/lib/features/cart/cartSlice";
-import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
+import { toggleWishlistRemote } from "@/lib/features/wishlist/wishlistSlice";
 import { selectAuthBootstrapped } from "@/lib/features/auth/authSlice";
 import toast from "react-hot-toast";
 import {
@@ -326,7 +326,7 @@ const ProductDetails = ({ product }) => {
                 : t('productDetails.viewCart')}
           </button>
           <button
-            onClick={() => dispatch(toggleWishlist({ productId }))}
+            onClick={() => dispatch(toggleWishlistRemote(productId))}
             className="border border-slate-300 text-slate-700 px-6 py-3 text-sm font-medium rounded hover:bg-slate-50 transition"
           >
             {inWishlist ? t('productDetails.wishlisted') : t('productDetails.wishlist')}

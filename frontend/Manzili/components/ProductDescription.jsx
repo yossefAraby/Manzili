@@ -34,8 +34,19 @@ const ProductDescription = ({ product }) => {
         return () => { cancelled = true; };
     }, [product.id]);
 
-    // Merge API ratings (newest first) with any ratings shipped on the product.
-    const allRatings = [...(apiRatings || []), ...(Array.isArray(product.rating) ? product.rating : [])];
+    // Merge API ratings with any ratings shipped on the product detail, DE-DUPED by id. Both
+    // sources are the same DB table and use the same stable id ({enduser}_{product}), so without
+    // this the buyer's own review renders twice (once from each source).
+    const allRatings = (() => {
+        const merged = [...(apiRatings || []), ...(Array.isArray(product.rating) ? product.rating : [])];
+        const seen = new Set();
+        return merged.filter((r) => {
+            const k = r?.id || `${r?.user?.name}|${r?.createdAt}|${r?.review}`;
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+        });
+    })();
 
     const material = String(product.material || '').trim()
     const sizeLabel = SHIPPING_SIZE_LABELS[product.shippingSize] || ''
@@ -83,7 +94,7 @@ const ProductDescription = ({ product }) => {
             {selectedTab === "Reviews" && (
                 <div className="flex flex-col gap-3 mt-14">
                     {allRatings.length > 0 ? allRatings.map((item, index) => (
-                        <div key={index} className="flex gap-5 mb-10">
+                        <div key={item.id || index} className="flex gap-5 mb-10">
                             {item.user?.image && <Image src={item.user.image} alt="" className="size-10 rounded-full" width={100} height={100} />}
                             <div>
                                 <div className="flex items-center" >

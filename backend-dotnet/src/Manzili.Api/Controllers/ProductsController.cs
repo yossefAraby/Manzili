@@ -64,6 +64,15 @@ public sealed class ProductsController : ApiController
         return ApiOk(data);
     }
 
+    // POST /api/v1/products/{id}/view  (optionalAuth) — records a recently-viewed taste signal for
+    // recommendations. No-op for guests; the product page fires this fire-and-forget on load.
+    [HttpPost("{id:int}/view")]
+    public async Task<IActionResult> RecordView(int id)
+    {
+        await _products.RecordViewAsync(CurrentPersonId, id);
+        return ApiOk(new { recorded = CurrentPersonId != null });
+    }
+
     private IActionResult PagedResponse(PagedProducts<ProductCardDto> result) =>
         ApiOk(
             new { ProductCards = result.Items },

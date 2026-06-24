@@ -1614,7 +1614,16 @@ function CustomOrderPageInner() {
         saved = await apiUpdateRequest(editId, {
           itemName: formData.itemName.trim(),
           description: formData.description.trim(),
+          category: formData.category,
           visibility: formData.visibility,
+          quantity: formData.quantity,
+          size: formData.size,
+          material: formData.material || "",
+          deliveryDate: formData.deliveryDate || null,
+          images: imageDataUrls,
+          voiceMemoUrl: voiceMemoDataUrl,
+          storeId: selectedStore?.id ?? null,
+          colors,
         });
       } else {
         saved = await apiCreateRequest({
@@ -1629,6 +1638,7 @@ function CustomOrderPageInner() {
           images: imageDataUrls,
           voiceMemoUrl: voiceMemoDataUrl,
           storeId: selectedStore?.id ?? null,
+          colors,
         });
       }
 

@@ -138,7 +138,10 @@ const OrderSummary = ({ totalPrice, items }) => {
                 paymentMethod: 'COD',
                 coupon: couponForOrder,
             });
-            clearServerCart();
+            // AWAIT the server-cart clear before navigating — router.push tears down this page and
+            // would otherwise cancel the in-flight DELETE /cart, leaving the server cart un-emptied
+            // (the "COD order didn't go through" symptom).
+            await clearServerCart();
             dispatch(clearCart());
             router.push('/orders');
             return { toastMessage: t('orderSummary.orderPlaced') };

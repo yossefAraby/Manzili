@@ -183,6 +183,13 @@ public sealed class EmbeddingsOptions
     public string? CohereApiKey { get; set; }
     public string CohereModel { get; set; } = "embed-v4.0";
 
+    /// <summary>Hard ceiling on cosine distance (pgvector &lt;=&gt;, range [0,2]) for "describe-it"
+    /// search: if even the CLOSEST product is beyond this, the query matches nothing. The result
+    /// count is otherwise driven by a relative gap to the best match (see SemanticSearchService), so
+    /// this only needs to be generous enough to admit valid-but-vague queries. Tunable via
+    /// Manzili__Embeddings__MaxDistance without a code change.</summary>
+    public double MaxDistance { get; set; } = 1.1;
+
     public bool IsConfigured => Enabled
         && (!string.IsNullOrWhiteSpace(JinaApiKey) || !string.IsNullOrWhiteSpace(CohereApiKey));
 }

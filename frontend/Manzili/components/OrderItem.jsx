@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, StoreIcon, MapPin, TruckIcon } from "lucide-react";
 import { useSelector } from "react-redux";
+import toast from "react-hot-toast";
 import Rating from "./Rating";
 import { useState } from "react";
 import RatingModal from "./RatingModal";
@@ -84,8 +85,10 @@ const OrderItem = ({ order, onAdvance }) => {
         if (status === "DELIVERED") break;
         await new Promise((r) => setTimeout(r, 1500));
       }
-    } catch {
-      /* non-fatal in a demo */
+    } catch (err) {
+      // Surface the failure instead of a dead button — otherwise a backend hiccup looks like
+      // "nothing happens" on click.
+      toast.error(err?.message || t('orderItem.somethingWentWrong'));
     } finally {
       setSimulating(false);
     }

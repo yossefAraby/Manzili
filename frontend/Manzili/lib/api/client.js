@@ -75,6 +75,16 @@ async function tryRefresh(admin = false) {
 }
 
 /**
+ * Storefront cookie refresh, deduped via the shared singleton above. The bootstrap probe
+ * (lib/api/auth.fetchSession) must use THIS — not its own /auth/refresh — so a cold post-payment
+ * load doesn't fire two concurrent refreshes that race the single-use rotating token (the loser
+ * 401s and fires manzili:auth-expired, stranding the navbar logged-out until a manual refresh).
+ */
+export function refreshSession() {
+  return tryRefresh(false);
+}
+
+/**
  * Core request. Returns the full envelope object `{ success, data, ...meta }`.
  * Throws ApiError on failure.
  *

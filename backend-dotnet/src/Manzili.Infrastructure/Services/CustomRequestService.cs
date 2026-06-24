@@ -64,29 +64,13 @@ public sealed class CustomRequestService
         var enduser = await _db.Endusers.FirstOrDefaultAsync(e => e.Personid == personId)
             ?? throw new NotFoundException("User");
 
-        short categoryid = 1;
-        if (!string.IsNullOrWhiteSpace(body.Category))
-        {
-            var cat = await _db.Categories
-                .FirstOrDefaultAsync(c => c.CategoryName.ToLower() == body.Category.ToLower());
-            if (cat is null)
-            {
-                cat = new Category { CategoryName = body.Category };
-                _db.Categories.Add(cat);
-                await _db.SaveChangesAsync();
-            }
-            categoryid = cat.Categoryid;
-        }
+        var categoryid = await ResolveCategoryIdAsync(body.Category);
 
         // A targeted (private) request carries the seller's store id. Validate it
         // exists before insert — otherwise a stale/deleted id triggers an FK
         // violation that surfaces as an opaque 500. A clean 404 is far easier to
         // diagnose (and to handle on the client).
-        var targetSellerId = ParseNullableInt(body.StoreId);
-        if (targetSellerId is int sid && !await _db.Sellers.AnyAsync(s => s.Sellerid == sid))
-        {
-            throw new NotFoundException("Store");
-        }
+        var targetSellerId = await ResolveTargetSellerAsync(body.StoreId);
 
         var request = new CustomRequest
         {
@@ -109,6 +93,7 @@ public sealed class CustomRequestService
 
         _db.CustomRequests.Add(request);
         await _db.SaveChangesAsync();
+        await SaveColorsAsync(request.Requestid, body.Colors, replace: false);
 
         return await MapDetailAsync(request.Requestid, personId);
     }
@@ -143,13 +128,87 @@ public sealed class CustomRequestService
         if (enduser is null || request.Enduserid != enduser.Enduserid)
             throw new ForbiddenException("Not your request");
 
-        if (!string.IsNullOrEmpty(body.ItemName)) request.Itemname = body.ItemName;
-        if (!string.IsNullOrEmpty(body.Description)) request.Description = body.Description;
+        // Overwrite each field the form sends. The edit form re-submits the FULL request
+        // (it re-loads the existing images + voice memo into the form before save), so a
+        // null field genuinely means "not provided — leave unchanged", while an empty
+        // array / blank string is an intentional clear. This mirrors CreateRequestAsync so
+        // editing persists everything, not just name/description/visibility.
+        if (body.ItemName is not null) request.Itemname = body.ItemName;
+        if (body.Description is not null) request.Description = body.Description;
         if (body.Visibility is not null) request.Visibility = body.Visibility != "private";
+        if (!string.IsNullOrWhiteSpace(body.Category))
+            request.Categoryid = await ResolveCategoryIdAsync(body.Category, request.Categoryid);
+        if (body.Quantity is int q) request.Quantity = (short)q;
+        if (body.Size is not null)
+        {
+            request.Lenght = body.Size.Length;
+            request.Width = body.Size.Width;
+            request.Hight = body.Size.Height;
+        }
+        if (body.Material is not null)
+            request.Matrial = string.IsNullOrWhiteSpace(body.Material) ? null : body.Material;
+        if (body.DeliveryDate is not null)
+            request.DesiredDeliveryDate = ParseDateOnly(body.DeliveryDate);
+        if (body.Images is not null) request.ImageUrls = body.Images.ToList();
+        if (body.VoiceMemoUrl is not null)
+            request.VoicememoUrl = string.IsNullOrWhiteSpace(body.VoiceMemoUrl) ? null : body.VoiceMemoUrl;
+        if (body.StoreId is not null) request.Sellerid = await ResolveTargetSellerAsync(body.StoreId);
 
         await _db.SaveChangesAsync();
+        // Colors re-submit the full set on edit (like images), so replace existing rows.
+        await SaveColorsAsync(request.Requestid, body.Colors, replace: true);
 
         return await BuildDetailAsync(request);
+    }
+
+    /// <summary>Persist the requested colours into color_palette. replace=true clears existing rows
+    /// first (edit re-submits the full set). No-op when colors is null (field not provided).</summary>
+    private async Task SaveColorsAsync(int requestId, IReadOnlyList<CustomColorInput>? colors, bool replace)
+    {
+        if (colors is null) return;
+        if (replace)
+        {
+            var existing = await _db.ColorPalettes.Where(c => c.Requestid == requestId).ToListAsync();
+            if (existing.Count > 0) _db.ColorPalettes.RemoveRange(existing);
+        }
+        foreach (var c in colors)
+        {
+            var hex = (c.Hex ?? "").Trim();
+            var desc = (c.Description ?? "").Trim();
+            if (hex.Length == 0 && desc.Length == 0) continue;
+            _db.ColorPalettes.Add(new ColorPalette
+            {
+                Requestid = requestId,
+                ColorCode = hex.Length > 20 ? hex[..20] : hex,
+                ColorDescription = desc.Length > 100 ? desc[..100] : desc,
+            });
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Find (or create) a category by name and return its id; falls back when the name is blank.</summary>
+    private async Task<short> ResolveCategoryIdAsync(string? category, short fallback = 1)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return fallback;
+        var cat = await _db.Categories
+            .FirstOrDefaultAsync(c => c.CategoryName.ToLower() == category.ToLower());
+        if (cat is null)
+        {
+            cat = new Category { CategoryName = category };
+            _db.Categories.Add(cat);
+            await _db.SaveChangesAsync();
+        }
+        return cat.Categoryid;
+    }
+
+    /// <summary>Resolve a (nullable) target store id, validating that the seller exists so a stale
+    /// id surfaces as a clean 404 instead of an opaque FK-violation 500. Null = untargeted (open) request.</summary>
+    private async Task<int?> ResolveTargetSellerAsync(string? storeId)
+    {
+        var targetSellerId = ParseNullableInt(storeId);
+        if (targetSellerId is int sid && !await _db.Sellers.AnyAsync(s => s.Sellerid == sid))
+            throw new NotFoundException("Store");
+        return targetSellerId;
     }
 
     public async Task<string> DeleteRequestAsync(int personId, int requestId)
@@ -205,6 +264,12 @@ public sealed class CustomRequestService
 
         var createdAt = FormatDate(r.CreatedAt);
 
+        var colors = await _db.ColorPalettes.AsNoTracking()
+            .Where(c => c.Requestid == r.Requestid)
+            .OrderBy(c => c.ColorPaletteid)
+            .Select(c => new CustomColorDto { Hex = c.ColorCode, Description = c.ColorDescription })
+            .ToListAsync();
+
         return new CustomRequestDetailDto
         {
             Id = r.Requestid.ToString(),
@@ -212,6 +277,7 @@ public sealed class CustomRequestService
             Description = r.Description,
             Category = r.Category?.CategoryName ?? "",
             Images = r.ImageUrls ?? [],
+            Colors = colors,
             VoiceMemo = r.VoicememoUrl,
             Quantity = r.Quantity ?? 1,
             Material = r.Matrial,

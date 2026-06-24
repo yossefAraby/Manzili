@@ -15,6 +15,7 @@
 //     coupons record the scope but not per-product links in this pass.
 
 import { apiGet, apiPost, apiPut, apiDelete } from './client';
+import { adaptCoupon } from './couponShared';
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -438,22 +439,10 @@ export async function rejectReturn(id, note) {
  * `discount` is the percentage; `productIds` isn't tracked server-side in this
  * pass so it defaults to [].
  */
-export function adaptCoupon(dto) {
-  return {
-    id: asString(pick(dto, 'id', '')),
-    code: pick(dto, 'code', '') || '',
-    description: pick(dto, 'description', '') || '',
-    discount: Number(pick(dto, 'discountPercentage', 0)) || 0,
-    scope: pick(dto, 'scope', 'GLOBAL') || 'GLOBAL',
-    storeId: pick(dto, 'storeId', null),
-    productIds: [],
-    expiresAt: pick(dto, 'expiredDate', null),
-    maxUsers: Number(pick(dto, 'maxUsers', 0)) || 0,
-    usedCount: Number(pick(dto, 'usedCount', 0)) || 0,
-    active: Boolean(pick(dto, 'active', true)),
-    createdAt: pick(dto, 'createdAt', null),
-  };
-}
+// Coupon adapter — shared with the seller dashboard (lib/api/couponShared.js).
+// Reads either backend naming (discountPercentage/expiredDate/active) and yields
+// the canonical UI coupon shape, including `id`.
+export { adaptCoupon };
 
 /** GET /admin/coupons → [adapted coupons]. Empty on failure. */
 export async function fetchCoupons() {

@@ -305,16 +305,35 @@ public sealed class KashierCheckoutService
     }
 
     /// <summary>
-    /// Verifies the redirect signature the way Kashier's hppCallback.php does: every returned param
-    /// except the excluded set, IN RECEIVED ORDER, as "k=v&amp;…" HMAC-SHA256'd with the API key,
-    /// compared to the <c>signature</c> param. No-op when no signature is present.
+    /// Verifies the redirect signature using Kashier's REAL scheme — the same one the webhook
+    /// (<see cref="KashierWebhookService"/>) and Kashier's docs use: hash ONLY the fields named in the
+    /// returned <c>signatureKeys</c> param, sorted ALPHABETICALLY, as "k=v&amp;…", HMAC-SHA256'd with the
+    /// API key, compared to <c>signature</c>. The old "all params in received order" scheme never
+    /// matched Kashier's hash, so an APPROVED wallet payment failed confirm with INVALID_SIGNATURE
+    /// (the "A General Error Occurred" symptom). We keep the legacy scheme only as a fallback for the
+    /// rare case where no <c>signatureKeys</c> is present. No-op when no signature is present.
     /// </summary>
     private void VerifySignatureOrThrow(List<KeyValuePair<string, string>> ordered, HashSet<string> excluded)
     {
         var signature = First(ordered, "signature");
         if (string.IsNullOrEmpty(signature)) return;
 
-        var basePairs = ordered.Where(kv => !excluded.Contains(kv.Key)).Select(kv => $"{kv.Key}={kv.Value}");
+        var sigKeysRaw = First(ordered, "signatureKeys");
+        IEnumerable<string> basePairs;
+        if (!string.IsNullOrWhiteSpace(sigKeysRaw))
+        {
+            // Kashier names exactly which fields it signed; hash those, alphabetically (Ordinal),
+            // so the merchant's own redirect params (checkout/gateway/etc.) are irrelevant to the hash.
+            var keys = sigKeysRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            basePairs = keys.OrderBy(k => k, StringComparer.Ordinal)
+                .Select(k => $"{k}={First(ordered, k) ?? ""}");
+        }
+        else
+        {
+            // Legacy fallback (no signatureKeys): filtered params in received order.
+            basePairs = ordered.Where(kv => !excluded.Contains(kv.Key)).Select(kv => $"{kv.Key}={kv.Value}");
+        }
+
         var expected = HmacSha256Hex(string.Join("&", basePairs), _kashier.ApiKey!);
         if (!CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(signature.Trim())))

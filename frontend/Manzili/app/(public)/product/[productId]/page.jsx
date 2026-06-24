@@ -5,7 +5,7 @@ import ProductRecommendations from "@/components/ProductRecommendations";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { fetchProductById } from "@/lib/api/products";
+import { fetchProductById, recordProductView } from "@/lib/api/products";
 import { normalizeProduct } from "@/lib/products/normalizeProduct";
 import { useTranslate } from '@/lib/i18n/LocaleContext'
 
@@ -22,6 +22,9 @@ export default function Product() {
         // page renders even before/without the API.
         const localMatch = products.find((p) => p.id === productId);
         if (localMatch && !product) setProduct(localMatch);
+
+        // Record the view as a taste signal for "Recommended for you" (no-op for guests).
+        recordProductView(productId);
 
         (async () => {
             try {

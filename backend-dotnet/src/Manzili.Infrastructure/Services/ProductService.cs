@@ -18,6 +18,32 @@ public sealed class ProductService
         _promotions = promotions;
     }
 
+    /// <summary>Record that a person viewed a product — a most-recent-first taste signal for the
+    /// recommendation rails. Upsert keyed on (person, product) so re-views just refresh the timestamp.
+    /// No-op for guests; best-effort (never throws to the caller).</summary>
+    public async Task RecordViewAsync(int? personId, int productId)
+    {
+        if (personId is null || productId <= 0) return;
+        try
+        {
+            await _db.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO manzili.product_views (personid, productid, viewed_at)
+                VALUES ({personId.Value}, {productId}, CURRENT_TIMESTAMP)
+                ON CONFLICT (personid, productid) DO UPDATE SET viewed_at = CURRENT_TIMESTAMP");
+        }
+        catch { /* a view ping must never break the product page */ }
+    }
+
+    /// <summary>The product ids this person most recently viewed (newest first) — taste seeds for recs.</summary>
+    public async Task<IReadOnlyList<int>> GetRecentlyViewedIdsAsync(int personId, int limit = 10)
+    {
+        return await _db.Database.SqlQuery<int>($@"
+            SELECT productid AS ""Value"" FROM manzili.product_views
+            WHERE personid = {personId}
+            ORDER BY viewed_at DESC
+            LIMIT {limit}").ToListAsync();
+    }
+
     /// <summary>Set of productids wishlisted by the given person (empty if not logged in).</summary>
     internal async Task<HashSet<int>> GetWishlistedIdsAsync(int? userId)
     {
@@ -100,6 +126,7 @@ public sealed class ProductService
             Id = s.Sellerid.ToString(),
             Name = s.Storename ?? "",
             Username = s.Username,
+            Logo = s.LogoUrl,
             City = city,
             BostaCityId = bostaCityId,
         };
