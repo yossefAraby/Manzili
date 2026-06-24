@@ -13,12 +13,21 @@ public sealed class SellerController : ApiController
     private readonly SellerService _seller;
     private readonly WarehouseService _warehouses;
     private readonly PromotionService _promotions;
+    private readonly CheckoutService _checkout;
+    private readonly KashierCheckoutService _kashier;
 
-    public SellerController(SellerService seller, WarehouseService warehouses, PromotionService promotions)
+    public SellerController(
+        SellerService seller,
+        WarehouseService warehouses,
+        PromotionService promotions,
+        CheckoutService checkout,
+        KashierCheckoutService kashier)
     {
         _seller = seller;
         _warehouses = warehouses;
         _promotions = promotions;
+        _checkout = checkout;
+        _kashier = kashier;
     }
 
     // ----- Promotions (paid "feature my item") -----
@@ -54,6 +63,66 @@ public sealed class SellerController : ApiController
             amount = p.Amount,
             expiresAt = p.ExpiresAt.ToString("yyyy-MM-ddTHH:mm:ss") + "Z",
         }, statusCode: 201);
+    }
+
+    /// <summary>Start a promotion payment by the chosen method. "wallet" charges the available balance
+    /// instantly (returns the active promotion); "kashier"/"stripe" return a redirect URL to pay
+    /// directly (the seller's funds may be pending, so direct payment is offered too).</summary>
+    [HttpPost("promotions/checkout")]
+    public async Task<IActionResult> PromotionCheckout([FromBody] CreatePromotionRequest req)
+    {
+        if (!int.TryParse(req?.ProductId, out var pid))
+            throw new Manzili.Application.Common.AppException("A valid productId is required", 400, "VALIDATION_ERROR");
+
+        var method = (req!.Method ?? "wallet").Trim().ToLowerInvariant();
+        switch (method)
+        {
+            case "stripe":
+            case "card":
+            {
+                var r = await _checkout.CreatePromotionCheckoutSessionAsync(RequireSellerId, pid, req.Plan, RequestOrigin);
+                return ApiOk(new { status = "redirect", method = "stripe", url = r.Url });
+            }
+            case "kashier":
+            case "wallet_online":
+            case "mobile_wallet":
+            {
+                var r = await _kashier.CreatePromotionPaymentAsync(RequireSellerId, pid, req.Plan, "wallet", RequestOrigin);
+                return ApiOk(new { status = "redirect", method = "kashier", url = r.Url });
+            }
+            default:
+            {
+                var p = await _promotions.CreateFromWalletAsync(RequireSellerId, pid, req.Plan);
+                return ApiOk(new
+                {
+                    status = "active",
+                    method = "wallet",
+                    id = p.Promotionid.ToString(),
+                    productId = p.Productid.ToString(),
+                    plan = p.Plan,
+                    amount = p.Amount,
+                    expiresAt = p.ExpiresAt.ToString("yyyy-MM-ddTHH:mm:ss") + "Z",
+                });
+            }
+        }
+    }
+
+    /// <summary>Server-trusted confirm of a promotion gateway redirect. The seller id is the
+    /// authenticated caller; on a paid status the promotion is activated (idempotently).</summary>
+    [HttpPost("promotions/confirm")]
+    public async Task<IActionResult> ConfirmPromotion([FromBody] ConfirmPromotionRequest req)
+    {
+        var gateway = (req?.Gateway ?? "").Trim().ToLowerInvariant();
+        if (gateway == "stripe")
+        {
+            var r = await _checkout.ConfirmSessionAsync(req!.SessionId);
+            return ApiOk(new { status = r.Status, type = "promotion" });
+        }
+
+        if (!int.TryParse(req?.ProductId, out var pid))
+            throw new Manzili.Application.Common.AppException("A valid productId is required", 400, "VALIDATION_ERROR");
+        var k = await _kashier.ConfirmPromotionAsync(RequireSellerId, pid, req!.Plan, req.Query);
+        return ApiOk(new { status = k.Status, type = "promotion" });
     }
 
     [HttpGet("dashboard")]

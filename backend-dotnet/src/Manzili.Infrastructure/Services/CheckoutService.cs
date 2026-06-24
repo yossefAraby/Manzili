@@ -26,6 +26,7 @@ public sealed class CheckoutService
     private readonly OrderService _orders;
     private readonly FulfillmentService _fulfillment;
     private readonly OfferService _offers;
+    private readonly PromotionService _promotions;
     private readonly CheckoutPricingService _pricing;
     private readonly StripeOptions _stripe;
     private readonly FeesOptions _fees;
@@ -36,6 +37,7 @@ public sealed class CheckoutService
         OrderService orders,
         FulfillmentService fulfillment,
         OfferService offers,
+        PromotionService promotions,
         CheckoutPricingService pricing,
         IOptions<AppOptions> options)
     {
@@ -43,10 +45,47 @@ public sealed class CheckoutService
         _orders = orders;
         _fulfillment = fulfillment;
         _offers = offers;
+        _promotions = promotions;
         _pricing = pricing;
         _stripe = options.Value.Stripe;
         _fees = options.Value.Fees;
         _app = options.Value;
+    }
+
+    // ===================== Product-promotion checkout (seller pays Manzili) =====================
+
+    /// <summary>Opens a Stripe card portal for a seller to pay for a "feature my product" promotion.
+    /// On success the promotion is activated via the shared <see cref="ApplyPaidSessionAsync"/> path
+    /// (works from both the webhook and the redirect confirm). The money is Manzili revenue.</summary>
+    public async Task<CheckoutResult> CreatePromotionCheckoutSessionAsync(int sellerId, int productId, string? plan, string? origin = null)
+    {
+        if (!_stripe.IsConfigured)
+            throw new AppException("Stripe not configured", 503, "SERVICE_UNAVAILABLE");
+
+        var owns = await _db.Products.AsNoTracking().AnyAsync(p => p.Productid == productId && p.Sellerid == sellerId);
+        if (!owns) throw new NotFoundException("Product");
+
+        var (planName, amount, _) = PromotionService.ResolvePlan(plan);
+        var appUrl = _app.ResolveBaseUrl(origin);
+
+        var sessionOptions = new SessionCreateOptions
+        {
+            PaymentMethodTypes = new List<string> { "card" },
+            Mode = "payment",
+            LineItems = new List<SessionLineItemOptions> { MoneyLine($"Featured promotion — {planName}", amount) },
+            SuccessUrl = $"{appUrl}/store/manage-product?promo=success&session_id={{CHECKOUT_SESSION_ID}}",
+            CancelUrl = $"{appUrl}/store/manage-product?promo=canceled",
+            Metadata = new Dictionary<string, string>
+            {
+                ["type"] = "promotion",
+                ["sellerId"] = sellerId.ToString(),
+                ["productId"] = productId.ToString(),
+                ["plan"] = planName,
+            },
+        };
+
+        var session = await new SessionService(new StripeClient(_stripe.SecretKey)).CreateAsync(sessionOptions);
+        return new CheckoutResult { Url = session.Url, SessionId = session.Id, OrderId = "" };
     }
 
     /// <summary>Cart money breakdown for the UI (POST /checkout/quote). Honors the chosen
@@ -286,6 +325,18 @@ public sealed class CheckoutService
                 decimal.TryParse(amountStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount);
                 int? addressId = meta.TryGetValue("addressId", out var aid) && int.TryParse(aid, out var a) ? a : null;
                 await _offers.RecordPaidMilestoneAsync(offerId, string.IsNullOrWhiteSpace(milestone) ? "final" : milestone, amount, addressId);
+            }
+            return;
+        }
+
+        if (type == "promotion")
+        {
+            if (meta.TryGetValue("sellerId", out var sid) && int.TryParse(sid, out var sellerId)
+                && meta.TryGetValue("productId", out var pid) && int.TryParse(pid, out var productId))
+            {
+                meta.TryGetValue("plan", out var plan);
+                // PaymentRef = the Stripe payment-intent → idempotent across webhook + redirect confirm.
+                await _promotions.ActivateAsync(sellerId, productId, plan, "STRIPE", session.PaymentIntentId);
             }
             return;
         }

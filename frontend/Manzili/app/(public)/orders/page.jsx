@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import PageTitle from "@/components/PageTitle";
 import OrderItem from "@/components/OrderItem";
@@ -7,10 +8,16 @@ import ReportButton from "@/components/ReportButton";
 import { useTranslate } from '@/lib/i18n/LocaleContext'
 import { fetchOrders } from "@/lib/api/orders";
 import { confirmCheckout, confirmKashier } from "@/lib/api/checkout";
+import { selectSession, selectAuthBootstrapped } from "@/lib/features/auth/authSlice";
 
 export default function Orders() {
   const t = useTranslate();
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Gate the first fetch on the cookie-session having rehydrated, so /orders doesn't render
+  // an empty list on a cold load (the bug where it needed a manual refresh to populate).
+  const session = useSelector(selectSession);
+  const bootstrapped = useSelector(selectAuthBootstrapped);
 
   // Re-fetch the order list (used after the dev simulate-delivery button so the
   // timeline visibly advances). Fail-safe: keeps the current list on error.
@@ -24,6 +31,7 @@ export default function Orders() {
   // the payment server-side first so the order is marked paid + a Bosta shipment
   // is created before we render the list (works even without an inbound webhook).
   useEffect(() => {
+    if (!bootstrapped) return undefined; // wait for the session cookie to rehydrate first
     let cancelled = false;
     (async () => {
       try {
@@ -60,16 +68,21 @@ export default function Orders() {
         /* non-fatal — fall through to loading the list */
       }
       const list = await fetchOrders();
-      if (!cancelled) setOrders(Array.isArray(list) ? list : []);
+      if (!cancelled) { setOrders(Array.isArray(list) ? list : []); setLoading(false); }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+    // Re-run once the session rehydrates (bootstrapped) and whenever the user changes.
+  }, [bootstrapped, session?.userId]);
 
   return (
     <div className="min-h-[70vh] mx-6">
-      {orders.length > 0 ? (
+      {loading ? (
+        <div className="min-h-[80vh] flex items-center justify-center text-slate-400 text-sm">
+          {t('common.loading')}
+        </div>
+      ) : orders.length > 0 ? (
         <div className="my-20 max-w-7xl mx-auto">
           <PageTitle
             heading={t('orders.title')}

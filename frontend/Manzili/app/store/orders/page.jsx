@@ -4,6 +4,7 @@ import Loading from "@/components/Loading"
 import TrackingTimeline from "@/components/TrackingTimeline"
 import { useSelector } from "react-redux"
 import { fetchSellerOrders, updateOrderStatus as apiUpdateOrderStatus } from "@/lib/api/seller"
+import { getCurrencySymbol } from "@/lib/currency"
 import {
     PackageIcon,
     CopyIcon,
@@ -55,6 +56,9 @@ function humanizeStatus(status) {
         .replace(/^\w/, (c) => c.toUpperCase())
 }
 
+// Real platform currency (EGP) — the page used to hardcode "$".
+const CURRENCY = getCurrencySymbol()
+
 function money(v) {
     const n = Number(v)
     return Number.isFinite(n) ? n.toFixed(2) : "0.00"
@@ -67,7 +71,7 @@ function shortId(id) {
 
 function fullAddress(a) {
     if (!a) return ""
-    return [a.street, a.city, a.state, a.zip, a.country].filter(Boolean).join(", ")
+    return [a.street, a.district || a.zone || a.state, a.city, a.zip, a.country].filter(Boolean).join(", ")
 }
 
 // ─── Copy-to-clipboard tracking chip ────────────────────────────────────────────
@@ -247,14 +251,14 @@ function PrintableSlip({ order, storeName }) {
                         <tr key={i}>
                             <td>{it.product?.name || it.name}</td>
                             <td className="ps-r">{it.quantity}</td>
-                            <td className="ps-r">${money(it.price)}</td>
+                            <td className="ps-r">{CURRENCY}{money(it.price)}</td>
                         </tr>
                     ))}
                 </tbody>
                 <tfoot>
                     <tr>
                         <td className="ps-total" colSpan={2}>Total</td>
-                        <td className="ps-r ps-total">${money(order.total)}</td>
+                        <td className="ps-r ps-total">{CURRENCY}{money(order.total)}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -375,9 +379,9 @@ function OrderCard({ order, index, onConfirm, confirming }) {
                                             <p className="text-xs text-slate-400">Qty {item.quantity}</p>
                                         </div>
                                         <div className="text-right text-sm">
-                                            <p className="font-medium text-slate-800">${money(item.price * item.quantity)}</p>
+                                            <p className="font-medium text-slate-800">{CURRENCY}{money(item.price * item.quantity)}</p>
                                             {item.quantity > 1 && (
-                                                <p className="text-xs text-slate-400">${money(item.price)} ea</p>
+                                                <p className="text-xs text-slate-400">{CURRENCY}{money(item.price)} ea</p>
                                             )}
                                         </div>
                                     </li>
@@ -419,7 +423,7 @@ function OrderCard({ order, index, onConfirm, confirming }) {
                         )}
                         <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
                             <span className="text-sm font-medium text-slate-600">Total</span>
-                            <span className="text-lg font-semibold text-[#1c355e]">${money(order.total)}</span>
+                            <span className="text-lg font-semibold text-[#1c355e]">{CURRENCY}{money(order.total)}</span>
                         </div>
                     </div>
 

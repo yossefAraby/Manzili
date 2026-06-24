@@ -129,7 +129,7 @@ export async function fetchSellerPromotions() {
   }
 }
 
-/** Feature a product: plan is 'day' (50 EGP) or 'week' (300 EGP). Throws on failure. */
+/** Feature a product from the WALLET balance: plan 'day' (50) | 'week' (300). Throws on failure. */
 export async function promoteProduct(productId, plan) {
   const r = await apiPost('/seller/promotions', { productId: str(productId), plan });
   const p = r?.data || {};
@@ -137,6 +137,33 @@ export async function promoteProduct(productId, plan) {
     id: str(p.id), productId: str(p.productId), plan: str(p.plan),
     amount: num(p.amount, 0), expiresAt: p.expiresAt || null,
   };
+}
+
+/**
+ * Start a "feature my product" payment by method:
+ *   - 'wallet'  → charges the available balance now; returns { status:'active', expiresAt }.
+ *   - 'kashier' → mobile wallet; returns { status:'redirect', url } (open it).
+ *   - 'stripe'  → card;          returns { status:'redirect', url } (open it).
+ * Throws ApiError on failure (e.g. 402 INSUFFICIENT_WALLET_BALANCE) so the modal can surface it.
+ */
+export async function promotionCheckout(productId, plan, method = 'wallet') {
+  const r = await apiPost('/seller/promotions/checkout', { productId: str(productId), plan, method });
+  const d = r?.data || {};
+  return {
+    status: str(d.status),
+    method: str(d.method),
+    url: d.url || null,
+    expiresAt: d.expiresAt || null,
+  };
+}
+
+/** Confirm a promotion gateway return. Stripe: pass { gateway:'stripe', sessionId }. Kashier: pass
+ *  { gateway:'kashier', productId, plan, query }. Returns { status } ('paid' on success). */
+export async function confirmPromotion({ gateway, productId, plan, query, sessionId } = {}) {
+  const r = await apiPost('/seller/promotions/confirm', {
+    gateway, productId: productId != null ? str(productId) : undefined, plan, query, sessionId,
+  });
+  return { status: str(r?.data?.status, 'unpaid') };
 }
 
 // Normalize either a GROUPED variant payload (API: [{ name, options:[...] }]) or an
@@ -196,9 +223,10 @@ function adaptOrderItem(it) {
   return {
     productId: str(it.productId ?? prod.id),
     quantity: num(it.quantity, 1),
-    price: num(it.price, 0),
+    // The seller order DTO sends the snapshot price as `unitPrice` (older shapes used `price`).
+    price: num(it.unitPrice ?? it.price, 0),
     name: str(it.name ?? prod.name),
-    image: firstImage(it.image) || firstImage(prod.images),
+    image: firstImage(it.imageUrl) || firstImage(it.image) || firstImage(prod.images),
     product: {
       id: str(prod.id ?? it.productId),
       name: str(prod.name ?? it.name),

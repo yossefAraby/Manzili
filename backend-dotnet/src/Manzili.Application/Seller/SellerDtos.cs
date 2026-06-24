@@ -40,6 +40,19 @@ public sealed class CreatePromotionRequest
     public string? ProductId { get; set; }
     /// <summary>"day" (50 EGP) or "week" (300 EGP).</summary>
     public string? Plan { get; set; }
+    /// <summary>How to pay: "wallet" (deduct available balance), "kashier" (mobile wallet), or
+    /// "stripe" (card). Defaults to wallet for back-compat. Gateway methods return a redirect URL.</summary>
+    public string? Method { get; set; }
+}
+
+/// <summary>Body for POST /seller/promotions/confirm — the gateway redirect return.</summary>
+public sealed class ConfirmPromotionRequest
+{
+    public string? Gateway { get; set; }     // "kashier" | "stripe"
+    public string? ProductId { get; set; }
+    public string? Plan { get; set; }
+    public string? Query { get; set; }       // Kashier: raw return query string
+    public string? SessionId { get; set; }   // Stripe: checkout session id
 }
 
 // Seller-scoped product detail used to prefill the edit form. Unlike the public
@@ -193,12 +206,20 @@ public sealed class SellerOrderDto
 
 public sealed class OrderItemDto
 {
+    public string ProductId { get; set; } = "";
     public string Name { get; set; } = "";
     public int Quantity { get; set; }
+    /// <summary>The price the buyer paid per unit at purchase (snapshot), so the seller card shows real money, not 0.</summary>
+    public decimal UnitPrice { get; set; }
+    public string? ImageUrl { get; set; }
 }
 
 public sealed class OrderAddressDto
 {
+    public string Name { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Street { get; set; } = "";
     public string City { get; set; } = "";
     public string District { get; set; } = "";
 }

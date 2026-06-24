@@ -7,7 +7,7 @@ import {
   persistReduxState,
 } from '@/lib/services/localStateBootstrap'
 import { setSession, clearSession, markBootstrapped } from '@/lib/features/auth/authSlice'
-import { clearCart, hydrateCart } from '@/lib/features/cart/cartSlice'
+import { clearCart, hydrateCart, markCartHydrated } from '@/lib/features/cart/cartSlice'
 import { hydrateAddresses } from '@/lib/features/address/addressSlice'
 import { fetchProducts } from '@/lib/features/product/productSlice'
 import { fetchSession, reconcileSession } from '@/lib/api/auth'
@@ -41,14 +41,19 @@ export default function StoreProvider({ children }) {
     ;(async () => {
       const session = await fetchSession()
       if (cancelled) return
-      if (!session) { store.dispatch(markBootstrapped()); return }
+      // Guests have no account cart to load — mark the cart hydrated so the cart page
+      // shows its empty state (not a perpetual loader).
+      if (!session) { store.dispatch(markBootstrapped()); store.dispatch(markCartHydrated()); return }
       store.dispatch(setSession(session))
       // Load the saved address book platform-wide (not just on the profile page),
       // so an address added at checkout is still there everywhere after a reload.
       store.dispatch(hydrateAddresses())
       // Load the account cart (authoritative for a logged-in buyer) so it follows the
       // account across devices and survives logout — the cart is no longer browser-local.
-      fetchServerCart().then((c) => { if (!cancelled && c) store.dispatch(hydrateCart(c)) })
+      // Always mark hydrated when done (even on empty/error) so the page stops loading.
+      fetchServerCart()
+        .then((c) => { if (cancelled) return; if (c) store.dispatch(hydrateCart(c)); else store.dispatch(markCartHydrated()) })
+        .catch(() => { if (!cancelled) store.dispatch(markCartHydrated()) })
       const next = await reconcileSession(session)
       if (!cancelled && next && next !== session) store.dispatch(setSession(next))
     })()

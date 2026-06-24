@@ -3,6 +3,7 @@ import Counter from "@/components/Counter";
 import OrderSummary from "@/components/OrderSummary";
 import PageTitle from "@/components/PageTitle";
 import { deleteItemFromCart } from "@/lib/features/cart/cartSlice";
+import { fetchProducts } from "@/lib/features/product/productSlice";
 import { Trash2Icon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -21,7 +22,7 @@ export default function Cart() {
     const currency = getCurrencySymbol();
     const t = useTranslate();
     
-    const { cartItems } = useSelector(state => state.cart);
+    const { cartItems, hydrated } = useSelector(state => state.cart);
     const products = useSelector(state => state.product.list);
 
     const dispatch = useDispatch();
@@ -33,6 +34,13 @@ export default function Cart() {
     useEffect(() => {
         setCartReady(true);
     }, []);
+
+    // Safety net: the cart can only resolve its items once the catalog is loaded. If the app-start
+    // catalog fetch raced or failed, the cart would look empty until a manual refresh — so fetch it
+    // here too when it's missing.
+    useEffect(() => {
+        if (products.length === 0) dispatch(fetchProducts());
+    }, [products.length, dispatch]);
 
     // Sum of the selected variant options' surcharges (mirrors the server's price-delta charge).
     const variantDelta = (product, selected) => {
@@ -88,7 +96,10 @@ export default function Cart() {
         }
     }, []);
 
-    if (!cartReady) {
+    // Show a loader (never a false "empty cart") until: the client has mounted, the account cart
+    // has hydrated from the backend, AND any items present have resolved against the catalog.
+    const itemsPending = Object.keys(cartItems).length > 0 && cartArray.length === 0;
+    if (!cartReady || !hydrated || itemsPending) {
         return (
             <div className="min-h-[50vh] mx-6 flex items-center justify-center text-slate-400 text-sm">
                 {t('common.loading')}

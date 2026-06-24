@@ -24,7 +24,10 @@ export function makeCartKey(productId, variants = {}) {
 
 const cartSlice = createSlice({
     name: 'cart',
-    initialState: getInitialCartState(),
+    // `hydrated` flips true once the account cart has loaded from the backend (or we've
+    // confirmed there's nothing to load) — so the cart page shows a loader, not a false
+    // "empty cart", during the async startup window.
+    initialState: { ...getInitialCartState(), hydrated: false },
     reducers: {
         addToCart: (state, action) => {
             const { productId, variants = {} } = action.payload
@@ -68,9 +71,15 @@ const cartSlice = createSlice({
             const { cartItems = {}, total = 0 } = action.payload || {}
             state.cartItems = cartItems
             state.total = total
+            state.hydrated = true
+        },
+        // Mark the cart as loaded without changing its contents — used for guests (no account
+        // cart to fetch) or when the server cart came back empty/errored, so the page stops loading.
+        markCartHydrated: (state) => {
+            state.hydrated = true
         },
     },
 })
 
-export const { addToCart, removeFromCart, clearCart, deleteItemFromCart, hydrateCart } = cartSlice.actions
+export const { addToCart, removeFromCart, clearCart, deleteItemFromCart, hydrateCart, markCartHydrated } = cartSlice.actions
 export default cartSlice.reducer

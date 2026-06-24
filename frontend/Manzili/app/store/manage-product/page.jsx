@@ -14,7 +14,9 @@ import {
     fetchSellerProducts,
     deleteSellerProduct,
     setSellerProductStatus,
-    promoteProduct,
+    promotionCheckout,
+    confirmPromotion,
+    fetchWallet,
 } from "@/lib/api/seller"
 import { quoteBySize } from "@/lib/shipping/bostaPricing"
 
@@ -90,6 +92,9 @@ export default function StoreManageProducts() {
     // Promotion modal
     const [promoteFor, setPromoteFor] = useState(null)
     const [promoting, setPromoting] = useState(false)
+    const [wallet, setWallet] = useState(null)          // { availableBalance, pendingBalance, currency }
+    const [payMethod, setPayMethod] = useState('wallet') // 'wallet' | 'kashier' | 'stripe'
+    const [selectedPlan, setSelectedPlan] = useState('day')
 
     const categoryOptions = useMemo(() => {
         const set = new Set()
@@ -166,12 +171,25 @@ export default function StoreManageProducts() {
         dispatch(removeProduct(productId))
     }
 
-    const handlePromote = async (product, plan) => {
-        if (promoting) return
+    // Open the promote modal: reset the method/plan and load the live wallet balance.
+    const openPromote = (product) => {
+        setSelectedPlan('day')
+        setPayMethod('wallet')
+        setPromoteFor(product)
+    }
+
+    const handlePromote = async () => {
+        if (promoting || !promoteFor) return
         setPromoting(true)
         try {
-            const promo = await promoteProduct(product.id, plan)
-            dispatch(updateProduct({ id: product.id, isPromoted: true, promotedUntil: promo.expiresAt }))
+            const res = await promotionCheckout(promoteFor.id, selectedPlan, payMethod)
+            if (res.status === 'redirect' && res.url) {
+                // Off to the gateway (mobile wallet / card); we return to /store/manage-product?promo=success.
+                window.location.href = res.url
+                return
+            }
+            // Wallet path: charged from the available balance instantly.
+            dispatch(updateProduct({ id: promoteFor.id, isPromoted: true, promotedUntil: res.expiresAt }))
             toast.success("Your product is now featured on the homepage 🎉")
             setPromoteFor(null)
         } catch (err) {
@@ -180,6 +198,43 @@ export default function StoreManageProducts() {
             setPromoting(false)
         }
     }
+
+    // Load the seller's live wallet whenever the promote modal opens, so we show the REAL
+    // available/pending balance (the bug was it never fetched the wallet) and can gate wallet-pay.
+    useEffect(() => {
+        if (!promoteFor) return
+        let cancelled = false
+        fetchWallet().then((w) => { if (!cancelled) setWallet(w?.wallet || null) }).catch(() => { })
+        return () => { cancelled = true }
+    }, [promoteFor])
+
+    // Handle the gateway redirect return (?promo=success&gateway=…&session_id=… / &productId=&plan=).
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        const params = new URLSearchParams(window.location.search)
+        const promo = params.get('promo')
+        if (promo == null) return
+        const gateway = params.get('gateway')
+        const sessionId = params.get('session_id')
+            ; (async () => {
+                try {
+                    if (promo === 'success') {
+                        let res = null
+                        if (sessionId) res = await confirmPromotion({ gateway: 'stripe', sessionId })
+                        else if (gateway === 'kashier') res = await confirmPromotion({ gateway: 'kashier', productId: params.get('productId'), plan: params.get('plan'), query: window.location.search })
+                        if (res?.status === 'paid') toast.success('Payment confirmed — your product is now featured 🎉')
+                        else toast.error('Payment not completed — the product was not featured.')
+                    } else {
+                        toast.error('Payment canceled — the product was not featured.')
+                    }
+                } catch { /* non-fatal */ }
+                const url = new URL(window.location.href)
+                    ;['promo', 'gateway', 'session_id', 'productId', 'plan', 'paymentStatus', 'merchantOrderId', 'orderId', 'transactionId', 'signature', 'amount', 'currency', 'mode'].forEach((k) => url.searchParams.delete(k))
+                window.history.replaceState({}, '', url.pathname + (url.search || ''))
+                if (storeId) fetchSellerProducts().then((list) => dispatch(setProduct(list.map((p) => ({ ...p, storeId }))))).catch(() => { })
+            })()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [storeId])
 
     const inStockCount = useMemo(() => products.filter((p) => productStatus(p) === 'in').length, [products])
     const promotedCount = useMemo(() => products.filter((p) => p.isPromoted).length, [products])
@@ -322,7 +377,7 @@ export default function StoreManageProducts() {
                                 <div className="flex items-center justify-between lg:justify-end gap-2 shrink-0">
                                     <button
                                         type="button"
-                                        onClick={() => setPromoteFor(product)}
+                                        onClick={() => openPromote(product)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium inline-flex items-center gap-1 transition-colors ${product.isPromoted ? 'border border-[#e67e22]/30 text-[#e67e22] hover:bg-[#e67e22]/10' : 'border border-[#e67e22]/40 text-[#e67e22] hover:bg-[#e67e22]/10'}`}
                                         title="Feature this product on the homepage"
                                     >
@@ -369,28 +424,86 @@ export default function StoreManageProducts() {
                             <button onClick={() => !promoting && setPromoteFor(null)} className="text-slate-400 hover:text-slate-600"><XIcon size={18} /></button>
                         </div>
                         <p className="text-sm text-slate-500 mt-3">
-                            Promote <span className="font-medium text-slate-700">{promoteFor.name}</span> to the homepage <span className="font-medium">Featured</span> section. The fee is <span className="font-medium text-slate-700">charged from your seller wallet balance</span>. If many sellers are featuring, items rotate through a queue.
+                            Promote <span className="font-medium text-slate-700">{promoteFor.name}</span> to the homepage <span className="font-medium">Featured</span> section. Pay from your wallet balance, or directly with mobile wallet / card. If many sellers are featuring, items rotate through a queue.
                         </p>
                         {promoteFor.isPromoted && promotedDaysLeft(promoteFor.promotedUntil) && (
                             <p className="text-xs text-[#e67e22] bg-[#e67e22]/10 rounded-lg px-3 py-2 mt-3">
                                 Currently featured — {promotedDaysLeft(promoteFor.promotedUntil)} day{promotedDaysLeft(promoteFor.promotedUntil) === 1 ? '' : 's'} left. Buying again adds to that.
                             </p>
                         )}
-                        <div className="mt-5 grid grid-cols-2 gap-3">
+
+                        {/* Live wallet balance — the real numbers, not a placeholder. */}
+                        <div className="mt-4 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-sm flex items-center justify-between">
+                            <span className="text-slate-500">Wallet balance</span>
+                            <span className="text-slate-700">
+                                <span className="font-semibold">{currency} {Number(wallet?.availableBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span> available
+                                {Number(wallet?.pendingBalance ?? 0) > 0 && (
+                                    <span className="text-slate-400"> · {currency} {Number(wallet.pendingBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })} pending</span>
+                                )}
+                            </span>
+                        </div>
+
+                        {/* Plan */}
+                        <p className="text-xs font-medium text-slate-500 mt-4 mb-1.5">Plan</p>
+                        <div className="grid grid-cols-2 gap-3">
                             {PROMO_PLANS.map((plan) => (
                                 <button
                                     key={plan.id}
                                     type="button"
                                     disabled={promoting}
-                                    onClick={() => handlePromote(promoteFor, plan.id)}
-                                    className="rounded-xl border border-slate-200 hover:border-[#e67e22] hover:bg-[#e67e22]/5 p-4 text-center transition-colors disabled:opacity-50"
+                                    onClick={() => setSelectedPlan(plan.id)}
+                                    className={`rounded-xl border p-3 text-center transition-colors disabled:opacity-50 ${selectedPlan === plan.id ? 'border-[#e67e22] bg-[#e67e22]/5 ring-1 ring-[#e67e22]/30' : 'border-slate-200 hover:border-[#e67e22]/50'}`}
                                 >
                                     <p className="text-sm text-slate-500">{plan.label}</p>
-                                    <p className="text-xl font-bold text-slate-800 mt-1">{currency} {plan.price}</p>
+                                    <p className="text-xl font-bold text-slate-800 mt-0.5">{currency} {plan.price}</p>
                                 </button>
                             ))}
                         </div>
-                        {promoting && <p className="text-xs text-slate-400 mt-3 text-center">Processing…</p>}
+
+                        {/* Payment method */}
+                        {(() => {
+                            const planPrice = PROMO_PLANS.find((p) => p.id === selectedPlan)?.price || 0
+                            const available = Number(wallet?.availableBalance ?? 0)
+                            const walletShort = available < planPrice
+                            const METHODS = [
+                                { id: 'wallet', label: 'Wallet balance', note: walletShort ? 'Not enough available' : 'Instant', disabled: walletShort },
+                                { id: 'kashier', label: 'Mobile wallet', note: 'Vodafone Cash / etc.', disabled: false },
+                                { id: 'stripe', label: 'Card', note: 'Visa / Mastercard', disabled: false },
+                            ]
+                            return (
+                                <>
+                                    <p className="text-xs font-medium text-slate-500 mt-4 mb-1.5">Pay with</p>
+                                    <div className="space-y-2">
+                                        {METHODS.map((m) => (
+                                            <button
+                                                key={m.id}
+                                                type="button"
+                                                disabled={promoting || m.disabled}
+                                                onClick={() => setPayMethod(m.id)}
+                                                className={`w-full flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${payMethod === m.id ? 'border-[#1c355e] bg-[#1c355e]/5' : 'border-slate-200 hover:border-slate-300'}`}
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <span className={`w-3.5 h-3.5 rounded-full border ${payMethod === m.id ? 'border-[#1c355e] bg-[#1c355e]' : 'border-slate-300'}`} />
+                                                    <span className="font-medium text-slate-700">{m.label}</span>
+                                                </span>
+                                                <span className="text-xs text-slate-400">{m.note}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={promoting || (payMethod === 'wallet' && walletShort)}
+                                        onClick={handlePromote}
+                                        className="mt-5 w-full rounded-xl bg-[#e67e22] hover:bg-[#d35400] text-white font-semibold py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {promoting ? 'Processing…' : `Pay ${currency} ${planPrice} & feature`}
+                                    </button>
+                                    {payMethod !== 'wallet' && (
+                                        <p className="text-[11px] text-slate-400 mt-2 text-center">You'll be redirected to a secure payment page.</p>
+                                    )}
+                                </>
+                            )
+                        })()}
                     </div>
                 </div>
             )}

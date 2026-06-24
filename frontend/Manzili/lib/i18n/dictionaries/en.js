@@ -245,6 +245,7 @@ const en = {
     placingOrder: "Placing order…",
     orderPlaced: "Order placed",
     redirectingStripe: "Redirecting to Stripe…",
+    redirectingPayment: "Redirecting to secure payment…",
     pleaseEnterCoupon: "Please enter a coupon code",
     couponApplied: "Coupon applied successfully",
     codNotAvailable: "Cash on delivery is not available",
@@ -267,6 +268,7 @@ const en = {
   },
   orderItem: {
     rateProduct: "Rate Product",
+    viewProduct: "View product →",
     leaveReview: "Leave a review",
     requestReturn: "Request Return",
     areYouSure: "Are you sure?",

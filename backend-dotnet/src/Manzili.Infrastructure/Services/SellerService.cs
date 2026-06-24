@@ -340,7 +340,14 @@ public sealed class SellerService
                 Id = so.StoreOrderid.ToString(),
                 CustomerName = customerName,
                 Items = so.StoreOrderItems
-                    .Select(i => new OrderItemDto { Name = i.ProductName, Quantity = i.Quantity })
+                    .Select(i => new OrderItemDto
+                    {
+                        ProductId = i.Productid.ToString(),
+                        Name = i.ProductName,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.PriceAtPurchase,
+                        ImageUrl = i.ProductImageUrl,
+                    })
                     .ToList(),
                 Total = (double)so.Total,
                 Status = so.Status.ToLowerInvariant(),
@@ -349,8 +356,12 @@ public sealed class SellerService
                 CreatedAt = ToIso(so.CreatedAt)!,
                 Address = so.Order.Address is null ? null : new OrderAddressDto
                 {
+                    Name = so.Order.Address.Name ?? customerName,
+                    Phone = so.Order.Address.Phone ?? "",
+                    Email = so.Order.Address.Email ?? person?.Email ?? "",
+                    Street = so.Order.Address.Street ?? "",
                     City = so.Order.Address.City ?? "",
-                    District = so.Order.Address.District ?? "",
+                    District = so.Order.Address.District ?? so.Order.Address.Zone ?? "",
                 },
                 Shipment = so.Shipment is null ? null : ShipmentMapper.Map(so.Shipment),
             };

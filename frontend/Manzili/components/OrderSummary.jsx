@@ -157,7 +157,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                 throw new Error(t('orderSummary.checkoutUrlMissing'));
             }
             window.location.href = kashier.url;
-            return { toastMessage: t('orderSummary.redirectingStripe') };
+            return { toastMessage: t('orderSummary.redirectingPayment') };
         }
 
         // STRIPE: get a Checkout session from the API and redirect to it.

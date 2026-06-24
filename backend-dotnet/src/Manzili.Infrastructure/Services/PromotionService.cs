@@ -26,35 +26,41 @@ public sealed class PromotionService
         _wallet = wallet;
     }
 
-    private static (string plan, decimal amount, int days) ResolvePlan(string? plan) =>
+    /// <summary>Plan catalog — the single source of truth for the plan name, price, and window.
+    /// The gateway checkout (Kashier/Stripe) and the wallet path all derive the amount from here.</summary>
+    public static (string plan, decimal amount, int days) ResolvePlan(string? plan) =>
         (plan ?? "").Trim().ToLowerInvariant() switch
         {
             "week" => ("week", 300m, 7),
             _ => ("day", 50m, 1),
         };
 
+    /// <summary>The price of a plan (EGP) — used by the gateway checkout to charge the exact amount.</summary>
+    public static decimal PlanAmount(string? plan) => ResolvePlan(plan).amount;
+
     /// <summary>
-    /// Buy a promotion for one of the seller's products. If the product is already promoted, the
-    /// window is EXTENDED (stacks onto the current expiry). The amount is recorded as the price the
-    /// seller paid Manzili.
+    /// Activates (or extends) a promotion that has ALREADY been paid for — whether from the wallet
+    /// (paymentMethod=WALLET) or a gateway (KASHIER/STRIPE). Stacks onto any still-active window so
+    /// re-buying extends rather than replaces. Idempotent on <paramref name="paymentRef"/> so a
+    /// webhook + redirect double-confirm of the same gateway payment creates exactly one promotion.
+    /// The Amount it records IS Manzili's revenue for this feature.
     /// </summary>
-    public async Task<Promotion> CreateAsync(int sellerId, int productId, string? plan)
+    public async Task<Promotion> ActivateAsync(int sellerId, int productId, string? plan, string paymentMethod, string? paymentRef)
     {
+        // Exactly-once for gateway payments: if we already activated this payment, return that row.
+        if (!string.IsNullOrWhiteSpace(paymentRef))
+        {
+            var existing = await _db.Promotions.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.PaymentRef == paymentRef);
+            if (existing is not null) return existing;
+        }
+
         var owns = await _db.Products.AsNoTracking()
             .AnyAsync(p => p.Productid == productId && p.Sellerid == sellerId);
         if (!owns) throw new NotFoundException("Product");
 
         var (planName, amount, days) = ResolvePlan(plan);
         var now = DateTime.UtcNow;
-
-        // Payment: charged from the seller's AVAILABLE wallet balance (this is them paying Manzili).
-        // No balance → no promotion (errors), so a feature is always a real, paid-for placement.
-        var wallet = await _wallet.EnsureWalletAsync(sellerId);
-        if (wallet.AvailableBalance < amount)
-            throw new AppException(
-                $"Not enough wallet balance to feature this product. The {planName} plan costs EGP {amount:0} "
-                + $"but your available balance is EGP {wallet.AvailableBalance:0}.",
-                402, "INSUFFICIENT_WALLET_BALANCE");
 
         // Stack onto any still-active promotion for this product so re-buying extends, not replaces.
         var activeExpiry = await _db.Promotions.AsNoTracking()
@@ -68,12 +74,36 @@ public sealed class PromotionService
             Sellerid = sellerId,
             Plan = planName,
             Amount = amount,
+            PaymentMethod = paymentMethod,
+            PaymentRef = paymentRef,
             CreatedAt = now,
             StartsAt = now,
             ExpiresAt = startFrom.AddDays(days),
         };
         _db.Promotions.Add(promo);
         await _db.SaveChangesAsync();
+        return promo;
+    }
+
+    /// <summary>
+    /// Buy a promotion paid from the seller's AVAILABLE wallet balance. Errors (402) if the balance
+    /// can't cover it, so a wallet-paid feature is always real money moved to Manzili. For sellers
+    /// whose earnings are still PENDING (not yet released), the UI also offers direct mobile-wallet /
+    /// card payment via the gateway checkout.
+    /// </summary>
+    public async Task<Promotion> CreateFromWalletAsync(int sellerId, int productId, string? plan)
+    {
+        var (planName, amount, _) = ResolvePlan(plan);
+
+        var wallet = await _wallet.EnsureWalletAsync(sellerId);
+        if (wallet.AvailableBalance < amount)
+            throw new AppException(
+                $"Not enough available wallet balance to feature this product. The {planName} plan costs EGP {amount:0} "
+                + $"but your available (withdrawable) balance is EGP {wallet.AvailableBalance:0}. "
+                + "Earnings stay pending until an order is delivered — you can pay directly with mobile wallet or card instead.",
+                402, "INSUFFICIENT_WALLET_BALANCE");
+
+        var promo = await ActivateAsync(sellerId, productId, plan, "WALLET", paymentRef: null);
 
         // Debit the wallet (Manzili keeps it — platform revenue) now that the promotion exists.
         await _wallet.PostWalletTransactionAsync(
@@ -82,6 +112,14 @@ public sealed class PromotionService
 
         return promo;
     }
+
+    /// <summary>Back-compat alias for the wallet-paid path (the original POST /seller/promotions).</summary>
+    public Task<Promotion> CreateAsync(int sellerId, int productId, string? plan) =>
+        CreateFromWalletAsync(sellerId, productId, plan);
+
+    /// <summary>Total promotion revenue Manzili has earned (sum of every paid feature). Admin dashboard.</summary>
+    public async Task<decimal> GetTotalRevenueAsync() =>
+        await _db.Promotions.AsNoTracking().SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
     /// <summary>The seller's currently-active promotions (newest first), for their dashboard.</summary>
     public async Task<List<Promotion>> GetSellerActiveAsync(int sellerId)

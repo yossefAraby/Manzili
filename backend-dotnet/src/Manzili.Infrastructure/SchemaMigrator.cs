@@ -48,5 +48,10 @@ public static class SchemaMigrator
             );");
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_promotion_expires ON manzili.promotion (expires_at);");
+        // Promotions can now be paid directly (mobile wallet / card), not only from the seller wallet.
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE manzili.promotion ADD COLUMN IF NOT EXISTS payment_method varchar(20) NOT NULL DEFAULT 'WALLET';");
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE manzili.promotion ADD COLUMN IF NOT EXISTS payment_ref text;");
     }
 }

@@ -51,11 +51,15 @@ public sealed class AdminService
             else { standardSales += r.Subtotal; standardCommission += _fees.Commission(r.Subtotal, custom: false); }
         }
 
+        // Paid "feature my product" promotions are 100% Manzili revenue (no seller share).
+        var promotionRevenue = await _db.Promotions.AsNoTracking().SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
         return new AdminRevenueDto
         {
-            PlatformRevenue = (double)(standardCommission + customCommission),
+            PlatformRevenue = (double)(standardCommission + customCommission + promotionRevenue),
             StandardCommission = (double)standardCommission,
             CustomCommission = (double)customCommission,
+            PromotionRevenue = (double)promotionRevenue,
             StandardSales = (double)standardSales,
             CustomSales = (double)customSales,
             GrossSales = (double)(standardSales + customSales),

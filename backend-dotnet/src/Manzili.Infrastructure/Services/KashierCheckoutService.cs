@@ -28,6 +28,7 @@ public sealed class KashierCheckoutService
     private readonly ManziliDbContext _db;
     private readonly OrderService _orders;
     private readonly OfferService _offers;
+    private readonly PromotionService _promotions;
     private readonly CheckoutPricingService _pricing;
     private readonly FulfillmentService _fulfillment;
     private readonly KashierOptions _kashier;
@@ -37,6 +38,7 @@ public sealed class KashierCheckoutService
         ManziliDbContext db,
         OrderService orders,
         OfferService offers,
+        PromotionService promotions,
         CheckoutPricingService pricing,
         FulfillmentService fulfillment,
         IOptions<AppOptions> options)
@@ -44,10 +46,57 @@ public sealed class KashierCheckoutService
         _db = db;
         _orders = orders;
         _offers = offers;
+        _promotions = promotions;
         _pricing = pricing;
         _fulfillment = fulfillment;
         _kashier = options.Value.Kashier;
         _app = options.Value;
+    }
+
+    // ===================== Product-promotion (seller pays Manzili) =====================
+
+    /// <summary>Opens a Kashier mobile-wallet HPP for a seller to pay for a "feature my product"
+    /// promotion. On the redirect return <see cref="ConfirmPromotionAsync"/> activates it. The money
+    /// is Manzili revenue (never touches the seller wallet).</summary>
+    public async Task<CheckoutResult> CreatePromotionPaymentAsync(int sellerId, int productId, string? plan, string? method = "wallet", string? origin = null)
+    {
+        if (!_kashier.IsConfigured)
+            throw new AppException("Kashier not configured", 503, "SERVICE_UNAVAILABLE");
+
+        var owns = await _db.Products.AsNoTracking().AnyAsync(p => p.Productid == productId && p.Sellerid == sellerId);
+        if (!owns) throw new NotFoundException("Product");
+
+        var (planName, amountDec, _) = PromotionService.ResolvePlan(plan);
+        var amount = amountDec.ToString("0.00", CultureInfo.InvariantCulture);
+        var merchantOrderId = $"PROMO-{productId}-{planName}-{sellerId}";
+
+        var baseUrl = _app.ResolveBaseUrl(origin);
+        var redirect = $"{baseUrl}/store/manage-product?promo=success&gateway=kashier&productId={productId}&plan={Uri.EscapeDataString(planName)}";
+        var failRedirect = $"{baseUrl}/store/manage-product?promo=failed&gateway=kashier";
+
+        var hppUrl = BuildHostedPaymentUrl(merchantOrderId, amount, AllowedMethods(method), redirect, failRedirect);
+        return new CheckoutResult { Url = hppUrl, SessionId = merchantOrderId, OrderId = "" };
+    }
+
+    /// <summary>Server-trusted confirm of the promotion redirect. Verifies the Kashier signature, and
+    /// on SUCCESS activates the promotion (idempotent via the transaction id). The seller id comes from
+    /// the authenticated caller, not the query.</summary>
+    public async Task<ConfirmCheckoutResult> ConfirmPromotionAsync(int sellerId, int productId, string? plan, string? rawQuery)
+    {
+        if (!_kashier.IsConfigured)
+            throw new AppException("Kashier not configured", 503, "SERVICE_UNAVAILABLE");
+
+        var ordered = ParseQueryOrdered(rawQuery);
+        VerifySignatureOrThrow(ordered, PromoExcluded);
+
+        var status = First(ordered, "paymentStatus") ?? First(ordered, "status");
+        var transactionId = First(ordered, "transactionId");
+        var paid = string.Equals(status, "SUCCESS", StringComparison.OrdinalIgnoreCase);
+
+        if (paid)
+            await _promotions.ActivateAsync(sellerId, productId, plan, "KASHIER", transactionId ?? $"kashier-promo-{productId}-{sellerId}");
+
+        return new ConfirmCheckoutResult { Status = paid ? "paid" : (status ?? "unpaid"), Type = "promotion" };
     }
 
     // ===================== Cart order =====================
@@ -93,8 +142,10 @@ public sealed class KashierCheckoutService
             var breakdown = await _pricing.QuoteAsync(req.Items, discount, methodLabel, addressId: req.AddressId);
             var amount = breakdown.Total.ToString("0.00", CultureInfo.InvariantCulture);
 
-            var redirect = $"{_app.ResolveBaseUrl(origin)}/orders?checkout=success&gateway=kashier";
-            var hppUrl = BuildHostedPaymentUrl(order.Id, amount, AllowedMethods(req.Method), redirect);
+            var baseUrl = _app.ResolveBaseUrl(origin);
+            var redirect = $"{baseUrl}/orders?checkout=success&gateway=kashier";
+            var failRedirect = $"{baseUrl}/orders?checkout=failed&gateway=kashier";
+            var hppUrl = BuildHostedPaymentUrl(order.Id, amount, AllowedMethods(req.Method), redirect, failRedirect);
             return new CheckoutResult { Url = hppUrl, SessionId = order.Id, OrderId = order.Id };
         }
         catch when (orderId > 0)
@@ -210,12 +261,15 @@ public sealed class KashierCheckoutService
     private static readonly HashSet<string> OfferExcluded =
         new(StringComparer.OrdinalIgnoreCase)
         { "signature", "mode", "checkout", "gateway", "session_id", "payment", "offerId", "milestone", "amount", "addressId" };
+    private static readonly HashSet<string> PromoExcluded =
+        new(StringComparer.OrdinalIgnoreCase)
+        { "signature", "mode", "checkout", "gateway", "session_id", "payment", "promo", "productId", "plan" };
 
     /// <summary>
     /// Builds the HPP redirect. Order hash = HMAC-SHA256( "/?payment={mid}.{order}.{amount}.{ccy}", apiKey )
     /// lowercase hex — Kashier rejects the open if the hash doesn't match exactly.
     /// </summary>
-    private string BuildHostedPaymentUrl(string orderId, string amount, string allowedMethods, string merchantRedirect)
+    private string BuildHostedPaymentUrl(string orderId, string amount, string allowedMethods, string merchantRedirect, string? failureRedirect = null)
     {
         var mid = _kashier.MerchantId!;
         var ccy = _kashier.Currency;
@@ -231,9 +285,17 @@ public sealed class KashierCheckoutService
             new("hash", hash),
             new("mode", _kashier.Mode),
             new("merchantRedirect", merchantRedirect),
+            // Force a GET redirect back to the merchant URL. Without this Kashier can POST the result
+            // to the redirect — which a static Next.js page can't receive, so the buyer sees Kashier's
+            // generic "A General Error Occurred" even though the payment was approved.
+            new("redirectMethod", "get"),
             new("allowedMethods", allowedMethods),
             new("display", "en"),
         };
+        // Where Kashier sends the buyer if the payment fails/is declined — so the order doesn't
+        // linger as "Pending Payment"; the orders page confirms the (unpaid) return and cancels it.
+        if (!string.IsNullOrWhiteSpace(failureRedirect))
+            q.Add(new("failureRedirect", failureRedirect!));
         if (!string.IsNullOrWhiteSpace(_kashier.WebhookUrl))
             q.Add(new("serverWebhook", $"{_kashier.WebhookUrl!.TrimEnd('/')}/api/v1/webhooks/kashier"));
 

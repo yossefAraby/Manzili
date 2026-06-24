@@ -245,6 +245,7 @@ const ar = {
     placingOrder: "جارٍ تقديم الطلب…",
     orderPlaced: "تم تقديم الطلب",
     redirectingStripe: "جارٍ التوجيه إلى Stripe…",
+    redirectingPayment: "جارٍ التوجيه إلى صفحة الدفع الآمنة…",
     pleaseEnterCoupon: "يرجى إدخال كود القسيمة",
     couponApplied: "تم تطبيق القسيمة بنجاح",
     codNotAvailable: "الدفع عند الاستلام غير متاح",
@@ -267,6 +268,7 @@ const ar = {
   },
   orderItem: {
     rateProduct: "تقييم المنتج",
+    viewProduct: "عرض المنتج →",
     leaveReview: "اكتب تقييماً",
     requestReturn: "طلب إرجاع",
     areYouSure: "هل أنت متأكد؟",

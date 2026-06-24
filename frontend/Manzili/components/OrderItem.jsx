@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import { Star, StoreIcon, MapPin, TruckIcon } from "lucide-react";
 import { useSelector } from "react-redux";
 import Rating from "./Rating";
@@ -129,10 +130,27 @@ const OrderItem = ({ order, onAdvance }) => {
                   <Image className="h-12 w-auto object-contain" src={getItemImage(item)} alt="" width={48} height={48} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-700 truncate">{item.product?.name || item.name}</p>
+                  {item?.product?.id ? (
+                    <Link
+                      href={`/product/${item.product.id}`}
+                      className="font-medium text-slate-700 truncate block hover:text-[#1c355e] hover:underline transition-colors"
+                    >
+                      {item.product?.name || item.name}
+                    </Link>
+                  ) : (
+                    <p className="font-medium text-slate-700 truncate">{item.product?.name || item.name}</p>
+                  )}
                   <p className="text-sm text-slate-500">
                     {currency}{item.price} · {t('orderItem.qty', { qty: item.quantity })}
                   </p>
+                  {item?.product?.id && (
+                    <Link
+                      href={`/product/${item.product.id}`}
+                      className="inline-block mt-1 text-xs text-[#2582eb] hover:underline"
+                    >
+                      {t('orderItem.viewProduct')}
+                    </Link>
+                  )}
                   {rated ? (
                     <div className="mt-1"><Rating value={rated.rating} /></div>
                   ) : item?.product?.id && order.status === "DELIVERED" ? (

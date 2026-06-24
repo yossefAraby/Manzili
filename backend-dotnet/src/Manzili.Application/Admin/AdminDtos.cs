@@ -14,9 +14,10 @@ public sealed class AdminStatsDto
 /// <summary>Manzili's own commission take: 15% of standard sales + 10% of custom-order sales.</summary>
 public sealed class AdminRevenueDto
 {
-    public double PlatformRevenue { get; set; }      // total Manzili commission earned
+    public double PlatformRevenue { get; set; }      // total Manzili income (commissions + promotions)
     public double StandardCommission { get; set; }   // 15% take from standard sales
     public double CustomCommission { get; set; }     // 10% take from custom-order sales
+    public double PromotionRevenue { get; set; }     // paid "feature my product" promotions (100% Manzili)
     public double StandardSales { get; set; }        // gross goods value of standard sales
     public double CustomSales { get; set; }          // gross goods value of custom-order sales
     public double GrossSales { get; set; }           // standard + custom goods value

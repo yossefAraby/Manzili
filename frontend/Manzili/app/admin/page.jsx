@@ -182,7 +182,7 @@ export default function AdminDashboard() {
       {isSuperAdmin && revenue && (
         <div className="mt-2 mb-4 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50/60 p-5">
           <p className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
-            <CircleDollarSignIcon size={14} /> Manzili Revenue (platform commission)
+            <CircleDollarSignIcon size={14} /> Manzili Revenue (commissions + promotions)
           </p>
           <p className="text-3xl font-semibold text-emerald-800 mt-1">
             {currency} {revenue.platformRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -190,10 +190,11 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap gap-x-8 gap-y-1 mt-3 text-xs text-emerald-900/80">
             <span>Standard ({revenue.standardRatePercent}%): <b>{currency} {revenue.standardCommission.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></span>
             <span>Custom ({revenue.customRatePercent}%): <b>{currency} {revenue.customCommission.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></span>
+            <span>Featured promotions: <b>{currency} {Number(revenue.promotionRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></span>
             <span>Gross sales: <b>{currency} {revenue.grossSales.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></span>
           </div>
           <p className="text-[11px] text-emerald-700/70 mt-2">
-            Your real earnings across all paid orders — {revenue.standardRatePercent}% of standard sales and {revenue.customRatePercent}% of custom-order sales. Visible to full admins only.
+            Your real earnings — {revenue.standardRatePercent}% of standard sales, {revenue.customRatePercent}% of custom-order sales, plus 100% of paid product-feature promotions. Visible to full admins only.
           </p>
         </div>
       )}

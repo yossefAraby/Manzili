@@ -217,6 +217,7 @@ export async function fetchAdminRevenue() {
       platformRevenue: Number(pick(d, 'platformRevenue', 0)) || 0,
       standardCommission: Number(pick(d, 'standardCommission', 0)) || 0,
       customCommission: Number(pick(d, 'customCommission', 0)) || 0,
+      promotionRevenue: Number(pick(d, 'promotionRevenue', 0)) || 0,
       standardSales: Number(pick(d, 'standardSales', 0)) || 0,
       customSales: Number(pick(d, 'customSales', 0)) || 0,
       grossSales: Number(pick(d, 'grossSales', 0)) || 0,

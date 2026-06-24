@@ -31,10 +31,14 @@ function adaptOrderItem(raw) {
   const images = toImageList(
     product.images ?? raw.images ?? (raw.imageUrl ? [raw.imageUrl] : (raw.image ? [raw.image] : []))
   );
+  // The order DTO sends the snapshotted unit price as `unitPrice` (+ `totalPrice`); older/nested
+  // shapes used `price`. Read unitPrice first so the line shows the real price, not 0.
+  const unit = raw.unitPrice ?? raw.price ?? product.price
+    ?? (raw.totalPrice != null && raw.quantity ? Number(raw.totalPrice) / Number(raw.quantity) : null);
   return {
     productId: productId != null ? String(productId) : null,
     quantity: Number(raw.quantity ?? 1),
-    price: Number(raw.price ?? product.price ?? 0),
+    price: Number(unit ?? 0),
     product: {
       id: product.id != null ? String(product.id) : (productId != null ? String(productId) : null),
       name: product.name ?? raw.name ?? '',

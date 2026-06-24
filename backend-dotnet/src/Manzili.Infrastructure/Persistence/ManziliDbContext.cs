@@ -270,6 +270,8 @@ public partial class ManziliDbContext : DbContext
             entity.Property(e => e.Sellerid).HasColumnName("sellerid");
             entity.Property(e => e.Plan).HasMaxLength(20).HasColumnName("plan");
             entity.Property(e => e.Amount).HasColumnType("numeric(12,2)").HasColumnName("amount");
+            entity.Property(e => e.PaymentMethod).HasMaxLength(20).HasColumnName("payment_method");
+            entity.Property(e => e.PaymentRef).HasColumnName("payment_ref");
             entity.Property(e => e.CreatedAt).HasColumnType("timestamp(6) without time zone").HasColumnName("created_at");
             entity.Property(e => e.StartsAt).HasColumnType("timestamp(6) without time zone").HasColumnName("starts_at");
             entity.Property(e => e.ExpiresAt).HasColumnType("timestamp(6) without time zone").HasColumnName("expires_at");
