@@ -44,6 +44,20 @@ public sealed class ProductService
             LIMIT {limit}").ToListAsync();
     }
 
+    /// <summary>Distinct cities of active+approved sellers (from their pickup warehouses) — powers the
+    /// shop "filter by city" dropdown, so only cities that actually have stores are offered.</summary>
+    public async Task<IReadOnlyList<string>> ListSellerCitiesAsync()
+    {
+        return await _db.Sellers.AsNoTracking()
+            .Where(s => s.IsActive == true && s.StoreStatus == StatusMaps.StoreStatus.Approved)
+            .SelectMany(s => s.StorePickupAddresses)
+            .Where(w => w.City != null && w.City != "")
+            .Select(w => w.City!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+    }
+
     /// <summary>Set of productids wishlisted by the given person (empty if not logged in).</summary>
     internal async Task<HashSet<int>> GetWishlistedIdsAsync(int? userId)
     {
@@ -181,12 +195,57 @@ public sealed class ProductService
             query = query.Where(p =>
                 ((p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m)) <= hi);
 
+        // City filter — products whose seller's pickup-warehouse city (or free-text address) matches.
+        if (!string.IsNullOrWhiteSpace(filter.City))
+        {
+            var fcity = filter.City.Trim().ToLower();
+            query = query.Where(p => p.Seller != null &&
+                (p.Seller.StorePickupAddresses.Any(w => w.City != null && w.City.ToLower() == fcity) ||
+                 (p.Seller.AddressText != null && p.Seller.AddressText.ToLower().Contains(fcity))));
+        }
+
+        // For "nearest" sort: resolve the buyer's own city (from any saved address) so same-city
+        // sellers rank first. Empty for guests / no address → nearest falls back to latest.
+        string? buyerCity = null;
+        if (effectiveSortBy == "nearest" && userId is int pid)
+        {
+            buyerCity = await _db.Addresses.AsNoTracking()
+                .Where(a => a.Personid == pid && a.City != null && a.City != "")
+                .Select(a => a.City!.ToLower())
+                .FirstOrDefaultAsync();
+        }
+
         if (effectiveSortBy == "price")
         {
             // Sort by the same effective selling price so price asc/desc matches the band filter.
             query = asc
                 ? query.OrderBy(p => (p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m))
                 : query.OrderByDescending(p => (p.Mrp != null && p.Price != null && p.Price > 0m && p.Price < p.Mrp) ? p.Price!.Value : (p.Mrp ?? p.Price ?? 0m));
+        }
+        else if (effectiveSortBy == "popular")
+        {
+            // Popularity = how many shoppers have viewed the product (recently-viewed tracking),
+            // with review count + recency as tiebreakers. Always most-first.
+            query = query
+                .OrderByDescending(p => _db.ProductViews.Count(v => v.Productid == p.Productid))
+                .ThenByDescending(p => p.ReviewingAndRatings.Count)
+                .ThenByDescending(p => p.CreatedAt);
+        }
+        else if (effectiveSortBy == "reviews")
+        {
+            // Most-reviewed first (then newest).
+            query = query
+                .OrderByDescending(p => p.ReviewingAndRatings.Count)
+                .ThenByDescending(p => p.CreatedAt);
+        }
+        else if (effectiveSortBy == "nearest")
+        {
+            // Same-city sellers first (then newest). No buyer city (guest / no address) → just newest.
+            query = string.IsNullOrEmpty(buyerCity)
+                ? query.OrderByDescending(p => p.CreatedAt)
+                : query
+                    .OrderByDescending(p => p.Seller != null && p.Seller.StorePickupAddresses.Any(w => w.City != null && w.City.ToLower() == buyerCity))
+                    .ThenByDescending(p => p.CreatedAt);
         }
         else
         {

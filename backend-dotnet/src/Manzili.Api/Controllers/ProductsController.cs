@@ -30,12 +30,22 @@ public sealed class ProductsController : ApiController
         [FromQuery] decimal? maxPrice,
         [FromQuery] bool? inStock,
         [FromQuery] string? sortBy,
-        [FromQuery] string? sortDir)
+        [FromQuery] string? sortDir,
+        [FromQuery] string? city)
     {
         var pg = Pagination.Parse(page, limit);
-        var filter = new ProductListFilter(category, search, minPrice, maxPrice, inStock, sortBy, sortDir);
+        var filter = new ProductListFilter(category, search, minPrice, maxPrice, inStock, sortBy, sortDir, city);
         var result = await _products.ListProductsAsync(pg, filter, CurrentPersonId);
         return PagedResponse(result);
+    }
+
+    // GET /api/v1/products/cities  (public) — distinct cities that have active stores, for the
+    // shop "filter by city" dropdown.
+    [HttpGet("cities")]
+    public async Task<IActionResult> Cities()
+    {
+        var cities = await _products.ListSellerCitiesAsync();
+        return ApiOk(new { cities });
     }
 
     // GET /api/v1/products/featured  (optionalAuth)

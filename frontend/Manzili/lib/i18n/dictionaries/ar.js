@@ -177,8 +177,13 @@ const ar = {
   shopFilters: {
     sortBy: "ترتيب حسب",
     latest: "الأحدث",
+    popular: "الأكثر رواجًا",
+    reviews: "الأكثر تقييمًا",
     priceLowToHigh: "السعر: من الأقل إلى الأعلى",
     priceHighToLow: "السعر: من الأعلى إلى الأقل",
+    nearest: "الأقرب إليّ",
+    location: "الموقع",
+    allCities: "كل المدن",
     availability: "التوفر",
     all: "الكل",
     inStock: "متوفر",

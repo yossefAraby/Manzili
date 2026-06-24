@@ -17,9 +17,12 @@ const ProductCard = ({ product }) => {
 
     // calculate the average rating of the product
     const ratingList = Array.isArray(product.rating) ? product.rating : [];
+    // Cards get an aggregate (ratingAvg + reviewCount) from the list endpoint; the detail page
+    // ships the full `rating` array. Use whichever is present so stars show on /shop and /home.
     const rating = (ratingList.length > 0)
         ? Math.round(ratingList.reduce((acc, curr) => acc + (curr.rating || 0), 0) / ratingList.length)
-        : 0;
+        : Math.round(Number(product.ratingAvg) || 0);
+    const reviewCount = ratingList.length > 0 ? ratingList.length : (Number(product.reviewCount) || 0);
     const thumbnail = (Array.isArray(product.images) ? product.images : [])[0] || null;
 
     return (
@@ -40,10 +43,11 @@ const ProductCard = ({ product }) => {
             <div className='flex justify-between gap-3 text-sm text-slate-800 pt-2 max-w-60'>
                 <div>
                     <p>{product.name}</p>
-                    <div className='flex'>
+                    <div className='flex items-center'>
                         {Array(5).fill('').map((_, index) => (
                             <StarIcon key={index} size={14} className='text-transparent mt-0.5' fill={rating >= index + 1 ? "#2582eb" : "#D1D5DB"} />
                         ))}
+                        {reviewCount > 0 && <span className='text-xs text-slate-400 ml-1'>({reviewCount})</span>}
                     </div>
                 </div>
                 <p>{currency}{product.price}</p>

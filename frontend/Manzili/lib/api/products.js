@@ -60,7 +60,11 @@ export function adaptProductCard(dto) {
     store: dto.store ? { id: String(dto.store.id ?? ''), name: dto.store.name || '', username: dto.store.username || null, logo: dto.store.logo || null } : null,
     inStock: dto.inStock !== false,
     stock: dto.inStock === false ? 0 : (dto.stock ?? 10),
-    rating: [], // card DTO only carries an aggregate number; UI tolerates an empty array
+    // The card endpoint sends an AGGREGATE rating (avg) + count, not the full review list. Carry
+    // them so cards on /shop and /home show stars (the detail page still uses the `rating` array).
+    rating: [],
+    ratingAvg: Number(dto.rating) || 0,
+    reviewCount: Number(dto.reviewCount) || 0,
     variants: [],
     createdAt: dto.createdAt || null,
   };
@@ -82,6 +86,8 @@ export function adaptSearchProduct(dto) {
     inStock: dto.inStock !== false,
     stock: dto.inStock === false ? 0 : (dto.stock ?? 10),
     rating: [],
+    ratingAvg: Number(dto.rating) || 0,
+    reviewCount: Number(dto.reviewCount) || 0,
     variants: [],
     createdAt: dto.createdAt || null,
   };
@@ -179,6 +185,7 @@ export async function fetchProducts({
   inStock,
   sortBy,
   sortDir,
+  city,
 } = {}) {
   const params = new URLSearchParams();
   params.set('page', String(page));
@@ -192,6 +199,7 @@ export async function fetchProducts({
   else if (inStock === false) params.set('inStock', 'false');
   if (sortBy) params.set('sortBy', sortBy);
   if (sortDir) params.set('sortDir', sortDir);
+  if (city) params.set('city', city);
   const r = await apiGet(`/products?${params.toString()}`);
   const cards = r?.data?.productCards || r?.data?.ProductCards || [];
   return {
@@ -277,6 +285,17 @@ export async function fetchRecommended(seedIds, limit = 4, taste = false) {
  */
 export async function recordProductView(id) {
   try { await apiPost(`/products/${encodeURIComponent(id)}/view`); } catch { /* non-fatal taste signal */ }
+}
+
+/** GET /products/cities → distinct cities that have active stores (for the shop city filter). Empty on failure. */
+export async function fetchProductCities() {
+  try {
+    const r = await apiGet('/products/cities');
+    const list = r?.data?.cities ?? r?.data ?? [];
+    return Array.isArray(list) ? list.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
 }
 
 /**

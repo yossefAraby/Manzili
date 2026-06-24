@@ -177,8 +177,13 @@ const en = {
   shopFilters: {
     sortBy: "Sort By",
     latest: "Latest",
+    popular: "Most Popular",
+    reviews: "Most Reviewed",
     priceLowToHigh: "Price: Low to High",
     priceHighToLow: "Price: High to Low",
+    nearest: "Nearest to me",
+    location: "Location",
+    allCities: "All cities",
     availability: "Availability",
     all: "All",
     inStock: "In Stock",

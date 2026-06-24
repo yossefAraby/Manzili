@@ -20,6 +20,9 @@ function sortParams(sortBy) {
   switch (sortBy) {
     case "price_asc": return { sortBy: "price", sortDir: "asc" };
     case "price_desc": return { sortBy: "price", sortDir: "desc" };
+    case "popular": return { sortBy: "popular", sortDir: "desc" };   // most-viewed
+    case "reviews": return { sortBy: "reviews", sortDir: "desc" };   // most-reviewed
+    case "nearest": return { sortBy: "nearest", sortDir: "desc" };   // same-city sellers first (buyer's city, server-resolved)
     default: return { sortBy: "created_at", sortDir: "desc" }; // latest
   }
 }
@@ -61,6 +64,7 @@ function ShopContent() {
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   const [sortBy, setSortBy] = useState("latest");
   const [stockFilter, setStockFilter] = useState("all");
+  const [selectedCity, setSelectedCity] = useState("");
 
   // Server-paginated results for the current page only.
   const [products, setProducts] = useState([]);
@@ -80,8 +84,9 @@ function ShopContent() {
       max: Number.isFinite(selectedPriceRange?.max) ? selectedPriceRange.max : null,
       sortBy,
       stockFilter,
+      city: selectedCity,
     }),
-    [search, selectedCategories, selectedPriceRange, sortBy, stockFilter],
+    [search, selectedCategories, selectedPriceRange, sortBy, stockFilter, selectedCity],
   );
   const prevFilterKey = useRef(filterKey);
   useEffect(() => {
@@ -111,6 +116,7 @@ function ShopContent() {
           inStock,
           sortBy: apiSortBy,
           sortDir,
+          city: selectedCity || undefined,
         });
         if (cancelled) return;
         setProducts(res.items);
@@ -124,7 +130,7 @@ function ShopContent() {
       }
     }, 300);
     return () => { cancelled = true; clearTimeout(handle); };
-  }, [search, selectedCategories, selectedPriceRange, sortBy, stockFilter, page]);
+  }, [search, selectedCategories, selectedPriceRange, sortBy, stockFilter, selectedCity, page]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -153,6 +159,7 @@ function ShopContent() {
               onPriceRangeChange={setSelectedPriceRange}
               onSortChange={setSortBy}
               onAvailabilityChange={setStockFilter}
+              onCityChange={setSelectedCity}
             />
           </div>
 

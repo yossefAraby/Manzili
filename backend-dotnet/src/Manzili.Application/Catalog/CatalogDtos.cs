@@ -14,7 +14,8 @@ public readonly record struct ProductListFilter(
     decimal? MaxPrice,
     bool? InStock,
     string? SortBy,
-    string? SortDir);
+    string? SortDir,
+    string? City = null);
 
 // ---- Shared building blocks ----
 

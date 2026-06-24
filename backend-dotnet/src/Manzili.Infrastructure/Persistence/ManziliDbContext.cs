@@ -28,6 +28,8 @@ public partial class ManziliDbContext : DbContext
 
     public virtual DbSet<ColorPalette> ColorPalettes { get; set; }
 
+    public virtual DbSet<ProductView> ProductViews { get; set; }
+
     public virtual DbSet<ConsistOf> ConsistOfs { get; set; }
 
     public virtual DbSet<Conversation> Conversations { get; set; }
@@ -330,6 +332,16 @@ public partial class ManziliDbContext : DbContext
             entity.HasOne(d => d.Request).WithMany(p => p.ColorPalettes)
                 .HasForeignKey(d => d.Requestid)
                 .HasConstraintName("color_palette_requestid_fkey");
+        });
+
+        modelBuilder.Entity<ProductView>(entity =>
+        {
+            // Table created by SchemaMigrator; one row per (person, product).
+            entity.HasKey(e => new { e.Personid, e.Productid });
+            entity.ToTable("product_views", "manzili");
+            entity.Property(e => e.Personid).HasColumnName("personid");
+            entity.Property(e => e.Productid).HasColumnName("productid");
+            entity.Property(e => e.ViewedAt).HasColumnName("viewed_at");
         });
 
         modelBuilder.Entity<ConsistOf>(entity =>

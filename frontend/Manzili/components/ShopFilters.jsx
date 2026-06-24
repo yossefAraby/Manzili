@@ -5,6 +5,7 @@ import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslate } from "@/lib/i18n/LocaleContext";
+import { fetchProductCities } from "@/lib/api/products";
 
 const currencySym = getCurrencySymbol();
 const MIN_PRICE = 0;
@@ -15,6 +16,7 @@ export default function ShopFilters({
   onPriceRangeChange,
   onSortChange,
   onAvailabilityChange,
+  onCityChange,
   initialCategories = [],
 }) {
   const t = useTranslate();
@@ -31,7 +33,16 @@ export default function ShopFilters({
   const [sliderMax, setSliderMax] = useState(MAX_PRICE);
   const [sortBy, setSortBy] = useState("latest");
   const [stockFilter, setStockFilter] = useState("all");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [cities, setCities] = useState([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Load cities that actually have active stores (for the location filter dropdown).
+  useEffect(() => {
+    let alive = true;
+    fetchProductCities().then((list) => { if (alive) setCities(Array.isArray(list) ? list : []); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -82,6 +93,10 @@ export default function ShopFilters({
     setStockFilter(val);
     onAvailabilityChange?.(val);
   };
+  const handleCityChange = (val) => {
+    setSelectedCity(val);
+    onCityChange?.(val);
+  };
 
   const clearFilters = () => {
     setSelectedCategories([]);
@@ -89,10 +104,12 @@ export default function ShopFilters({
     setSliderMax(MAX_PRICE);
     setSortBy("latest");
     setStockFilter("all");
+    setSelectedCity("");
     onCategoryChange?.([]);
     onPriceRangeChange?.(null);
     onSortChange?.("latest");
     onAvailabilityChange?.("all");
+    onCityChange?.("");
   };
 
   const hasActiveFilters =
@@ -100,14 +117,16 @@ export default function ShopFilters({
     selectedPriceRange ||
     sliderMax !== MAX_PRICE ||
     sortBy !== "latest" ||
-    stockFilter !== "all";
+    stockFilter !== "all" ||
+    Boolean(selectedCity);
 
   const activeFilterCount =
     selectedCategories.length +
     (selectedPriceRange ? 1 : 0) +
     (sliderMax !== MAX_PRICE && !selectedPriceRange ? 1 : 0) +
     (sortBy !== "latest" ? 1 : 0) +
-    (stockFilter !== "all" ? 1 : 0);
+    (stockFilter !== "all" ? 1 : 0) +
+    (selectedCity ? 1 : 0);
 
   const filterBody = (
     <div className="px-5 lg:px-0 pb-4 pt-4 lg:pt-0">
@@ -117,6 +136,9 @@ export default function ShopFilters({
         <div className="flex flex-wrap gap-2">
           {[
             { value: "latest", label: t("shopFilters.latest") },
+            { value: "popular", label: t("shopFilters.popular") },
+            { value: "reviews", label: t("shopFilters.reviews") },
+            { value: "nearest", label: t("shopFilters.nearest") },
             { value: "price_asc", label: t("shopFilters.priceLowToHigh") },
             { value: "price_desc", label: t("shopFilters.priceHighToLow") },
           ].map((opt) => (
@@ -159,6 +181,21 @@ export default function ShopFilters({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Location (city) */}
+      <div className="mb-8">
+        <h4 className="font-medium text-slate-700 mb-3">{t("shopFilters.location")}</h4>
+        <select
+          value={selectedCity}
+          onChange={(e) => handleCityChange(e.target.value)}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white outline-none focus:ring-2 focus:ring-[#e67e22]"
+        >
+          <option value="">{t("shopFilters.allCities")}</option>
+          {cities.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       {/* Categories */}
@@ -227,9 +264,11 @@ export default function ShopFilters({
           <div className="flex flex-wrap gap-2">
             {sortBy !== "latest" && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                {sortBy === "price_asc"
-                  ? t("shopFilters.priceLowToHigh")
-                  : t("shopFilters.priceHighToLow")}
+                {sortBy === "price_asc" ? t("shopFilters.priceLowToHigh")
+                  : sortBy === "price_desc" ? t("shopFilters.priceHighToLow")
+                  : sortBy === "popular" ? t("shopFilters.popular")
+                  : sortBy === "reviews" ? t("shopFilters.reviews")
+                  : sortBy}
               </span>
             )}
             {stockFilter !== "all" && (
