@@ -49,12 +49,13 @@ public sealed class ShippingController : ApiController
     }
 
     // POST /api/v1/shipping/estimate  and  POST /api/v1/bosta/estimate
+    // Public: the product page shows an "estimated delivery" range to guests too.
+    [AllowAnonymous]
     [HttpPost("api/v1/shipping/estimate")]
     [HttpPost("api/v1/bosta/estimate")]
-    public IActionResult Estimate([FromBody] ShippingEstimateRequest? req)
+    public async Task<IActionResult> Estimate([FromBody] ShippingEstimateRequest? req)
     {
-        var items = req?.Items ?? new List<ShippingEstimateItem>();
-        var data = _shipping.EstimateShipping(items);
+        var data = await _shipping.EstimateAsync(req ?? new ShippingEstimateRequest());
         return ApiOk(data);
     }
 }

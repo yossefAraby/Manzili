@@ -43,6 +43,15 @@ public sealed class StoreController : ApiController
         return ApiOk(data);
     }
 
+    // GET /api/v1/stores/search?q=&limit=  (public) — find a specific seller for the custom-order
+    // private-vendor picker. Literal route, so it takes precedence over the {id} template below.
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] int? limit)
+    {
+        var stores = await _store.SearchStoresAsync(q, limit ?? 20);
+        return ApiOk(new { stores });
+    }
+
     // GET /api/v1/stores/by-username/{username}  (optionalAuth)
     [HttpGet("by-username/{username}")]
     public async Task<IActionResult> GetByUsername(string username)

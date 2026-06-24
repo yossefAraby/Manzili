@@ -11,6 +11,7 @@ public static class SellerModule
     public static IServiceCollection AddSeller(this IServiceCollection s)
     {
         s.AddScoped<SellerService>();
+        s.AddScoped<PromotionService>();
         s.AddScoped<CouponService>();
         s.AddScoped<WalletService>();
         s.AddScoped<ReturnService>();

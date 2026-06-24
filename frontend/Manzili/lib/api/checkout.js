@@ -120,12 +120,15 @@ export async function confirmCheckout(sessionId) {
 /**
  * POST /checkout/quote → the money breakdown the cart shows, computed by the same backend
  * logic that charges the card, so the displayed total equals the charged total.
- * Buyer pays: goods − discount + 25% Bosta shipping share + the Stripe fee.
+ * Buyer pays: goods − discount + the buyer Bosta shipping share + the Stripe fee.
  * @returns {Promise<{subtotal,discount,shipping,buyerShippingShare,sellerShippingShare,stripeFee,commission,total,sellerNet,stores}|null>}
  */
-export async function quoteCheckout({ items, coupon = null, paymentMethod = 'STRIPE' } = {}) {
+export async function quoteCheckout({ items, coupon = null, paymentMethod = 'STRIPE', addressId = null } = {}) {
   try {
     const payload = {
+      // addressId lets the backend price shipping by the distance from each seller to the
+      // buyer's chosen city; omitted (null) → a mid/unknown-distance estimate.
+      addressId: addressId != null ? String(addressId) : undefined,
       items: (Array.isArray(items) ? items : []).map((it) => ({
         productId: String(it.productId ?? it.id),
         quantity: Number(it.quantity ?? 1),
@@ -139,6 +142,7 @@ export async function quoteCheckout({ items, coupon = null, paymentMethod = 'STR
     const n = (v) => Number(v ?? 0);
     return {
       subtotal: n(d.subtotal), discount: n(d.discount), shipping: n(d.shipping),
+      shippingLow: n(d.shippingLow ?? d.shipping), shippingHigh: n(d.shippingHigh ?? d.shipping),
       buyerShippingShare: n(d.buyerShippingShare), sellerShippingShare: n(d.sellerShippingShare),
       stripeFee: n(d.stripeFee), commission: n(d.commission), total: n(d.total),
       sellerNet: n(d.sellerNet), stores: n(d.stores),

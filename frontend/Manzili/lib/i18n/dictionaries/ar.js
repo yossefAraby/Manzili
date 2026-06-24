@@ -109,6 +109,35 @@ const ar = {
     showing: "عرض {count} من {total} منتج",
   },
 
+  forYou: {
+    title: "مختارة لك",
+    subtitle: "اختارها الذكاء الاصطناعي لك من كل منزلي",
+    persona: "مختارة لمتسوّق {persona} مثلك",
+  },
+
+  recommend: {
+    title: "موصى به لك",
+  },
+
+  searchAi: {
+    toggle: "بحث ذكي",
+    placeholder: "صف ما تبحث عنه…",
+    hint: "أخبر الذكاء الاصطناعي بما تريد — يجد لك أقرب النتائج إليك",
+    searching: "جارٍ البحث…",
+    noResults: "لا نتائج بعد — جرّب وصفًا مختلفًا",
+    poweredBy: "مدعوم بالذكاء الاصطناعي",
+  },
+
+  productShipping: {
+    title: "التوصيل المقدّر:",
+    near: "قريب منك — نفس مدينة البائع ({city})",
+    nearby: "يُشحن من مدينة قريبة",
+    far: "يُشحن من محافظة أخرى — وقت أطول وتكلفة أعلى قليلًا",
+    toCity: "مقدّر إلى {city}",
+    toCityShort: "(إلى {city})",
+    addAddress: "أضف عنوان التوصيل للحصول على تقدير دقيق",
+  },
+
   productCard: {
     outOfStock: "غير متوفر",
     toggleWishlist: "تبديل المفضلة",
@@ -188,12 +217,15 @@ const ar = {
     next: "التالي ←",
     page: "صفحة {current} من {total}",
     perPage: "لكل صفحة",
+    showing: "عرض {from}–{to} من {total}",
+    productsOne: "منتج واحد",
+    productsMany: "{total} منتج",
   },
 
   orderSummary: {
     paymentSummary: "ملخص الدفع",
     paymentMethod: "طريقة الدفع",
-    cod: "الدفع عند الاستلام",
+    cod: "الدفع عند الاستلام (COD)",
     stripe: "بطاقة ائتمان",
     mobileWallet: "محفظة إلكترونية",
     fawry: "فوري",
@@ -775,6 +807,9 @@ const ar = {
       estimatedPrice: "التقدير:",
       priceBasedOn: "بناءً على {count} قطعة مشابهة في الكتالوج",
       priceLowConfidence: "تقدير تقريبي — لم نجد قطعًا مشابهة بعد، فاعتبره تقديرًا أوليًا",
+      shippingEstimate: "تقدير التوصيل",
+      shippingBasedOn: "بناءً على طرد {size} — يختلف حسب موقع الحِرَفي",
+      shippingPickSize: "حدّد حجم القطعة أو أبعادها أعلاه لتقدير التوصيل",
       requiredFieldsBegin: "الحقول المطلوبة مميزة بـ ",
       requiredFieldsEnd: " في النموذج الرئيسي.",
       // Validation

@@ -127,9 +127,9 @@ function apiMessagesToLanes(apiMsgs) {
   }));
 }
 
-// The buyer covers 25% of the ~50 EGP Bosta delivery fee (the seller covers the other 75%);
+// The buyer covers 35% of the ~50 EGP Bosta delivery fee (the seller covers the other 65%);
 // the exact Stripe card fee is added by the backend at payment time.
-const ESTIMATED_SHIPPING_FALLBACK = 12.5;
+const ESTIMATED_SHIPPING_FALLBACK = 17.5;
 
 export default function RequestViewPage() {
   const params = useParams();
@@ -936,7 +936,7 @@ function PaymentCard({
           <div className="flex flex-col gap-2 text-sm">
             <label className="flex items-center gap-2 opacity-50 cursor-not-allowed">
               <input type="radio" disabled className="accent-slate-500" />
-              <span>Cash on delivery (unavailable)</span>
+              <span>Cash on Delivery (COD) (unavailable)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -998,7 +998,7 @@ function PaymentCard({
             </div>
             {isFinal && (
               <div className="flex justify-between">
-                <span>Shipping (your 25%)</span>
+                <span>Delivery</span>
                 <span>{currency} {ESTIMATED_SHIPPING_FALLBACK.toFixed(2)}</span>
               </div>
             )}

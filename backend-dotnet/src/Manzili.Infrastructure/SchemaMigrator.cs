@@ -24,5 +24,29 @@ public static class SchemaMigrator
             "ALTER TABLE manzili.variant_options ADD COLUMN IF NOT EXISTS swatch varchar(20);");
         await db.Database.ExecuteSqlRawAsync(
             "ALTER TABLE manzili.variant_options ADD COLUMN IF NOT EXISTS image_url varchar(500);");
+
+        // Account-linked cart: the active cart is persisted as a variant-faithful JSON snapshot
+        // (productId + quantity + serialized variant) on the buyer's cart row, so a logged-in cart
+        // survives logout/device-switch and is never browser-local. Cart prices are always
+        // recomputed server-side at checkout, so this column only holds line hints.
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE manzili.cart ADD COLUMN IF NOT EXISTS items_json text;");
+
+        // Paid product promotions ("feature my item"): seller pays Manzili to surface a product in
+        // the homepage Featured section for a window. Active rows (expires_at in the future) drive
+        // the featured ordering; the platform fills any remaining slots with the most popular items.
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS manzili.promotion (
+                promotionid serial PRIMARY KEY,
+                productid   int NOT NULL,
+                sellerid    int NOT NULL,
+                plan        varchar(20) NOT NULL DEFAULT 'day',
+                amount      numeric(12,2) NOT NULL DEFAULT 0,
+                created_at  timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                starts_at   timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at  timestamp without time zone NOT NULL
+            );");
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_promotion_expires ON manzili.promotion (expires_at);");
     }
 }

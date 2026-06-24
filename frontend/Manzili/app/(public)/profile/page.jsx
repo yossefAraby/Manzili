@@ -15,13 +15,33 @@ import { uploadImage } from '@/lib/api/upload'
 import { fetchRequests } from '@/lib/api/custom'
 import { fetchSettings } from '@/lib/api/seller'
 import { useTranslate } from '@/lib/i18n/LocaleContext'
+import { PackageIcon, RotateCcwIcon, StarIcon, StoreIcon, PaletteIcon, MapPinIcon, ArrowRightIcon } from 'lucide-react'
 
 const NAV = [
+  { id: 'overview', label: 'Overview' },
   { id: 'personal', label: 'Personal data' },
   { id: 'addresses', label: 'Addresses' },
   { id: 'requests', label: 'Custom requests' },
   { id: 'store', label: 'Seller store', sellerOnly: true },
 ]
+
+/** A purposeful quick-link tile for the profile overview (Manzili styling, not icon soup). */
+function QuickLink({ href, onClick, icon: Icon, title, desc }) {
+  const inner = (
+    <>
+      <span className="w-10 h-10 rounded-xl bg-[#1c355e]/5 flex items-center justify-center shrink-0">
+        <Icon size={18} className="text-[#1c355e]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium text-slate-800">{title}</span>
+        <span className="block text-xs text-slate-500">{desc}</span>
+      </span>
+      <ArrowRightIcon size={16} className="text-slate-300 shrink-0" />
+    </>
+  )
+  const cls = "flex items-center gap-3 w-full text-left border border-slate-200 rounded-xl p-4 hover:border-[#2582eb]/40 hover:bg-slate-50 transition-colors"
+  return href ? <Link href={href} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>
+}
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -29,7 +49,7 @@ export default function ProfilePage() {
   const session = useSelector((s) => s.auth.session)
   const addressList = useSelector((s) => s.address.list)
 
-  const [section, setSection] = useState('personal')
+  const [section, setSection] = useState('overview')
   const [addressModalOpen, setAddressModalOpen] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [emailDraft, setEmailDraft] = useState('')
@@ -175,6 +195,28 @@ export default function ProfilePage() {
         </nav>
 
         <div className="flex-1 min-w-0 space-y-8">
+          {section === 'overview' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border border-slate-200 rounded-xl p-5">
+                <Avatar name={nameDraft} src={avatar} size={56} />
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-800 truncate">{nameDraft || 'Your account'}</p>
+                  <p className="text-sm text-slate-500 truncate">{emailDraft}</p>
+                </div>
+                <button onClick={() => setSection('personal')} className="ml-auto text-sm text-[#2582eb] hover:underline shrink-0">
+                  {t('profile.saveChanges') ? 'Edit' : 'Edit'}
+                </button>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <QuickLink href="/orders" icon={PackageIcon} title="My orders" desc="Track & review your orders" />
+                <QuickLink href="/returns" icon={RotateCcwIcon} title="Returns" desc="Your return requests" />
+                <QuickLink href="/wishlist" icon={StarIcon} title="Wishlist" desc="Items you saved" />
+                <QuickLink onClick={() => setSection('addresses')} icon={MapPinIcon} title="Addresses" desc="Delivery addresses" />
+                <QuickLink onClick={() => setSection('requests')} icon={PaletteIcon} title="Custom requests" desc="Your bespoke orders" />
+                {storeRecord && <QuickLink href="/store" icon={StoreIcon} title="Seller dashboard" desc="Manage your store" />}
+              </div>
+            </div>
+          )}
           {section === 'personal' && (
             <div className="border border-slate-200 rounded-lg p-6 max-w-lg">
               <h2 className="text-slate-800 font-medium text-lg mb-4">Personal data</h2>

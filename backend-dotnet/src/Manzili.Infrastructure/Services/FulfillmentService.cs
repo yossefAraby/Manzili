@@ -99,8 +99,8 @@ public sealed class FulfillmentService
 
     /// <summary>
     /// Creates a Bosta delivery + Shipment row for one store order, credits the seller wallet,
-    /// and notifies both parties. Falls back to a synthetic tracking number if Bosta is not
-    /// configured or the API call fails (the "managed in backend, graceful fallback" requirement).
+    /// and notifies both parties. Bosta is REQUIRED — if it isn't connected or the API call fails,
+    /// this throws (no synthetic/fake tracking): a shipment only ever reflects a real Bosta delivery.
     /// </summary>
     public async Task<Shipment> CreateShipmentForStoreOrderAsync(Order order, StoreOrder so)
     {
@@ -113,27 +113,30 @@ public sealed class FulfillmentService
         var codAmount = isCod ? so.Total : 0m;
         var size = ResolveSize(so);
 
-        string? trackingNumber = null;
-        string? bostaDeliveryId = null;
+        // Bosta must be connected. No fake fallback — if shipping can't be booked, error loudly.
+        if (!_bosta.IsConfigured)
+            throw new AppException(
+                "Bosta is not connected — the shipment cannot be created.", 503, "BOSTA_NOT_CONNECTED");
 
-        if (_bosta.IsConfigured)
+        string? trackingNumber;
+        string? bostaDeliveryId;
+        try
         {
-            try
-            {
-                var payload = await BuildDeliveryPayloadAsync(order, so, codAmount, size);
-                var resp = await _bosta.CreateDeliveryAsync(payload);
-                (trackingNumber, bostaDeliveryId) = ReadDeliveryIds(resp);
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex,
-                    "Bosta create-delivery failed for store order {StoreOrderId}; using fallback tracking",
-                    so.StoreOrderid);
-            }
+            var payload = await BuildDeliveryPayloadAsync(order, so, codAmount, size);
+            var resp = await _bosta.CreateDeliveryAsync(payload);
+            (trackingNumber, bostaDeliveryId) = ReadDeliveryIds(resp);
+        }
+        catch (AppException) { throw; }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Bosta create-delivery failed for store order {StoreOrderId}", so.StoreOrderid);
+            throw new AppException(
+                "Bosta create-delivery failed — the shipment was not created.", 502, "BOSTA_DELIVERY_FAILED");
         }
 
         if (string.IsNullOrWhiteSpace(trackingNumber))
-            trackingNumber = SyntheticTracking(so.StoreOrderid);
+            throw new AppException(
+                "Bosta did not return a tracking number — the shipment was not created.", 502, "BOSTA_NO_TRACKING");
 
         var shipment = new Shipment
         {
@@ -431,23 +434,29 @@ public sealed class FulfillmentService
             ?? throw new NotFoundException("Store order");
 
         // Book the Bosta reverse delivery (pickup from the buyer, drop-off at the seller pickup
-        // address) — falls back to a synthetic tracking number, like the forward leg.
-        string? reverseTracking = null;
-        if (_bosta.IsConfigured)
+        // address). Bosta is REQUIRED — no synthetic fallback; error if it can't be booked.
+        if (!_bosta.IsConfigured)
+            throw new AppException(
+                "Bosta is not connected — the return pickup cannot be booked.", 503, "BOSTA_NOT_CONNECTED");
+
+        string? reverseTracking;
+        try
         {
-            try
-            {
-                var payload = await BuildReverseDeliveryPayloadAsync(so);
-                var resp = await _bosta.CreateDeliveryAsync(payload);
-                (reverseTracking, _) = ReadDeliveryIds(resp);
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Bosta reverse-delivery failed for store order {StoreOrderId}; using fallback",
-                    so.StoreOrderid);
-            }
+            var payload = await BuildReverseDeliveryPayloadAsync(so);
+            var resp = await _bosta.CreateDeliveryAsync(payload);
+            (reverseTracking, _) = ReadDeliveryIds(resp);
         }
-        reverseTracking ??= SyntheticTracking(so.StoreOrderid, "RET");
+        catch (AppException) { throw; }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Bosta reverse-delivery failed for store order {StoreOrderId}", so.StoreOrderid);
+            throw new AppException(
+                "Bosta reverse-delivery failed — the return pickup was not booked.", 502, "BOSTA_REVERSE_FAILED");
+        }
+
+        if (string.IsNullOrWhiteSpace(reverseTracking))
+            throw new AppException(
+                "Bosta did not return a return tracking number.", 502, "BOSTA_NO_TRACKING");
 
         so.Status = "RETURNED";
         so.UpdatedAt = DateTime.UtcNow;
@@ -798,10 +807,6 @@ public sealed class FulfillmentService
         if (sizes.Count > 0 && sizes.All(s => s == "SMALL")) return "SMALL";
         return "MEDIUM";
     }
-
-    /// <summary>A Bosta-style numeric-ish tracking number used when the real API is unavailable.</summary>
-    private static string SyntheticTracking(int storeOrderId, string prefix = "MZ") =>
-        $"{prefix}{storeOrderId:D6}{Random.Shared.Next(100, 999)}";
 
     private static string NormalizeStatus(string status)
     {

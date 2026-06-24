@@ -11,6 +11,9 @@ public partial class Cart
 
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>Variant-faithful JSON snapshot of the active cart lines (added by SchemaMigrator).</summary>
+    public string? ItemsJson { get; set; }
+
     public virtual ICollection<CartContain> CartContains { get; set; } = new List<CartContain>();
 
     public virtual Person? Creator { get; set; }

@@ -274,4 +274,15 @@ public sealed class AuthService
         person.RefreshToken = null;
         await _db.SaveChangesAsync();
     }
+
+    /// <summary>
+    /// Best-effort revoke from a refresh-token value (used by admin logout, which is anonymous so the
+    /// access token may already be expired). Parses the person id out of the refresh JWT and revokes.
+    /// </summary>
+    public async Task LogoutByRefreshTokenAsync(string refreshToken)
+    {
+        var principal = _tokens.ValidateRefreshToken(refreshToken);
+        var sub = principal?.FindFirst("sub")?.Value;
+        if (int.TryParse(sub, out var personId)) await LogoutAsync(personId);
+    }
 }

@@ -29,7 +29,7 @@ const faqContent = {
           },
           {
             q: 'What are the fees I pay as a buyer?',
-            a: "You pay the item price plus 25% of the Bosta delivery fee and a small Stripe card-processing fee. The seller covers the remaining 75% of the delivery fee and Manzili's commission, so there are no hidden charges.",
+            a: "You pay the item price plus 35% of the Bosta delivery fee and a small Stripe card-processing fee. The seller covers the remaining 65% of the delivery fee and Manzili's commission, so there are no hidden charges.",
           },
           {
             q: 'How do I track my order?',
@@ -84,7 +84,7 @@ const faqContent = {
           },
           {
             q: 'What does it cost to sell?',
-            a: 'Manzili takes a 15% commission on standard orders and 10% on custom orders. You also cover 75% of the Bosta delivery fee on each order.',
+            a: 'Manzili takes a 15% commission on standard orders and 10% on custom orders. You also cover 65% of the Bosta delivery fee on each order.',
           },
           {
             q: 'How and when do I get paid?',
@@ -132,7 +132,7 @@ const faqContent = {
           },
           {
             q: 'ما الرسوم التي أدفعها كمشترٍ؟',
-            a: 'تدفع سعر القطعة مضافًا إليه 25٪ من رسوم توصيل بوسطة ورسمًا بسيطًا لمعالجة البطاقة عبر سترايب. أما البائع فيتحمّل الـ75٪ الباقية من رسوم التوصيل وعمولة منزلي، فلا توجد أي رسوم خفية.',
+            a: 'تدفع سعر القطعة مضافًا إليه 35٪ من رسوم توصيل بوسطة ورسمًا بسيطًا لمعالجة البطاقة عبر سترايب. أما البائع فيتحمّل الـ65٪ الباقية من رسوم التوصيل وعمولة منزلي، فلا توجد أي رسوم خفية.',
           },
           {
             q: 'كيف أتتبّع طلبي؟',
@@ -187,7 +187,7 @@ const faqContent = {
           },
           {
             q: 'ما تكلفة البيع؟',
-            a: 'يأخذ منزلي عمولة 15٪ على الطلبات العادية و10٪ على الطلبات المُفصّلة. كما تتحمّل 75٪ من رسوم توصيل بوسطة على كل طلب.',
+            a: 'يأخذ منزلي عمولة 15٪ على الطلبات العادية و10٪ على الطلبات المُفصّلة. كما تتحمّل 65٪ من رسوم توصيل بوسطة على كل طلب.',
           },
           {
             q: 'كيف ومتى أتقاضى أموالي؟',

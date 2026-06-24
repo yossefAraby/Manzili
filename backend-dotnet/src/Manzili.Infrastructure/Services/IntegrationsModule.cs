@@ -21,6 +21,8 @@ public static class IntegrationsModule
         services.AddScoped<UploadService>();
         services.AddScoped<ShippingService>();
         services.AddScoped<CheckoutPricingService>();
+        // Size + distance shipping pricing model (pure; shared by quote, order creation, estimates).
+        services.AddSingleton<ShippingPricingService>();
         services.AddScoped<EmailService>();
 
         // FulfillmentService orchestrates shipments/wallet/notifications across the order lifecycle.

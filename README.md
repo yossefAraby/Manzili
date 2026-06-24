@@ -21,8 +21,9 @@ entirely on the real API.
 | Frontend | Next.js 16 (App Router), React 19, Redux Toolkit, Tailwind CSS |
 | Backend | .NET 10 (ASP.NET Core controllers), EF Core 10 + Npgsql |
 | Database | PostgreSQL (Supabase), schema `manzili` |
-| Auth | JWT (HS256) + BCrypt |
-| Integrations | Stripe (checkout), Cloudinary (images), Bosta (shipping) |
+| Auth | JWT (HS256) over **httpOnly cookies** + BCrypt · **Google Sign-In** |
+| Payments | **Stripe** (cards) · **Kashier** Hosted Payment Page (**Mobile Wallet** — Vodafone/Orange/Etisalat) |
+| Integrations | Cloudinary (images), Bosta (shipping) |
 
 ## Run it locally
 You need the **.NET 10 SDK** and **Node 20+**.
@@ -51,12 +52,17 @@ Open these single-file docs in any browser:
 - [`docs/frontend-migration-documentation.html`](docs/frontend-migration-documentation.html) — how the frontend was wired to the API.
 - [`docs/manzili-openapi.json`](docs/manzili-openapi.json) — the API contract.
 
-## Deploying (planned)
-- **Frontend** → Vercel (root directory `frontend/Manzili`).
-- **Backend** → Docker container (`backend-dotnet/Dockerfile`) on AWS; configure via env vars
-  (`ConnectionStrings__Default`, `Manzili__*`).
+## Deploying
+- **Frontend** → **Vercel** — live at **https://manzili-mis.vercel.app** (root directory `frontend/Manzili`).
+  Set the `NEXT_PUBLIC_*` vars in the Vercel project (see `frontend/Manzili/.env.example`); at minimum
+  `NEXT_PUBLIC_API_BASE_URL` (the deployed backend), and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` /
+  `NEXT_PUBLIC_KASHIER_ENABLED` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to enable Google + the payment options.
+- **Backend** → Docker container (`backend-dotnet/Dockerfile`); configure via env vars
+  (`ConnectionStrings__Default`, `Manzili__*`). Redirects are origin-aware (return to whichever origin
+  triggered checkout), so the same backend serves both localhost and the Vercel frontend.
 - **Database** → already on Supabase.
 
-> ⚠️ Before deploying: rotate the Supabase / Stripe / Bosta credentials and provide them as
-> environment variables (not committed files), and set `Manzili__CorsOrigin` to the deployed
-> frontend origin.
+> ⚠️ Before going to production: **rotate** the Supabase / Stripe / Kashier / Bosta / Google credentials and
+> provide them as environment variables (not committed files), and set `Manzili__CorsOrigin` to the deployed
+> frontend origin(s). Google Sign-In also needs the deployed origin added under the OAuth client's
+> **Authorized JavaScript origins** in Google Cloud Console.

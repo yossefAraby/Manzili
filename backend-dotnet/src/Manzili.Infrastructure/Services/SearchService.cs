@@ -1,6 +1,7 @@
 using Manzili.Application.Catalog;
 using Manzili.Application.Common;
 using Manzili.Infrastructure.Persistence;
+using Manzili.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Manzili.Infrastructure.Services;
@@ -40,36 +41,40 @@ public sealed class SearchService
 
         var wishlisted = await _products.GetWishlistedIdsAsync(userId);
 
-        var mapped = products.Select(p =>
-        {
-            var ratings = p.ReviewingAndRatings.Select(r => r.Rating).ToList();
-            var avg = ratings.Count > 0 ? ratings.Average() : 0;
-            var price = p.Mrp.HasValue ? (double)p.Mrp.Value : (double)(p.Price ?? 0m);
-            double? offerPrice = p.Mrp.HasValue && p.Price.HasValue ? (double)p.Price.Value : null;
-
-            return new SearchProductDto
-            {
-                Id = p.Productid.ToString(),
-                Name = p.Productname,
-                Images = p.ProductImages
-                    .Where(i => i.ImageUrl != null)
-                    .Select(i => i.ImageUrl!)
-                    .Take(1)
-                    .ToList(),
-                Price = price,
-                OfferPrice = offerPrice,
-                Rating = Math.Round(avg * 10) / 10,
-                ReviewCount = p.ReviewingAndRatings.Count,
-                IsWishlisted = wishlisted.Contains(p.Productid),
-                Category = p.Category?.CategoryName ?? "",
-                InStock = p.InStock ?? true,
-                Stock = p.Stock ?? 0,
-                Store = p.Seller != null
-                    ? new StoreRefDto { Id = p.Seller.Sellerid.ToString(), Name = p.Seller.Storename ?? "" }
-                    : null,
-            };
-        }).ToList();
+        var mapped = products.Select(p => MapSearch(p, wishlisted)).ToList();
 
         return (mapped, total);
+    }
+
+    /// <summary>Map a Product entity to the search-card DTO. Shared by lexical and semantic search.</summary>
+    internal static SearchProductDto MapSearch(Product p, IReadOnlySet<int> wishlisted)
+    {
+        var ratings = p.ReviewingAndRatings.Select(r => r.Rating).ToList();
+        var avg = ratings.Count > 0 ? ratings.Average() : 0;
+        var price = p.Mrp.HasValue ? (double)p.Mrp.Value : (double)(p.Price ?? 0m);
+        double? offerPrice = p.Mrp.HasValue && p.Price.HasValue ? (double)p.Price.Value : null;
+
+        return new SearchProductDto
+        {
+            Id = p.Productid.ToString(),
+            Name = p.Productname,
+            Images = p.ProductImages
+                .Where(i => i.ImageUrl != null)
+                .Select(i => i.ImageUrl!)
+                .Take(1)
+                .ToList(),
+            Price = price,
+            OfferPrice = offerPrice,
+            Rating = Math.Round(avg * 10) / 10,
+            ReviewCount = p.ReviewingAndRatings.Count,
+            IsWishlisted = wishlisted.Contains(p.Productid),
+            Category = p.Category?.CategoryName ?? "",
+            Description = ProductService.Truncate(p.Description, 200),
+            InStock = p.InStock ?? true,
+            Stock = p.Stock ?? 0,
+            Store = p.Seller != null
+                ? new StoreRefDto { Id = p.Seller.Sellerid.ToString(), Name = p.Seller.Storename ?? "" }
+                : null,
+        };
     }
 }

@@ -61,6 +61,28 @@ public sealed class OrderItemDto
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal TotalPrice { get; set; }
+    /// <summary>Product thumbnail so the orders list can show each item, not just a count.</summary>
+    public string? ImageUrl { get; set; }
+}
+
+/// <summary>
+/// One vendor's slice of an order (this is a multi-vendor marketplace, so a single checkout can
+/// split across sellers). Each carries its OWN items, delivery cost and shipment/tracking, so the
+/// orders page can render a separate card per vendor.
+/// </summary>
+public sealed class StoreOrderSummaryDto
+{
+    public string Id { get; set; } = "";
+    public string StoreId { get; set; } = "";
+    public string StoreName { get; set; } = "";
+    public string Status { get; set; } = "ORDER_PLACED";
+    public decimal Subtotal { get; set; }
+    public decimal ShippingTotal { get; set; }
+    public decimal Total { get; set; }
+    public string PaymentMethod { get; set; } = "COD";
+    public bool IsPaid { get; set; }
+    public List<OrderItemDto> Items { get; set; } = new();
+    public ShipmentDto? Shipment { get; set; }
 }
 
 public sealed class OrderAddressDto
@@ -131,6 +153,10 @@ public sealed class OrderSummaryDto
     public string PaymentMethod { get; set; } = "COD";
     public ShipmentDto? Shipment { get; set; }
     public List<ShipmentDto> Shipments { get; set; } = new();
+    /// <summary>Per-vendor breakdown (items + delivery + tracking each) for the multi-vendor order cards.</summary>
+    public List<StoreOrderSummaryDto> StoreOrders { get; set; } = new();
+    /// <summary>The delivery address for this order (so the orders list can show it without a detail fetch).</summary>
+    public OrderAddressDto? Address { get; set; }
     public string? CreatedAt { get; set; }
 }
 

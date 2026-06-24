@@ -2,6 +2,7 @@ import { PlusIcon, SquarePenIcon, XIcon } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 import AddressModal from './AddressModal';
 import { clearCart } from '@/lib/features/cart/cartSlice';
+import { clearServerCart } from '@/lib/api/cart';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -66,15 +67,17 @@ const OrderSummary = ({ totalPrice, items }) => {
         let cancelled = false;
         (async () => {
             // Full money breakdown from the backend (same math it charges): goods − discount +
-            // the buyer's 25% Bosta shipping share + the Stripe fee. Fails safe to null → "…".
+            // the buyer's Bosta shipping share + the Stripe fee. Fails safe to null → "…".
             const couponForQuote = coupon ? { discountAmount: couponDiscountAmount } : null;
-            const q = await quoteCheckout({ items, coupon: couponForQuote, paymentMethod });
+            // Pass the chosen address so shipping is priced by the distance to the buyer's city
+            // (re-quotes when they switch address). Server-trusted: this is what the card is charged.
+            const q = await quoteCheckout({ items, coupon: couponForQuote, paymentMethod, addressId: selectedAddress?.id });
             if (!cancelled) setQuote(q);
         })();
         return () => {
             cancelled = true;
         };
-    }, [items, coupon, couponDiscountAmount, paymentMethod]);
+    }, [items, coupon, couponDiscountAmount, paymentMethod, selectedAddress?.id]);
 
     const handleCouponCode = async (event) => {
         event.preventDefault();
@@ -135,6 +138,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                 paymentMethod: 'COD',
                 coupon: couponForOrder,
             });
+            clearServerCart();
             dispatch(clearCart());
             router.push('/orders');
             return { toastMessage: t('orderSummary.orderPlaced') };
@@ -237,13 +241,13 @@ const OrderSummary = ({ totalPrice, items }) => {
                 <div className='flex justify-between'>
                     <div className='flex flex-col gap-1 text-slate-400'>
                         <p>{t('orderSummary.subtotal')}</p>
-                        <p>Shipping (your 25%)</p>
+                        <p>Delivery</p>
                         <p>Processing fee</p>
                         {coupon && <p>{t('orderSummary.coupon')}</p>}
                     </div>
                     <div className='flex flex-col gap-1 font-medium text-right'>
                         <p>{currency}{formatCartMoney(quote?.subtotal ?? totalPrice)}</p>
-                        <p title="You pay 25% of the Bosta delivery fee; the seller covers 75%.">
+                        <p>
                             {quote ? `${currency}${quote.buyerShippingShare.toFixed(2)}` : '…'}
                         </p>
                         <p title="Stripe card processing fee.">
@@ -252,9 +256,6 @@ const OrderSummary = ({ totalPrice, items }) => {
                         {coupon && <p>{`-${currency}${couponDiscountAmount.toFixed(2)}`}</p>}
                     </div>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1 leading-snug">
-                    You pay 25% of Bosta delivery + the card fee; the seller covers the other 75%.
-                </p>
                 {
                     !coupon ? (
                         <form onSubmit={e => toast.promise(handleCouponCode(e), { loading: t('orderSummary.checkingCoupon') })} className='flex justify-center gap-3 mt-3'>

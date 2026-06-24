@@ -29,6 +29,7 @@ public static class DependencyInjection
 
         // Feature services (scoped — depend on the scoped DbContext)
         services.AddScoped<AuthService>();
+        services.AddScoped<CartService>();
 
         // Feature modules (ported areas; each registers its own services)
         services.AddCatalog();
@@ -38,6 +39,9 @@ public static class DependencyInjection
         services.AddCustom();
         services.AddAdmin();
         services.AddIntegrations();
+
+        // One-shot startup backfill of any missing product embeddings (idempotent, cheap after first run).
+        services.AddHostedService<EmbeddingBackfillService>();
 
         return services;
     }

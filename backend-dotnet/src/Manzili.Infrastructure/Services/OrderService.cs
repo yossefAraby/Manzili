@@ -18,11 +18,13 @@ public sealed class OrderService
 {
     private readonly ManziliDbContext _db;
     private readonly FeesOptions _fees;
+    private readonly ShippingPricingService _ship;
 
-    public OrderService(ManziliDbContext db, IOptions<AppOptions> options)
+    public OrderService(ManziliDbContext db, IOptions<AppOptions> options, ShippingPricingService ship)
     {
         _db = db;
         _fees = options.Value.Fees;
+        _ship = ship;
     }
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
@@ -47,7 +49,7 @@ public sealed class OrderService
             .ToList();
 
         var products = await _db.Products
-            .Include(p => p.Seller)
+            .Include(p => p.Seller).ThenInclude(s => s!.StorePickupAddresses)
             .Include(p => p.ProductVariants).ThenInclude(v => v.VariantOptions)
             .Where(p => productIds.Contains(p.Productid))
             .ToListAsync();
@@ -100,10 +102,23 @@ public sealed class OrderService
         var discountAmount = req.Coupon?.DiscountAmount ?? 0m;
         var goodsTotal = Math.Max(0m, subtotal - discountAmount);
 
-        // Marketplace fees: one Bosta shipment per seller; the buyer covers their 25% shipping
-        // share + the Stripe processing fee, so Order.Totalamount is the full buyer charge.
-        var perStoreShipping = _fees.DefaultShipping;
-        var totalShipping = sellerGroups.Count * perStoreShipping;
+        // Marketplace fees: one Bosta shipment per seller, priced by the parcel's package size and
+        // the distance from the seller's pickup city to the buyer's address. The buyer covers their
+        // 25% share + the Stripe processing fee, so Order.Totalamount is the full buyer charge.
+        var sellerShipping = new Dictionary<int, decimal>();
+        foreach (var (selId, sellerItems) in sellerGroups)
+        {
+            var (size, bulky) = ShippingPricingService.Aggregate(
+                sellerItems.Select(i => ((string?)i.Product.ShippingSize, (string?)i.Product.ShippingBulkyCategory)));
+            var seller = sellerItems[0].Product.Seller;
+            var w = seller?.StorePickupAddresses?.FirstOrDefault(x => x.IsDefault)
+                    ?? seller?.StorePickupAddresses?.FirstOrDefault();
+            var sellerCityName = !string.IsNullOrWhiteSpace(w?.City) ? w!.City : seller?.AddressText;
+            sellerShipping[selId] = _ship
+                .QuoteLeg(sellerCityName, w?.BostaCityId, address.City, address.BostaCityId, size, bulky)
+                .Point;
+        }
+        var totalShipping = sellerShipping.Values.Sum();
         var buyerShippingShare = _fees.BuyerShip(totalShipping);
         // Only Stripe (card) carries a processing fee; COD and the Kashier wallet/Fawry paths don't.
         var stripeFee = paymentMethod == "STRIPE" ? _fees.StripeFee(goodsTotal + buyerShippingShare) : 0m;
@@ -143,7 +158,7 @@ public sealed class OrderService
                     Sellerid = selId,
                     Subtotal = soSubtotal,
                     DiscountTotal = soDiscount,
-                    ShippingTotal = perStoreShipping,
+                    ShippingTotal = sellerShipping.TryGetValue(selId, out var ship) ? ship : _fees.DefaultShipping,
                     Total = Math.Max(0m, soSubtotal - soDiscount),
                     Status = isPrepaid ? "PENDING_PAYMENT" : "ORDER_PLACED",
                     IsPaid = false,
@@ -195,12 +210,25 @@ public sealed class OrderService
         var orders = await _db.Orders
             .AsNoTracking()
             .Where(o => o.Enduserid == enduser.Enduserid)
+            .Include(o => o.Address)
             .Include(o => o.StoreOrders).ThenInclude(so => so.StoreOrderItems)
+            .Include(o => o.StoreOrders).ThenInclude(so => so.Seller)
             .Include(o => o.StoreOrders).ThenInclude(so => so.Shipment!).ThenInclude(sh => sh.ShipmentEvents)
             .OrderByDescending(o => o.Orderid)
             .ToListAsync();
 
-        return new ListOrdersResult(orders.Select(MapOrderSummary).ToList(), orders.Count);
+        // A real order only exists once payment goes through. An online-payment order (Stripe / Mobile
+        // Wallet / Fawry) that the buyer hasn't paid yet — including one they abandoned on the gateway —
+        // must NOT show up as a placed order (the gateway flow cancels the unpaid row server-side). COD
+        // is the exception: it's pay-on-delivery, so it's a real order the moment it's placed. Canceled
+        // rows are always hidden so an abandoned attempt never leaves a phantom behind.
+        var visible = orders
+            .Select(MapOrderSummary)
+            .Where(o => o.Status != "CANCELED"
+                && (o.IsPaid || string.Equals(o.PaymentMethod, "COD", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        return new ListOrdersResult(visible, visible.Count);
     }
 
     public async Task<OrderDetailDto> GetOrderByIdAsync(int personId, string orderId)
@@ -248,9 +276,51 @@ public sealed class OrderService
             PaymentMethod = DisplayPaymentMethod(order),
             Shipment = shipments.FirstOrDefault(),
             Shipments = shipments,
+            StoreOrders = order.StoreOrders.Select(MapStoreOrderSummary).ToList(),
+            Address = MapAddress(order.Address),
             CreatedAt = ToIso(order.CreatedAt) ?? ToIso(order.PaidAt),
         };
     }
+
+    /// <summary>One vendor's slice of the order — its own items (with images), delivery cost and shipment.</summary>
+    private static StoreOrderSummaryDto MapStoreOrderSummary(StoreOrder so) => new()
+    {
+        Id = so.StoreOrderid.ToString(),
+        StoreId = so.Sellerid.ToString(),
+        StoreName = so.Seller?.Storename ?? "Manzili seller",
+        Status = so.Status,
+        Subtotal = so.Subtotal,
+        ShippingTotal = so.ShippingTotal,
+        Total = so.Total,
+        PaymentMethod = so.PaymentMethod,
+        IsPaid = so.IsPaid,
+        Items = so.StoreOrderItems.Select(item => new OrderItemDto
+        {
+            ProductId = item.Productid.ToString(),
+            Name = item.ProductName,
+            Quantity = item.Quantity,
+            UnitPrice = item.PriceAtPurchase,
+            TotalPrice = item.PriceAtPurchase * item.Quantity,
+            ImageUrl = item.ProductImageUrl,
+        }).ToList(),
+        Shipment = so.Shipment is null ? null : ShipmentMapper.Map(so.Shipment),
+    };
+
+    /// <summary>Shared Address → DTO mapper (used by both the list and detail views).</summary>
+    private static OrderAddressDto? MapAddress(Address? a) => a is null ? null : new OrderAddressDto
+    {
+        Id = a.Id.ToString(),
+        Name = a.Name ?? "",
+        Phone = a.Phone ?? "",
+        City = a.City ?? "",
+        Zone = a.Zone ?? "",
+        District = a.District ?? "",
+        Street = a.Street ?? "",
+        Building = a.Buildingnumber ?? "",
+        Floor = a.Floor ?? "",
+        Apartment = a.Apartmentnumber ?? "",
+        PostalCode = a.Postalcode ?? "",
+    };
 
     /// <summary>Maps every store order's Bosta shipment (with timeline) for the order views.</summary>
     private static List<ShipmentDto> MapShipments(Order order) =>
@@ -273,6 +343,7 @@ public sealed class OrderService
                     Quantity = item.Quantity,
                     UnitPrice = item.PriceAtPurchase,
                     TotalPrice = item.PriceAtPurchase * item.Quantity,
+                    ImageUrl = item.ProductImageUrl,
                 });
             }
         }
@@ -291,20 +362,7 @@ public sealed class OrderService
             IsPaid = order.IsPaid ?? false,
             Shipment = shipments.FirstOrDefault(),
             Shipments = shipments,
-            Address = order.Address is null ? null : new OrderAddressDto
-            {
-                Id = order.Address.Id.ToString(),
-                Name = order.Address.Name ?? "",
-                Phone = order.Address.Phone ?? "",
-                City = order.Address.City ?? "",
-                Zone = order.Address.Zone ?? "",
-                District = order.Address.District ?? "",
-                Street = order.Address.Street ?? "",
-                Building = order.Address.Buildingnumber ?? "",
-                Floor = order.Address.Floor ?? "",
-                Apartment = order.Address.Apartmentnumber ?? "",
-                PostalCode = order.Address.Postalcode ?? "",
-            },
+            Address = MapAddress(order.Address),
             CreatedAt = ToIso(order.CreatedAt) ?? ToIso(order.PaidAt),
         };
     }

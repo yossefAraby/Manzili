@@ -11,11 +11,13 @@ public sealed class SellerService
 {
     private readonly ManziliDbContext _db;
     private readonly FulfillmentService _fulfillment;
+    private readonly SemanticSearchService _semantic;
 
-    public SellerService(ManziliDbContext db, FulfillmentService fulfillment)
+    public SellerService(ManziliDbContext db, FulfillmentService fulfillment, SemanticSearchService semantic)
     {
         _db = db;
         _fulfillment = fulfillment;
+        _semantic = semantic;
     }
 
     // ---- Dashboard ----
@@ -62,6 +64,15 @@ public sealed class SellerService
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
 
+        // Active promotions for this seller → product id ⇒ latest expiry (so the manage-product
+        // page can badge promoted items and show when the feature ends).
+        var now = DateTime.UtcNow;
+        var activePromos = await _db.Promotions.AsNoTracking()
+            .Where(x => x.Sellerid == sellerid && x.ExpiresAt > now)
+            .GroupBy(x => x.Productid)
+            .Select(g => new { ProductId = g.Key, Until = g.Max(x => x.ExpiresAt) })
+            .ToDictionaryAsync(x => x.ProductId, x => x.Until);
+
         var items = products.Select(p => new SellerProductListItemDto
         {
             Id = p.Productid.ToString(),
@@ -75,6 +86,12 @@ public sealed class SellerService
             TotalSold = p.StoreOrderItems.Sum(i => i.Quantity),
             Category = p.Category?.CategoryName ?? "",
             IsDisabled = p.IsDisabled == true,
+            ShippingSize = string.IsNullOrEmpty(p.ShippingSize) ? "MEDIUM" : p.ShippingSize,
+            ShippingBulkyCategory = string.IsNullOrEmpty(p.ShippingBulkyCategory) ? "NORMAL" : p.ShippingBulkyCategory,
+            IsPromoted = activePromos.ContainsKey(p.Productid),
+            PromotedUntil = activePromos.TryGetValue(p.Productid, out var until)
+                ? until.ToString("yyyy-MM-ddTHH:mm:ss") + "Z"
+                : null,
         }).ToList();
 
         return new SellerProductsResult { Products = items, Total = items.Count };
@@ -160,6 +177,9 @@ public sealed class SellerService
         }
 
         await tx.CommitAsync();
+
+        // Embed the new product for semantic "describe-it" search (best-effort; never blocks the save).
+        await _semantic.IndexProductAsync(product.Productid);
 
         return await LoadProductDetailAsync(product.Productid);
     }
@@ -272,6 +292,9 @@ public sealed class SellerService
 
         await tx.CommitAsync();
 
+        // Re-embed after an edit so semantic search reflects the new name/description/category.
+        await _semantic.IndexProductAsync(productId);
+
         return await LoadProductDetailAsync(productId);
     }
 
@@ -299,7 +322,13 @@ public sealed class SellerService
             .OrderByDescending(so => so.CreatedAt)
             .ToListAsync();
 
-        var orders = storeOrders.Select(so =>
+        // A seller only sees a real order: one that's paid, or COD (pay-on-delivery). An unpaid
+        // online-payment attempt (Stripe/Wallet/Fawry) the buyer never completed — or any canceled
+        // row — is never surfaced, so the seller never tries to fulfil a phantom order.
+        var orders = storeOrders
+            .Where(so => !string.Equals(so.Status, "CANCELED", StringComparison.OrdinalIgnoreCase)
+                && (so.IsPaid || string.Equals(so.PaymentMethod, "COD", StringComparison.OrdinalIgnoreCase)))
+            .Select(so =>
         {
             var person = so.Order.Enduser?.Person;
             var customerName = string.Join(" ",

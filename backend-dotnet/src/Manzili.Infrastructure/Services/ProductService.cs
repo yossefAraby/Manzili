@@ -10,10 +10,12 @@ namespace Manzili.Infrastructure.Services;
 public sealed class ProductService
 {
     private readonly ManziliDbContext _db;
+    private readonly PromotionService _promotions;
 
-    public ProductService(ManziliDbContext db)
+    public ProductService(ManziliDbContext db, PromotionService promotions)
     {
         _db = db;
+        _promotions = promotions;
     }
 
     /// <summary>Set of productids wishlisted by the given person (empty if not logged in).</summary>
@@ -43,6 +45,22 @@ public sealed class ProductService
 
     private static double Round1(double v) => Math.Round(v * 10) / 10;
 
+    /// <summary>
+    /// Resolve a seller's location for proximity-based recommendations: prefer the default
+    /// pickup warehouse's city + Bosta city id (a normalized geo key), then any warehouse,
+    /// then the free-text address. Returns nulls when nothing is on file. The pickup-address
+    /// collection must be Included on the query for this to be populated.
+    /// </summary>
+    private static (string? City, string? BostaCityId) SellerLocation(Seller? s)
+    {
+        if (s == null) return (null, null);
+        var w = s.StorePickupAddresses?.FirstOrDefault(x => x.IsDefault)
+                ?? s.StorePickupAddresses?.FirstOrDefault();
+        var city = w?.City;
+        if (string.IsNullOrWhiteSpace(city)) city = s.AddressText;
+        return (string.IsNullOrWhiteSpace(city) ? null : city, w?.BostaCityId);
+    }
+
     internal static ProductCardDto MapCard(Product p, IReadOnlySet<int> wishlistedIds)
     {
         var mainImage = p.CoverUrl
@@ -65,19 +83,34 @@ public sealed class ProductService
             ReviewCount = p.ReviewingAndRatings.Count,
             IsWishlisted = wishlistedIds.Contains(p.Productid),
             Category = p.Category != null ? new List<string> { p.Category.CategoryName } : new List<string>(),
+            Description = Truncate(p.Description, 200),
             InStock = p.InStock ?? true,
             Stock = p.Stock ?? 0,
-            Store = p.Seller != null
-                ? new StoreRefDto { Id = p.Seller.Sellerid.ToString(), Name = p.Seller.Storename ?? "", Username = p.Seller.Username }
-                : null,
+            Store = BuildStoreRef(p.Seller),
         };
     }
 
-    // Mirrors Node productInclude (category, seller, first 5 images, ratings).
+    /// <summary>Map a seller onto the embedded store ref, including its city for proximity ranking.</summary>
+    private static StoreRefDto? BuildStoreRef(Seller? s)
+    {
+        if (s == null) return null;
+        var (city, bostaCityId) = SellerLocation(s);
+        return new StoreRefDto
+        {
+            Id = s.Sellerid.ToString(),
+            Name = s.Storename ?? "",
+            Username = s.Username,
+            City = city,
+            BostaCityId = bostaCityId,
+        };
+    }
+
+    // Mirrors Node productInclude (category, seller, first 5 images, ratings) plus the seller's
+    // pickup warehouses so the card can carry the seller city for proximity-based recommendations.
     private IQueryable<Product> CardQuery() =>
         _db.Products.AsNoTracking()
             .Include(p => p.Category)
-            .Include(p => p.Seller)
+            .Include(p => p.Seller).ThenInclude(s => s!.StorePickupAddresses)
             .Include(p => p.ProductImages)
             .Include(p => p.ReviewingAndRatings);
 
@@ -148,27 +181,53 @@ public sealed class ProductService
 
     public async Task<PagedProducts<ProductCardDto>> ListFeaturedAsync(Pagination pg, int? userId)
     {
-        // Node: take page slice ordered by created_at desc, then sort that slice by avg rating desc.
-        var products = await CardQuery()
-            .Where(p => p.IsDisabled != true && p.Seller != null && p.Seller.IsActive == true && p.Seller.StoreStatus == StatusMaps.StoreStatus.Approved)
-            .OrderByDescending(p => p.CreatedAt)
-            .Skip(pg.Skip)
-            .Take(pg.Take)
-            .ToListAsync();
+        // The homepage Featured section = PAID promotions first (FIFO queue, capped at the slot count),
+        // then topped up with the MOST POPULAR products so it's always full. When nobody is promoting,
+        // it's simply the most popular items — never just a thin slice.
+        var slots = pg.Take > 0 ? Math.Min(pg.Take, 24) : PromotionService.FeaturedSlots;
 
-        products = products
-            .OrderByDescending(p => AvgRating(p.ReviewingAndRatings.Select(r => r.Rating)))
-            .ToList();
+        bool IsLive(Product p) =>
+            p.IsDisabled != true && p.Seller != null && p.Seller.IsActive == true
+            && p.Seller.StoreStatus == StatusMaps.StoreStatus.Approved;
 
-        var total = await _db.Products.AsNoTracking().CountAsync(p => p.IsDisabled != true && p.Seller != null && p.Seller.IsActive == true && p.Seller.StoreStatus == StatusMaps.StoreStatus.Approved);
+        var visible = new List<Product>();
+        var used = new HashSet<int>();
+
+        // 1) Promoted (paid) products, in queue order, capped at the slot count.
+        var promotedIds = (await _promotions.GetActivePromotedProductIdsAsync()).Take(slots).ToList();
+        if (promotedIds.Count > 0)
+        {
+            var promoted = await CardQuery().Where(p => promotedIds.Contains(p.Productid)).ToListAsync();
+            foreach (var id in promotedIds)
+            {
+                var p = promoted.FirstOrDefault(x => x.Productid == id);
+                if (p is not null && IsLive(p) && used.Add(p.Productid)) visible.Add(p);
+            }
+        }
+
+        // 2) Fill remaining slots with the most popular live products (by units sold, then reviews).
+        var need = slots - visible.Count;
+        if (need > 0)
+        {
+            var fill = await CardQuery()
+                .Where(p => p.IsDisabled != true && p.Seller != null && p.Seller.IsActive == true
+                    && p.Seller.StoreStatus == StatusMaps.StoreStatus.Approved
+                    && !used.Contains(p.Productid))
+                .OrderByDescending(p => p.StoreOrderItems.Sum(i => i.Quantity))
+                .ThenByDescending(p => p.ReviewingAndRatings.Count)
+                .ThenByDescending(p => p.CreatedAt)
+                .Take(need)
+                .ToListAsync();
+            foreach (var p in fill) if (used.Add(p.Productid)) visible.Add(p);
+        }
+
         var wishlisted = await GetWishlistedIdsAsync(userId);
-
         return new PagedProducts<ProductCardDto>
         {
-            Items = products.Select(p => MapCard(p, wishlisted)).ToList(),
-            Total = total,
-            Page = pg.Page,
-            Limit = pg.Limit,
+            Items = visible.Select(p => MapCard(p, wishlisted)).ToList(),
+            Total = visible.Count,
+            Page = 1,
+            Limit = slots,
         };
     }
 
@@ -195,7 +254,7 @@ public sealed class ProductService
 
         var product = await _db.Products.AsNoTracking()
             .Include(p => p.Category)
-            .Include(p => p.Seller)
+            .Include(p => p.Seller).ThenInclude(s => s!.StorePickupAddresses)
             .Include(p => p.ProductImages)
             .Include(p => p.ReviewingAndRatings).ThenInclude(r => r.Enduser).ThenInclude(e => e.Person)
             .Include(p => p.ProductVariants).ThenInclude(v => v.VariantOptions)
@@ -232,9 +291,9 @@ public sealed class ProductService
             Size = new List<string>(),
             Stock = product.Stock ?? 0,
             InStock = product.InStock ?? (product.Stock ?? 0) > 0,
-            Store = product.Seller != null
-                ? new StoreRefDto { Id = product.Seller.Sellerid.ToString(), Name = product.Seller.Storename ?? "", Username = product.Seller.Username }
-                : null,
+            ShippingSize = product.ShippingSize,
+            ShippingBulkyCategory = product.ShippingBulkyCategory,
+            Store = BuildStoreRef(product.Seller),
             Variants = product.ProductVariants.Count > 0
                 ? product.ProductVariants.Select(v => new ProductVariantDto
                 {
@@ -271,5 +330,13 @@ public sealed class ProductService
     {
         var name = string.Join(" ", new[] { first, last }.Where(s => !string.IsNullOrWhiteSpace(s)));
         return string.IsNullOrWhiteSpace(name) ? fallback : name;
+    }
+
+    /// <summary>Trim a description to a short snippet for list/search payloads (AI semantic context).</summary>
+    internal static string? Truncate(string? text, int max)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var t = text.Trim();
+        return t.Length <= max ? t : t.Substring(0, max).TrimEnd() + "…";
     }
 }

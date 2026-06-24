@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { bluesmindsChat } from "@/lib/ai/bluesminds";
-import { zaiChat } from "@/lib/ai/zai";
-import { geminiGenerate, geminiText } from "@/lib/ai/gemini";
-import { groqChat } from "@/lib/ai/groq";
+import { textTiers } from "@/lib/ai/textChain";
 
 const SYSTEM =
   "You write image-generation prompts that depict a single FINISHED, handmade, made-to-order object a buyer is " +
@@ -56,55 +53,8 @@ export async function POST(request) {
     const body = await request.json();
     const userMsg = buildUserMessage(body);
 
-    const tiers = [
-      {
-        name: "bluesminds",
-        run: () =>
-          bluesmindsChat({
-            model: "DeepSeek-V4-Flash",
-            messages: [
-              { role: "system", content: SYSTEM },
-              { role: "user", content: userMsg },
-            ],
-            temperature: 0.7,
-          }),
-      },
-      {
-        name: "z.ai",
-        run: () =>
-          zaiChat({
-            model: "glm-4.7-flash",
-            messages: [
-              { role: "system", content: SYSTEM },
-              { role: "user", content: userMsg },
-            ],
-            temperature: 0.7,
-          }),
-      },
-      {
-        name: "gemini",
-        run: async () => {
-          const content = await geminiGenerate({
-            model: "gemini-2.5-flash",
-            parts: [{ text: `${SYSTEM}\n\n${userMsg}` }],
-            generationConfig: { temperature: 0.7 },
-          });
-          return geminiText(content);
-        },
-      },
-      {
-        name: "groq",
-        run: () =>
-          groqChat({
-            model: "llama-3.1-8b-instant",
-            messages: [
-              { role: "system", content: SYSTEM },
-              { role: "user", content: userMsg },
-            ],
-            temperature: 0.7,
-          }),
-      },
-    ];
+    // OpenRouter (free Gemma) primary → z.ai / gemini / groq → DeepSeek last (costly).
+    const tiers = textTiers({ system: SYSTEM, user: userMsg, temperature: 0.7 });
 
     let prompt = null;
     let lastErr = null;

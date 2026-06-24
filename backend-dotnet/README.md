@@ -14,9 +14,11 @@ dotnet run --project src/Manzili.Api --urls http://localhost:5080
 - Health check: `GET /api/v1/health` → `{ "success": true, "data": { "database": "connected" } }`
 - Tests: `dotnet test`
 
-Config (connection string, JWT secrets, Stripe/Cloudinary/Bosta keys) loads from
+Config (connection string, JWT secrets, Stripe / Kashier / Google / Cloudinary / Bosta keys) loads from
 `src/Manzili.Api/appsettings.Development.json` in dev, or environment variables in production
-(`ConnectionStrings__Default`, `Manzili__Jwt__Secret`, `Manzili__Stripe__SecretKey`, …).
+(`ConnectionStrings__Default`, `Manzili__Jwt__Secret`, `Manzili__Stripe__SecretKey`,
+`Manzili__Kashier__MerchantId/ApiKey/SecretKey`, `Manzili__GoogleAuth__ClientId`, …). A copy-me
+template lives at `src/Manzili.Api/appsettings.example.json`.
 
 ## Project layout (4 layers, one-way dependencies)
 ```
@@ -39,7 +41,7 @@ tests/Manzili.Tests/       xUnit integration tests (WebApplicationFactory)
 
 ## How a request flows
 1. `ExceptionHandlingMiddleware` wraps everything (errors → `{ success:false, error }`).
-2. CORS → Authentication (validate JWT) → Authorization (`[Authorize(Roles=…)]`).
+2. CORS → Authentication (validate the JWT, read from the **httpOnly cookie** `manzili_at`, falling back to a bearer header) → Authorization (`[Authorize(Roles=…)]`).
 3. The controller (inherits `ApiController`) reads claims, calls a service.
 4. The service queries `ManziliDbContext` (EF Core → SQL → PostgreSQL).
 5. The controller returns `ApiOk(data)` → `{ success: true, data: … }`.

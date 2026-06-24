@@ -24,6 +24,14 @@ export class ApiError extends Error {
 }
 
 let refreshPromise = null;
+let adminRefreshPromise = null;
+
+// Admin endpoints (/admin/*) authenticate with a SEPARATE cookie and refresh via a separate
+// endpoint, so a 401 on an admin call must refresh the admin cookie — not the storefront one —
+// and must not drop the buyer/seller session.
+function isAdminPath(path) {
+  return typeof path === 'string' && path.startsWith('/admin');
+}
 
 async function rawFetch(path, { method = 'GET', body, headers = {} } = {}) {
   const finalHeaders = { ...headers };
@@ -45,10 +53,20 @@ async function rawFetch(path, { method = 'GET', body, headers = {} } = {}) {
   });
 }
 
-async function tryRefresh() {
+async function tryRefresh(admin = false) {
+  // The refresh cookie rides along automatically; a 200 means new cookies were set.
+  // Admin and storefront refreshes hit different endpoints (and different cookies).
+  if (admin) {
+    if (!adminRefreshPromise) {
+      adminRefreshPromise = (async () => {
+        const res = await rawFetch('/admin/auth/refresh', { method: 'POST' });
+        return res.ok;
+      })().finally(() => { adminRefreshPromise = null; });
+    }
+    return adminRefreshPromise;
+  }
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      // The refresh cookie rides along automatically; a 200 means new cookies were set.
       const res = await rawFetch('/auth/refresh', { method: 'POST' });
       return res.ok;
     })().finally(() => { refreshPromise = null; });
@@ -67,10 +85,11 @@ async function tryRefresh() {
  */
 export async function apiFetch(path, options = {}) {
   const { retry = true, auth = true } = options;
+  const admin = isAdminPath(path);
   let res = await rawFetch(path, options);
 
   if (res.status === 401 && retry && auth) {
-    const refreshed = await tryRefresh();
+    const refreshed = await tryRefresh(admin);
     if (refreshed) res = await rawFetch(path, options);
   }
 
@@ -82,8 +101,10 @@ export async function apiFetch(path, options = {}) {
     const err = (json && json.error) || {};
     if (res.status === 401 && auth && typeof window !== 'undefined') {
       // Refresh absent or failed: tell the app to drop the in-memory session so the
-      // UI reflects logged-out immediately (no stale "ghost login").
-      window.dispatchEvent(new Event('manzili:auth-expired'));
+      // UI reflects logged-out immediately (no stale "ghost login"). Admin and storefront
+      // sessions are independent, so fire the matching event — an expired admin token must
+      // NOT log the buyer/seller out, and vice versa.
+      window.dispatchEvent(new Event(admin ? 'manzili:admin-expired' : 'manzili:auth-expired'));
     }
     throw new ApiError(err.message || `Request failed (${res.status})`, {
       code: err.code || `HTTP_${res.status}`,

@@ -90,7 +90,7 @@ public sealed class KashierCheckoutService
             // no card processing fee, so the quote method is non-STRIPE (no fee line) — matching the
             // total the cart displayed for this method.
             var discount = req.Coupon?.DiscountAmount ?? 0m;
-            var breakdown = await _pricing.QuoteAsync(req.Items, discount, methodLabel);
+            var breakdown = await _pricing.QuoteAsync(req.Items, discount, methodLabel, addressId: req.AddressId);
             var amount = breakdown.Total.ToString("0.00", CultureInfo.InvariantCulture);
 
             var redirect = $"{_app.ResolveBaseUrl(origin)}/orders?checkout=success&gateway=kashier";

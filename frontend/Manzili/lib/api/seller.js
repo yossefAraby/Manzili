@@ -109,8 +109,33 @@ function adaptProduct(p, storeId) {
     variants,
     shippingSize: str(p.shippingSize, 'MEDIUM'),
     shippingBulkyCategory: str(p.shippingBulkyCategory, 'NORMAL'),
+    isPromoted: !!p.isPromoted,
+    promotedUntil: p.promotedUntil || null,
     createdAt: p.createdAt || new Date().toISOString(),
     updatedAt: p.updatedAt || p.createdAt || new Date().toISOString(),
+  };
+}
+
+// ─── Promotions (paid "feature my item") ─────────────────────────────────────
+export async function fetchSellerPromotions() {
+  try {
+    const r = await apiGet('/seller/promotions');
+    return arr(r?.data?.promotions).map((p) => ({
+      id: str(p.id), productId: str(p.productId), plan: str(p.plan),
+      amount: num(p.amount, 0), expiresAt: p.expiresAt || null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Feature a product: plan is 'day' (50 EGP) or 'week' (300 EGP). Throws on failure. */
+export async function promoteProduct(productId, plan) {
+  const r = await apiPost('/seller/promotions', { productId: str(productId), plan });
+  const p = r?.data || {};
+  return {
+    id: str(p.id), productId: str(p.productId), plan: str(p.plan),
+    amount: num(p.amount, 0), expiresAt: p.expiresAt || null,
   };
 }
 

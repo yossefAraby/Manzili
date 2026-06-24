@@ -157,6 +157,10 @@ export function adaptProductDetail(dto) {
     stock: dto.stock != null ? Number(dto.stock) : (dto.inStock === false ? 0 : 10),
     rating: reviewItems,
     variants: adaptVariants(dto.variants),
+    // Shipping profile — drives the "Material & Size" line + the size-aware delivery estimate.
+    // (Dropping these here was making every product look MEDIUM on the product page.)
+    shippingSize: dto.shippingSize || 'MEDIUM',
+    shippingBulkyCategory: dto.shippingBulkyCategory || 'NORMAL',
     createdAt: dto.createdAt || null,
   };
 }
@@ -219,6 +223,52 @@ export async function fetchProductById(id) {
 }
 
 /**
+ * Semantic "describe-it" search → GET /search/semantic. Embeds the query and ranks the catalog
+ * by meaning (pgvector); the backend falls back to lexical search when embeddings are unavailable.
+ * Returns { items, mode } where items are UI products. Fail-safe to empty so the search UI just
+ * shows no results instead of throwing.
+ */
+// Small in-session cache so re-typing / backspacing the same query doesn't re-embed it.
+const _semanticCache = new Map();
+export async function searchProductsSemantic(q, limit = 6) {
+  const query = String(q ?? '').trim();
+  if (query.length < 2) return { items: [], mode: 'empty' };
+  const key = `${query.toLowerCase()}|${limit}`;
+  if (_semanticCache.has(key)) return _semanticCache.get(key);
+  try {
+    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    const r = await apiGet(`/search/semantic?${params.toString()}`);
+    const products = r?.data?.products || [];
+    const out = { items: products.map(adaptSearchProduct).filter(Boolean), mode: r?.mode || 'semantic' };
+    _semanticCache.set(key, out);
+    if (_semanticCache.size > 50) _semanticCache.delete(_semanticCache.keys().next().value);
+    return out;
+  } catch {
+    return { items: [], mode: 'error' };
+  }
+}
+
+/**
+ * Vector recommendations → GET /search/recommend. ONE engine for both rails: pass seed product
+ * id(s) and it returns the products nearest to their average embedding (pgvector; instant, zero
+ * tokens). Product page → seed with the viewed product; home "For You" → seed with the shopper's
+ * engaged products. Empty seeds → the backend returns popular items. Fail-safe to empty.
+ */
+export async function fetchRecommended(seedIds, limit = 4) {
+  const seeds = (Array.isArray(seedIds) ? seedIds : [seedIds])
+    .map((s) => String(s ?? '').trim())
+    .filter(Boolean);
+  try {
+    const params = new URLSearchParams({ seeds: seeds.join(','), limit: String(limit) });
+    const r = await apiGet(`/search/recommend?${params.toString()}`);
+    const cards = r?.data?.productCards || r?.data?.ProductCards || [];
+    return cards.map(adaptProductCard).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Search products. Returns { items, total } where items are UI products.
  * Throws ApiError on failure.
  */
@@ -233,4 +283,28 @@ export async function searchProducts(q, page = 1, limit = 20) {
     items: products.map(adaptSearchProduct).filter(Boolean),
     total: r?.total ?? products.length,
   };
+}
+
+/**
+ * Search APPROVED stores by name/@username → GET /stores/search. Backs the custom-order private
+ * vendor picker directly from the seller table (so it finds sellers even with no listings yet, and
+ * never returns hidden stores). Fail-safe to []. Returns [{ id, name, username, description, logo }].
+ */
+export async function searchStores(q, limit = 20) {
+  try {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    params.set('limit', String(limit));
+    const r = await apiGet(`/stores/search?${params.toString()}`);
+    const stores = r?.data?.stores || [];
+    return stores.map((s) => ({
+      id: String(s.id ?? ''),
+      name: s.name || '',
+      username: s.username || '',
+      description: s.description || '',
+      logo: s.logo || null,
+    }));
+  } catch {
+    return [];
+  }
 }

@@ -6,8 +6,11 @@ import { LogOutIcon } from "lucide-react"
 import Loading from "../Loading"
 import AdminNavbar from "./AdminNavbar"
 import AdminSidebar from "./AdminSidebar"
-import { selectIsAdmin, selectSession, selectAuthBootstrapped, clearSession } from "@/lib/features/auth/authSlice"
-import { apiLogout } from "@/lib/api/auth"
+import {
+    selectIsAdmin, selectAdminSession, selectAdminBootstrapped,
+    setAdminSession, clearAdminSession, markAdminBootstrapped,
+} from "@/lib/features/auth/authSlice"
+import { apiAdminLogout, fetchAdminSession } from "@/lib/api/auth"
 import { fetchAdminMe } from "@/lib/api/admin"
 
 const LOGIN_PATH = "/admin/login"
@@ -34,18 +37,40 @@ export default function AdminLayout({ children }) {
     const pathname = usePathname()
     const dispatch = useDispatch()
     const isAdmin = useSelector(selectIsAdmin)
-    const session = useSelector(selectSession)
-    const bootstrapped = useSelector(selectAuthBootstrapped)
+    const adminSession = useSelector(selectAdminSession)
+    const bootstrapped = useSelector(selectAdminBootstrapped)
     const [me, setMe] = useState(null)
 
     const isLoginRoute = pathname === LOGIN_PATH
 
-    // Wait until the cookie session has been probed before deciding to redirect, so a
+    // Rehydrate the ADMIN session from its own cookie (/admin/auth/me) — separate from the
+    // storefront session, which StoreProvider bootstraps. This is what keeps an admin logged in
+    // across reloads without ever touching a buyer/seller session.
+    useEffect(() => {
+        if (bootstrapped) return
+        let cancelled = false
+        ;(async () => {
+            const s = await fetchAdminSession()
+            if (cancelled) return
+            dispatch(s ? setAdminSession(s) : markAdminBootstrapped())
+        })()
+        return () => { cancelled = true }
+    }, [bootstrapped, dispatch])
+
+    // An unrecoverable 401 on an admin call drops ONLY the admin session (the storefront stays
+    // logged in) and bounces back to the admin login.
+    useEffect(() => {
+        const onAdminExpired = () => { dispatch(clearAdminSession()); router.replace(LOGIN_PATH) }
+        window.addEventListener('manzili:admin-expired', onAdminExpired)
+        return () => window.removeEventListener('manzili:admin-expired', onAdminExpired)
+    }, [dispatch, router])
+
+    // Wait until the admin cookie has been probed before deciding to redirect, so a
     // logged-in admin isn't bounced to login during the async rehydrate.
     useEffect(() => {
         if (!bootstrapped || isLoginRoute) return
-        if (!session || !isAdmin) router.replace(LOGIN_PATH)
-    }, [bootstrapped, isLoginRoute, isAdmin, session, router])
+        if (!adminSession || !isAdmin) router.replace(LOGIN_PATH)
+    }, [bootstrapped, isLoginRoute, isAdmin, adminSession, router])
 
     // Load identity + section permissions once we know the user is an admin.
     useEffect(() => {
@@ -64,8 +89,8 @@ export default function AdminLayout({ children }) {
     }, [me, pathname, isLoginRoute, router])
 
     const handleLogout = async () => {
-        await apiLogout()
-        dispatch(clearSession())
+        await apiAdminLogout()
+        dispatch(clearAdminSession())
         router.replace(LOGIN_PATH)
     }
 

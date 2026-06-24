@@ -25,6 +25,21 @@ public sealed class SellerProductListItemDto
     /// <summary>Whether the seller has disabled (hidden) this product. The manage-product
     /// table shows a "Disabled" badge and offers a re-enable toggle when true.</summary>
     public bool IsDisabled { get; set; }
+    /// <summary>Shipping profile — lets the manage-product page show a REAL size-based delivery estimate.</summary>
+    public string ShippingSize { get; set; } = "MEDIUM";
+    public string ShippingBulkyCategory { get; set; } = "NORMAL";
+    /// <summary>True while this product has an active paid promotion (featured on the homepage).</summary>
+    public bool IsPromoted { get; set; }
+    /// <summary>When the active promotion ends (ISO), or null if not promoted.</summary>
+    public string? PromotedUntil { get; set; }
+}
+
+/// <summary>Body for POST /seller/promotions — feature a product for a window.</summary>
+public sealed class CreatePromotionRequest
+{
+    public string? ProductId { get; set; }
+    /// <summary>"day" (50 EGP) or "week" (300 EGP).</summary>
+    public string? Plan { get; set; }
 }
 
 // Seller-scoped product detail used to prefill the edit form. Unlike the public

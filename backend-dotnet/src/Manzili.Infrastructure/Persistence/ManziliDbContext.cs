@@ -20,6 +20,8 @@ public partial class ManziliDbContext : DbContext
 
     public virtual DbSet<Cart> Carts { get; set; }
 
+    public virtual DbSet<Promotion> Promotions { get; set; }
+
     public virtual DbSet<CartContain> CartContains { get; set; }
 
     public virtual DbSet<Category> Categories { get; set; }
@@ -251,11 +253,26 @@ public partial class ManziliDbContext : DbContext
                 .HasColumnType("timestamp(6) without time zone")
                 .HasColumnName("created_at");
             entity.Property(e => e.Creatorid).HasColumnName("creatorid");
+            entity.Property(e => e.ItemsJson).HasColumnName("items_json");
 
             entity.HasOne(d => d.Creator).WithMany(p => p.Carts)
                 .HasForeignKey(d => d.Creatorid)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("cart_creatorid_fkey");
+        });
+
+        modelBuilder.Entity<Promotion>(entity =>
+        {
+            entity.HasKey(e => e.Promotionid).HasName("promotion_pkey");
+            entity.ToTable("promotion", "manzili");
+            entity.Property(e => e.Promotionid).HasColumnName("promotionid");
+            entity.Property(e => e.Productid).HasColumnName("productid");
+            entity.Property(e => e.Sellerid).HasColumnName("sellerid");
+            entity.Property(e => e.Plan).HasMaxLength(20).HasColumnName("plan");
+            entity.Property(e => e.Amount).HasColumnType("numeric(12,2)").HasColumnName("amount");
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamp(6) without time zone").HasColumnName("created_at");
+            entity.Property(e => e.StartsAt).HasColumnType("timestamp(6) without time zone").HasColumnName("starts_at");
+            entity.Property(e => e.ExpiresAt).HasColumnType("timestamp(6) without time zone").HasColumnName("expires_at");
         });
 
         modelBuilder.Entity<CartContain>(entity =>

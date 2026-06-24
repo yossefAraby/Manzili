@@ -67,6 +67,35 @@ export async function estimateShipping(items) {
   }
 }
 
+/**
+ * Estimate the Bosta delivery fee for ONE product to a buyer city — size + distance aware.
+ * Returns { estimatedShipping, low, high, currency, tier, sameCity } (low/high/tier are present
+ * once the backend exposes the ranged estimate; older backends return just estimatedShipping).
+ * Fails safe to null so the product page just hides the widget.
+ */
+export async function estimateProductShipping(productId, { city, bostaCityId, quantity = 1 } = {}) {
+  if (!productId) return null;
+  try {
+    const res = await apiPost('/shipping/estimate', {
+      items: [{ productId: String(productId), quantity: Number(quantity) || 1 }],
+      dropOffCity: city || undefined,
+      dropOffBostaCityId: bostaCityId || undefined,
+    });
+    const d = res?.data ?? res ?? {};
+    const n = (v) => (v == null ? null : Number(v));
+    return {
+      estimatedShipping: n(d.estimatedShipping ?? d.total),
+      low: n(d.low),
+      high: n(d.high),
+      currency: d.currency ?? 'EGP',
+      tier: d.tier ?? 'unknown',
+      sameCity: !!d.sameCity,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function normalizeCity(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const id = raw.id ?? raw._id ?? raw.cityId;

@@ -24,7 +24,7 @@ const fmt = (n, symbol = "EGP") =>
 const TX_META = {
   SALE_CREDIT: { label: "Sale Credit" },
   COMMISSION_DEBIT: { label: "Manzili Commission" },
-  SHIPPING_DEBIT: { label: "Shipping (75%)" },
+  SHIPPING_DEBIT: { label: "Shipping (65%)" },
   COD_RELEASE: { label: "Funds Released" },
   SALE_REVERSAL: { label: "Return Reversal" },
   PAYOUT: { label: "Payout" },

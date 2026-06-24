@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { bluesmindsChat } from "@/lib/ai/bluesminds";
-import { zaiChat } from "@/lib/ai/zai";
-import { geminiGenerate, geminiText } from "@/lib/ai/gemini";
-import { groqChat } from "@/lib/ai/groq";
+import { textTiers } from "@/lib/ai/textChain";
 
 // We ask the model for a JSON array so we can render it as bullets without
 // regex-splitting prose. Every provider honors "respond with JSON only"
@@ -63,55 +60,8 @@ export async function POST(request) {
     const body = await request.json();
     const userPrompt = buildUserPrompt(body);
 
-    const tiers = [
-      {
-        name: "bluesminds",
-        run: () =>
-          bluesmindsChat({
-            model: "DeepSeek-V4-Flash",
-            messages: [
-              { role: "system", content: SYSTEM },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.4,
-          }),
-      },
-      {
-        name: "z.ai",
-        run: () =>
-          zaiChat({
-            model: "glm-4.7-flash",
-            messages: [
-              { role: "system", content: SYSTEM },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.4,
-          }),
-      },
-      {
-        name: "gemini",
-        run: async () => {
-          const content = await geminiGenerate({
-            model: "gemini-2.5-flash",
-            parts: [{ text: `${SYSTEM}\n\n${userPrompt}` }],
-            generationConfig: { temperature: 0.4 },
-          });
-          return geminiText(content);
-        },
-      },
-      {
-        name: "groq",
-        run: () =>
-          groqChat({
-            model: "llama-3.1-8b-instant",
-            messages: [
-              { role: "system", content: SYSTEM },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.4,
-          }),
-      },
-    ];
+    // OpenRouter (free Gemma) primary → z.ai / gemini / groq → DeepSeek last (costly).
+    const tiers = textTiers({ system: SYSTEM, user: userPrompt, temperature: 0.4 });
 
     let raw = null;
     let lastErr = null;

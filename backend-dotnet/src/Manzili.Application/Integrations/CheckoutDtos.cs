@@ -121,7 +121,9 @@ public sealed class CheckoutBreakdown
 {
     public decimal Subtotal { get; set; }
     public decimal Discount { get; set; }
-    public decimal Shipping { get; set; }            // total Bosta delivery fee (all stores)
+    public decimal Shipping { get; set; }            // total Bosta delivery fee (all stores), point estimate
+    public decimal ShippingLow { get; set; }         // low end of the size+distance shipping range
+    public decimal ShippingHigh { get; set; }        // high end of the size+distance shipping range
     public decimal BuyerShippingShare { get; set; }  // 25% — added to the buyer's bill
     public decimal SellerShippingShare { get; set; } // 75% — debited from seller wallets
     public decimal StripeFee { get; set; }           // borne by the buyer

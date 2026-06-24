@@ -84,12 +84,11 @@ export default function StoreSettings() {
             return
         }
         const name = form.name.trim()
-        const username = sanitizeUsername(form.username)
         const email = form.email.trim()
         const contact = form.contact.trim()
 
-        if (!name || !username || !email || !contact) {
-            toast.error('Name, username, email and contact are required')
+        if (!name || !email || !contact) {
+            toast.error('Name, email and contact are required')
             return
         }
 
@@ -107,16 +106,11 @@ export default function StoreSettings() {
                 }
             }
 
-            // Keep the trailing `_xxxxxx` suffix the create flow attaches so the
-            // username stays stable when only the human-readable part changes.
-            const existingSuffix =
-                (record.username || '').match(/_([a-z0-9]{6})$/i)?.[1] ||
-                String(record.id || storeId).slice(-6)
-            const nextUsername = `${username}_${existingSuffix}`
-
+            // The username is ENFORCED — it's fixed when the store is created (like the
+            // "Sell on Manzili" form) and can't be changed here. Always send the existing one.
             const payload = {
                 name,
-                username: nextUsername,
+                username: record.username,
                 description: form.description.trim(),
                 email,
                 contact,
@@ -193,14 +187,16 @@ export default function StoreSettings() {
                     />
                 </label>
 
-                <p>Username</p>
+                <p>Username <span className="text-xs text-slate-400">(permanent — set when you opened your store)</span></p>
                 <input
                     name="username"
-                    onChange={onChangeHandler}
                     value={form.username}
                     type="text"
-                    className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded"
-                    required
+                    readOnly
+                    disabled
+                    aria-readonly="true"
+                    title="Your store username is fixed and cannot be changed."
+                    className="border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed w-full max-w-lg p-2 rounded"
                 />
 
                 <p>Name</p>

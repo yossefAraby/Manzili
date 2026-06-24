@@ -19,8 +19,10 @@ import {
   ExternalLinkIcon,
   ZoomInIcon,
   TagIcon,
+  TruckIcon,
 } from "lucide-react";
 import Image from "next/image";
+import { quoteBySize, normalizeSize, bucketFromDimensions, buyerShare } from "@/lib/shipping/bostaPricing";
 import toast from "react-hot-toast";
 import { assets, categories } from "@/assets/assets";
 import StoreSearch from "@/components/StoreSearch";
@@ -1197,29 +1199,10 @@ function CustomOrderPageInner() {
 
     try {
       let list = null;
+      let lastErr = null;
 
-      // Tier 1: Puter — but only if the buyer is already signed in from a
-      // previous image-generation flow. Review never prompts on its own.
-      const puter = await ensurePuter({ passive: true });
-      if (puter) {
-        try {
-          const raw = await puterChat(puter, {
-            system:
-              "You are reviewing a custom-order request for a handmade-goods marketplace. " +
-              "Identify the 3-5 most useful clarifications. Respond ONLY with a JSON array of short strings.",
-            user: JSON.stringify(reviewPayload.formData),
-            temperature: 0.4,
-          });
-          list = parseSuggestionsClient(raw);
-        } catch (e) {
-          if (!looksLikeQuotaError(e)) {
-            console.warn("[puter review] failed, will fall back:", e?.message || e);
-          }
-        }
-      }
-
-      // Tier 2: server route (z.ai → Gemini).
-      if (!list) {
+      // Tier 1: the server chain — OpenRouter (free) → z.ai → Gemini → Groq → DeepSeek (last).
+      try {
         const res = await fetch("/api/ai/review", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1228,7 +1211,34 @@ function CustomOrderPageInner() {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "review failed");
         list = Array.isArray(data.suggestions) ? data.suggestions : [];
+      } catch (e) {
+        lastErr = e;
+        console.warn("[review] server failed, will try Puter:", e?.message || e);
       }
+
+      // Tier 2 (LAST resort, after DeepSeek): Puter — only if the buyer is already signed in
+      // from a previous flow. Review never shows the consent prompt on its own.
+      if (list === null) {
+        const puter = await ensurePuter({ passive: true });
+        if (puter) {
+          try {
+            const raw = await puterChat(puter, {
+              system:
+                "You are reviewing a custom-order request for a handmade-goods marketplace. " +
+                "Identify the 3-5 most useful clarifications. Respond ONLY with a JSON array of short strings.",
+              user: JSON.stringify(reviewPayload.formData),
+              temperature: 0.4,
+            });
+            list = parseSuggestionsClient(raw);
+          } catch (e) {
+            if (!looksLikeQuotaError(e)) {
+              console.warn("[puter review] failed:", e?.message || e);
+            }
+          }
+        }
+      }
+
+      if (list === null) throw lastErr || new Error("review failed");
 
       if (list.length === 0) {
         toast.success(t('custom.form.noClarificationsNeeded'), { id: toastId });
@@ -2111,6 +2121,36 @@ function CustomOrderPageInner() {
                   {priceEstimate.note && (
                     <p className="mt-2 text-sm text-slate-700">{priceEstimate.note}</p>
                   )}
+
+                  {/* Bosta delivery estimate — by package size; varies by the artisan's location
+                      (a range), since who fulfills the request isn't known yet. */}
+                  {(() => {
+                    const sizeStr =
+                      formData.sizeMode === "package"
+                        ? formData.packageSize
+                        : bucketFromDimensions(formData.size) || formData.packageSize;
+                    if (!sizeStr) {
+                      return (
+                        <p className="mt-3 border-t border-emerald-100 pt-3 text-xs text-slate-500">
+                          {t('custom.form.shippingPickSize')}
+                        </p>
+                      );
+                    }
+                    const q = quoteBySize(sizeStr, sizeStr);
+                    return (
+                      <div className="mt-3 flex items-start gap-2 border-t border-emerald-100 pt-3">
+                        <TruckIcon size={15} className="mt-0.5 shrink-0 text-[#2582eb]" />
+                        <div className="text-xs">
+                          <p className="font-semibold text-slate-800">
+                            {t('custom.form.shippingEstimate')}: EGP {buyerShare(q.low)}–{buyerShare(q.high)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">
+                            {t('custom.form.shippingBasedOn', { size: normalizeSize(sizeStr) })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

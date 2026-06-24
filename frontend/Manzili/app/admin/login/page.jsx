@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch } from 'react-redux'
 import Link from 'next/link'
 import { ArrowRightIcon, ShieldCheckIcon, LoaderIcon } from 'lucide-react'
-import { setSession } from '@/lib/features/auth/authSlice'
+import { setAdminSession } from '@/lib/features/auth/authSlice'
 import { apiAdminLogin } from '@/lib/api/auth'
 
 /**
@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
     setError('')
     try {
       const session = await apiAdminLogin({ username: username.trim(), password })
-      dispatch(setSession(session))
+      dispatch(setAdminSession(session))
       router.replace('/admin')
     } catch (err) {
       setError(err?.message || 'Invalid admin credentials')

@@ -11,6 +11,9 @@ public static class CatalogModule
         s.AddScoped<SearchService>();
         s.AddScoped<StoreService>();
         s.AddScoped<RatingService>();
+        // Semantic ("describe-it") search: embeddings provider (Jina→Cohere) + pgvector search.
+        s.AddHttpClient<EmbeddingService>();
+        s.AddScoped<SemanticSearchService>();
         return s;
     }
 }

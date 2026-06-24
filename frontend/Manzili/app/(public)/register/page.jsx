@@ -5,9 +5,10 @@ import Image from 'next/image'
 import { assets } from '@/assets/assets'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { setSession } from '@/lib/features/auth/authSlice'
-import { clearCart } from '@/lib/features/cart/cartSlice'
+import { hydrateCart } from '@/lib/features/cart/cartSlice'
+import { mergeServerCart } from '@/lib/api/cart'
 import { hydrateAddresses } from '@/lib/features/address/addressSlice'
 import { apiRegister } from '@/lib/api/auth'
 import { useTranslate } from '@/lib/i18n/LocaleContext'
@@ -17,6 +18,7 @@ function RegisterInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const dispatch = useDispatch()
+    const guestCart = useSelector((s) => s.cart.cartItems)
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -52,10 +54,11 @@ function RegisterInner() {
                 email: email.trim().toLowerCase(),
                 password,
             })
-            // Start the new account with a clean cart (don't inherit a guest cart).
-            dispatch(clearCart())
             dispatch(setSession(session))
             dispatch(hydrateAddresses())
+            // Carry the guest cart the buyer built before signing up onto their new account.
+            const merged = await mergeServerCart(guestCart)
+            if (merged) dispatch(hydrateCart(merged))
             router.push(redirectDest)
         } catch (err) {
             alert(err?.message || 'Registration failed')

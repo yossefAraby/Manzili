@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { SearchIcon, XIcon, StoreIcon } from "lucide-react";
-import { searchProducts } from "@/lib/api/products";
+import { searchStores } from "@/lib/api/products";
 import { useTranslate } from '@/lib/i18n/LocaleContext';
 
 /**
- * Store picker used by the custom-request form. Stores are derived from the
- * .NET product search endpoint (`/search`) — each product carries its owning
- * `store { id, name }`, so we dedupe those into a store list. There is no
- * dedicated "search stores" endpoint, so username/description are unavailable
- * from the API and the card renders without them.
+ * Store picker used by the custom-request form. Backed by the dedicated GET /stores/search
+ * endpoint (approved sellers, by store name or @username) — so it finds the right seller directly
+ * (even one with no listings yet) instead of the old trick of deduping stores out of a product
+ * search. Debounced so it doesn't fire a request per keystroke.
  */
 const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
   const t = useTranslate();
@@ -19,45 +18,23 @@ const StoreSearch = ({ selectedStore, onSelectStore, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const fetchStores = useCallback(async (searchQuery) => {
-    setLoading(true);
-    try {
-      const { items } = await searchProducts(searchQuery, 1, 50);
-      const byId = new Map();
-      for (const product of items) {
-        const store = product.store;
-        if (!store?.id) continue;
-        if (!byId.has(store.id)) {
-          byId.set(store.id, {
-            id: store.id,
-            name: store.name || "",
-            username: store.username || "",
-            description: store.description || "",
-          });
-        }
-      }
-      const q = searchQuery.toLowerCase();
-      const stores = Array.from(byId.values());
-      // Prefer stores whose name matches the query; if none match by name
-      // (the query matched on product fields only), surface all owners found.
-      const byName = stores.filter((s) => s.name.toLowerCase().includes(q));
-      setSuggestions(byName.length > 0 ? byName : stores);
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (query.trim().length > 1) {
-      fetchStores(query);
-      setIsOpen(true);
-    } else {
+    if (query.trim().length <= 1) {
       setSuggestions([]);
       setIsOpen(false);
+      return undefined;
     }
-  }, [query, fetchStores]);
+    let alive = true;
+    setIsOpen(true);
+    setLoading(true);
+    const handle = setTimeout(() => {
+      searchStores(query.trim(), 20)
+        .then((stores) => { if (alive) setSuggestions(stores); })
+        .catch(() => { if (alive) setSuggestions([]); })
+        .finally(() => { if (alive) setLoading(false); });
+    }, 350);
+    return () => { alive = false; clearTimeout(handle); };
+  }, [query]);
 
   const handleSelect = (store) => {
     onSelectStore(store);

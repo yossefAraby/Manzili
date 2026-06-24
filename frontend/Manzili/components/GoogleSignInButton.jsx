@@ -8,9 +8,10 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useStore } from 'react-redux'
 import { setSession } from '@/lib/features/auth/authSlice'
-import { clearCart } from '@/lib/features/cart/cartSlice'
+import { hydrateCart } from '@/lib/features/cart/cartSlice'
+import { mergeServerCart } from '@/lib/api/cart'
 import { hydrateAddresses } from '@/lib/features/address/addressSlice'
 import { apiGoogleLogin } from '@/lib/api/auth'
 
@@ -19,6 +20,7 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 export default function GoogleSignInButton({ redirectTo = '/' }) {
   const router = useRouter()
   const dispatch = useDispatch()
+  const store = useStore()
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -29,10 +31,11 @@ export default function GoogleSignInButton({ redirectTo = '/' }) {
     async function handleCredential(response) {
       try {
         const session = await apiGoogleLogin(response.credential)
-        // Drop any guest/previous cart before adopting this session (same as password login).
-        dispatch(clearCart())
         dispatch(setSession(session))
         dispatch(hydrateAddresses())
+        // Merge the guest cart into the account cart, then show the unified account cart.
+        const merged = await mergeServerCart(store.getState().cart.cartItems)
+        if (merged) dispatch(hydrateCart(merged))
         router.push(redirectTo || '/')
       } catch (err) {
         alert(err?.message || 'Google sign-in failed')

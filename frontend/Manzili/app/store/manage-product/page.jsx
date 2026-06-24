@@ -6,7 +6,7 @@ import Link from "next/link"
 import Loading from "@/components/Loading"
 import Pagination from "@/components/Pagination"
 import { getCurrencySymbol } from "@/lib/currency"
-import { Trash2Icon, PencilIcon, CheckIcon } from "lucide-react"
+import { Trash2Icon, PencilIcon, CheckIcon, PlusIcon, SearchIcon, PackageIcon, SparklesIcon, XIcon, TruckIcon } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 import { updateProduct, setProduct, removeProduct } from "@/lib/features/product/productSlice"
 import {
@@ -14,7 +14,9 @@ import {
     fetchSellerProducts,
     deleteSellerProduct,
     setSellerProductStatus,
+    promoteProduct,
 } from "@/lib/api/seller"
+import { quoteBySize } from "@/lib/shipping/bostaPricing"
 
 function imageSrc(img) {
     if (!img) return '/favicon.ico'
@@ -24,7 +26,17 @@ function imageSrc(img) {
 const LOW_STOCK = 5
 const ITEMS_PER_PAGE = 10
 
-// Derived status used by the toolbar filter + the status badge.
+// Manzili takes a 15% commission on the sale price. Delivery is the REAL size-based Bosta estimate
+// (a range; it also varies by buyer distance), computed from each product's shipping profile —
+// no fixed placeholder fee.
+const COMMISSION_RATE = 0.15
+
+// Promotion plans (must match the backend PromotionService).
+const PROMO_PLANS = [
+    { id: 'day', label: '1 day', price: 50 },
+    { id: 'week', label: '1 week', price: 300 },
+]
+
 function productStatus(p) {
     if (p.disabled) return 'disabled'
     const stock = Number(p.stock) || 0
@@ -38,6 +50,13 @@ const STATUS_BADGE = {
     low: { label: 'Low stock', cls: 'bg-amber-50 text-amber-700' },
     out: { label: 'Out of stock', cls: 'bg-rose-50 text-rose-700' },
     disabled: { label: 'Disabled', cls: 'bg-slate-100 text-slate-500' },
+}
+
+function promotedDaysLeft(until) {
+    if (!until) return null
+    const ms = new Date(until).getTime() - Date.now()
+    if (!Number.isFinite(ms) || ms <= 0) return null
+    return Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)))
 }
 
 export default function StoreManageProducts() {
@@ -56,19 +75,22 @@ export default function StoreManageProducts() {
 
     const [loading, setLoading] = useState(true)
 
-    // ── Toolbar state ──
+    // Toolbar
     const [search, setSearch] = useState("")
     const [categoryFilter, setCategoryFilter] = useState("ALL")
-    const [statusFilter, setStatusFilter] = useState("ALL") // ALL | in | low | out | disabled
-    const [sortBy, setSortBy] = useState("newest") // newest | name | priceAsc | priceDesc | stock | bestSelling
+    const [statusFilter, setStatusFilter] = useState("ALL")
+    const [sortBy, setSortBy] = useState("newest")
 
-    // ── Inline stock editing ──
-    const [stockEdits, setStockEdits] = useState({}) // { [id]: "value" }
+    // Inline stock editing
+    const [stockEdits, setStockEdits] = useState({})
     const [savingId, setSavingId] = useState(null)
 
     const [currentPage, setCurrentPage] = useState(1)
 
-    // Distinct categories for the filter dropdown.
+    // Promotion modal
+    const [promoteFor, setPromoteFor] = useState(null)
+    const [promoting, setPromoting] = useState(false)
+
     const categoryOptions = useMemo(() => {
         const set = new Set()
         products.forEach((p) => { if (p.category) set.add(p.category) })
@@ -86,48 +108,33 @@ export default function StoreManageProducts() {
         const byNum = (v) => Number(v) || 0
         list = [...list].sort((a, b) => {
             switch (sortBy) {
-                case "name":
-                    return (a.name || "").localeCompare(b.name || "")
-                case "priceAsc":
-                    return byNum(a.price) - byNum(b.price)
-                case "priceDesc":
-                    return byNum(b.price) - byNum(a.price)
-                case "stock":
-                    return byNum(a.stock) - byNum(b.stock)
-                case "bestSelling":
-                    return byNum(b.totalSold ?? b.sold) - byNum(a.totalSold ?? a.sold)
+                case "name": return (a.name || "").localeCompare(b.name || "")
+                case "priceAsc": return byNum(a.price) - byNum(b.price)
+                case "priceDesc": return byNum(b.price) - byNum(a.price)
+                case "stock": return byNum(a.stock) - byNum(b.stock)
+                case "bestSelling": return byNum(b.totalSold ?? b.sold) - byNum(a.totalSold ?? a.sold)
                 case "newest":
-                default:
-                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+                default: return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
             }
         })
         return list
     }, [products, search, categoryFilter, statusFilter, sortBy])
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
-    const paginated = filtered.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE,
-    )
+    const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
-    // Reset to page 1 whenever the filtered set changes size.
     useEffect(() => { setCurrentPage(1) }, [search, categoryFilter, statusFilter, sortBy, filtered.length])
 
-    // Load THIS seller's products from the API into the catalog list.
     useEffect(() => {
         let cancelled = false
         if (!storeId) { setLoading(false); return }
         fetchSellerProducts()
-            // The seller list DTO carries no store id, so tag each product with this
-            // seller's storeId — otherwise the `p.storeId === storeId` filter (and the
-            // storefront link) would drop them all.
             .then((list) => { if (!cancelled) dispatch(setProduct(list.map((p) => ({ ...p, storeId })))) })
-            .catch(() => { /* fail-safe: keep whatever's in the list */ })
+            .catch(() => { })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }
     }, [storeId, dispatch])
 
-    // ── Inline stock save ──
     const saveStock = async (product) => {
         const raw = stockEdits[product.id]
         const next = Number(raw)
@@ -148,10 +155,8 @@ export default function StoreManageProducts() {
         }
     }
 
-    // ── Real enable/disable status toggle (distinct from stock) ──
     const toggleStatus = async (product) => {
         const nextDisabled = !product.disabled
-        // Persist first; reflect in Redux only on success.
         await setSellerProductStatus(product.id, nextDisabled)
         dispatch(updateProduct({ id: product.id, disabled: nextDisabled }))
     }
@@ -161,207 +166,234 @@ export default function StoreManageProducts() {
         dispatch(removeProduct(productId))
     }
 
+    const handlePromote = async (product, plan) => {
+        if (promoting) return
+        setPromoting(true)
+        try {
+            const promo = await promoteProduct(product.id, plan)
+            dispatch(updateProduct({ id: product.id, isPromoted: true, promotedUntil: promo.expiresAt }))
+            toast.success("Your product is now featured on the homepage 🎉")
+            setPromoteFor(null)
+        } catch (err) {
+            toast.error(err?.message || "Could not start the promotion")
+        } finally {
+            setPromoting(false)
+        }
+    }
+
+    const inStockCount = useMemo(() => products.filter((p) => productStatus(p) === 'in').length, [products])
+    const promotedCount = useMemo(() => products.filter((p) => p.isPromoted).length, [products])
+
     if (loading) return <Loading />
 
-    return (
-        <>
-            <h1 className="text-2xl text-slate-500 mb-5">Manage <span className="text-slate-800 font-medium">Products</span></h1>
+    const fieldCls = "h-10 px-3 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#2582eb]/30 bg-white text-slate-700"
 
-            {/* ── Toolbar ── */}
-            <div className="flex flex-wrap gap-3 mb-5 items-end">
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">Search</label>
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search by name…"
-                        className="p-2 px-3 text-sm border border-slate-200 rounded outline-slate-400 w-56"
-                    />
+    return (
+        <div className="mb-28">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl text-slate-500">Manage <span className="text-slate-800 font-medium">Products</span></h1>
+                    <p className="text-sm text-slate-400 mt-1">
+                        {products.length} product{products.length === 1 ? '' : 's'}
+                        {products.length > 0 && <> · <span className="text-emerald-600">{inStockCount} in stock</span></>}
+                        {promotedCount > 0 && <> · <span className="text-[#e67e22]">{promotedCount} featured</span></>}
+                    </p>
                 </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">Category</label>
-                    <select
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="p-2 px-3 text-sm border border-slate-200 rounded outline-slate-400 bg-white"
-                    >
-                        <option value="ALL">All categories</option>
-                        {categoryOptions.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">Status</label>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="p-2 px-3 text-sm border border-slate-200 rounded outline-slate-400 bg-white"
-                    >
-                        <option value="ALL">All</option>
-                        <option value="in">In stock</option>
-                        <option value="low">Low stock</option>
-                        <option value="out">Out of stock</option>
-                        <option value="disabled">Disabled</option>
-                    </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">Sort</label>
-                    <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="p-2 px-3 text-sm border border-slate-200 rounded outline-slate-400 bg-white"
-                    >
-                        <option value="newest">Newest</option>
-                        <option value="name">Name (A–Z)</option>
-                        <option value="priceAsc">Price (low–high)</option>
-                        <option value="priceDesc">Price (high–low)</option>
-                        <option value="stock">Stock (low–high)</option>
-                        <option value="bestSelling">Best-selling</option>
-                    </select>
-                </div>
-                <Link
-                    href="/store/add-product"
-                    className="ml-auto px-4 py-2 text-sm rounded-lg bg-[#1c355e] text-white hover:bg-[#2582eb] transition-colors"
-                >
-                    + Add product
+                <Link href="/store/add-product" className="inline-flex items-center gap-1.5 px-4 h-10 text-sm rounded-full bg-[#1c355e] text-white hover:bg-[#2582eb] transition-colors shadow-sm">
+                    <PlusIcon size={16} /> Add product
                 </Link>
             </div>
 
+            {/* Toolbar */}
+            <div className="flex flex-wrap gap-2.5 mt-6 mb-5 items-center">
+                <div className="relative flex-1 min-w-[220px]">
+                    <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products by name…" className={`${fieldCls} w-full pl-9`} />
+                </div>
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={fieldCls}>
+                    <option value="ALL">All categories</option>
+                    {categoryOptions.map((c) => (<option key={c} value={c}>{c}</option>))}
+                </select>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={fieldCls}>
+                    <option value="ALL">All statuses</option>
+                    <option value="in">In stock</option>
+                    <option value="low">Low stock</option>
+                    <option value="out">Out of stock</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={fieldCls}>
+                    <option value="newest">Newest</option>
+                    <option value="name">Name (A–Z)</option>
+                    <option value="priceAsc">Price (low–high)</option>
+                    <option value="priceDesc">Price (high–low)</option>
+                    <option value="stock">Stock (low–high)</option>
+                    <option value="bestSelling">Best-selling</option>
+                </select>
+            </div>
+
             {products.length === 0 ? (
-                <p className="text-slate-600">No products for this store yet. Add products from the Add Product page.</p>
+                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                    <PackageIcon size={32} className="mx-auto text-slate-300" />
+                    <p className="mt-3 text-slate-600">No products yet.</p>
+                    <Link href="/store/add-product" className="inline-flex items-center gap-1.5 mt-4 px-4 h-10 text-sm rounded-full bg-[#1c355e] text-white hover:bg-[#2582eb] transition-colors">
+                        <PlusIcon size={16} /> Add your first product
+                    </Link>
+                </div>
             ) : filtered.length === 0 ? (
-                <p className="text-slate-600">No products match the current filters.</p>
+                <p className="text-slate-600 py-10 text-center">No products match the current filters.</p>
             ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full max-w-5xl text-left ring ring-slate-200 rounded overflow-hidden text-sm">
-                <thead className="bg-slate-50 text-gray-700 uppercase tracking-wider">
-                    <tr>
-                        <th className="px-4 py-3">Product</th>
-                        <th className="px-4 py-3 hidden md:table-cell">Category</th>
-                        <th className="px-4 py-3">Price</th>
-                        <th className="px-4 py-3">Stock</th>
-                        <th className="px-4 py-3 hidden lg:table-cell">Sold</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="text-slate-700">
+                /* One quiet container; rows are separated by thin dividers, not boxes. */
+                <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden">
                     {paginated.map((product) => {
                         const status = productStatus(product)
                         const badge = STATUS_BADGE[status]
                         const stock = Number(product.stock) || 0
                         const hasSale = Number(product.price) > 0 && Number(product.price) < Number(product.mrp)
                         const editing = stockEdits[product.id] !== undefined
+                        const sell = Number(product.price || product.mrp) || 0
+                        const commission = sell * COMMISSION_RATE
+                        const net = Math.max(0, sell - commission)
+                        const sold = Number(product.totalSold ?? product.sold) || 0
+                        const ship = quoteBySize(product.shippingSize, product.shippingBulkyCategory)
+                        const daysLeft = product.isPromoted ? promotedDaysLeft(product.promotedUntil) : null
                         return (
-                        <tr key={product.id} className="border-t border-gray-200 hover:bg-gray-50">
-                            <td className="px-4 py-3">
-                                <div className="flex gap-2 items-center">
-                                    <Image width={40} height={40} className='p-1 shadow rounded' src={imageSrc(product.images?.[0])} alt="" />
-                                    <span className="font-medium text-slate-700">{product.name}</span>
+                            <div key={product.id} className={`p-4 flex flex-col lg:flex-row lg:items-center gap-4 hover:bg-slate-50/60 transition-colors ${product.disabled ? 'opacity-60' : ''}`}>
+                                {/* Product */}
+                                <div className="flex items-center gap-3 lg:flex-1 min-w-0">
+                                    <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                                        <Image width={52} height={52} className="h-12 w-auto object-contain" src={imageSrc(product.images?.[0])} alt="" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <p className="font-medium text-slate-800 truncate">{product.name}</p>
+                                            {product.isPromoted && (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e67e22]/10 text-[#e67e22]">
+                                                    <SparklesIcon size={11} /> Featured{daysLeft ? ` · ${daysLeft}d` : ''}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[11px] text-slate-500">
+                                            {product.category && <span>{product.category}</span>}
+                                            <span className={`font-medium px-1.5 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </td>
-                            <td className="px-4 py-3 hidden md:table-cell text-slate-600">{product.category || "—"}</td>
-                            <td className="px-4 py-3">
-                                {hasSale ? (
-                                    <span className="flex items-center gap-2">
-                                        <span className="font-medium text-slate-800">{currency} {Number(product.price).toLocaleString()}</span>
-                                        <span className="text-xs text-slate-400 line-through">{currency} {Number(product.mrp).toLocaleString()}</span>
-                                    </span>
-                                ) : (
-                                    <span className="font-medium text-slate-800">{currency} {Number(product.mrp).toLocaleString()}</span>
-                                )}
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        value={editing ? stockEdits[product.id] : stock}
-                                        onChange={(e) =>
-                                            setStockEdits((prev) => ({ ...prev, [product.id]: e.target.value }))
-                                        }
-                                        className={`w-16 p-1 px-2 text-sm border rounded outline-slate-400 ${
-                                            stock > 0
-                                                ? (stock < LOW_STOCK ? "border-amber-300 text-amber-700" : "border-slate-200 text-slate-700")
-                                                : "border-rose-300 text-rose-600"
-                                        }`}
-                                    />
-                                    {editing && (
-                                        <button
-                                            type="button"
-                                            onClick={() => saveStock(product)}
-                                            disabled={savingId === product.id}
-                                            className="p-1 rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
-                                            title="Save stock"
-                                        >
-                                            <CheckIcon size={16} />
-                                        </button>
-                                    )}
-                                    {stock > 0 && stock < LOW_STOCK && !editing && (
-                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">Low</span>
-                                    )}
+
+                                {/* Price + economics (inline, no inner box) */}
+                                <div className="lg:w-56 shrink-0 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-slate-800">{currency} {sell.toLocaleString()}</span>
+                                        {hasSale && <span className="text-xs text-slate-400 line-through">{currency} {Number(product.mrp).toLocaleString()}</span>}
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Manzili 15%: <span className="text-rose-600">− {currency} {commission.toFixed(0)}</span> · You earn <span className="font-medium text-emerald-700">{currency} {net.toFixed(0)}</span>
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-0.5 inline-flex items-center gap-1" title="Estimated from the item's size; the exact Bosta fee also varies with the buyer's distance.">
+                                        <TruckIcon size={12} className="text-slate-400" /> Est. delivery ≈ {currency} {ship.low}–{ship.high}
+                                    </p>
                                 </div>
-                            </td>
-                            <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{Number(product.totalSold ?? product.sold) || 0}</td>
-                            <td className="px-4 py-3">
-                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${badge.cls}`}>{badge.label}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex items-center gap-3">
-                                    <Link
-                                        href={`/store/manage-product/${product.id}/edit`}
-                                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors inline-flex items-center gap-1"
-                                    >
-                                        <PencilIcon size={13} /> Edit
-                                    </Link>
-                                    {/* REAL enable/disable toggle (drives Product.IsDisabled) */}
-                                    <label
-                                        className="relative inline-flex items-center cursor-pointer gap-2"
-                                        title={product.disabled ? "Disabled — click to enable" : "Enabled — click to disable"}
-                                    >
+
+                                {/* Stock */}
+                                <div className="lg:w-24 shrink-0">
+                                    <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Stock</p>
+                                    <div className="flex items-center gap-2">
                                         <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={!product.disabled}
-                                            onChange={() =>
-                                                toast.promise(toggleStatus(product), {
-                                                    loading: "Updating…",
-                                                    success: product.disabled ? "Product enabled" : "Product disabled",
-                                                    error: "Could not update status",
-                                                })
-                                            }
+                                            type="number" min={0}
+                                            value={editing ? stockEdits[product.id] : stock}
+                                            onChange={(e) => setStockEdits((prev) => ({ ...prev, [product.id]: e.target.value }))}
+                                            className={`w-16 p-1.5 px-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-[#2582eb]/30 ${stock > 0 ? (stock < LOW_STOCK ? "border-amber-300 text-amber-700" : "border-slate-200 text-slate-700") : "border-rose-300 text-rose-600"}`}
                                         />
+                                        {editing && (
+                                            <button type="button" onClick={() => saveStock(product)} disabled={savingId === product.id} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-50" title="Save stock">
+                                                <CheckIcon size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Sold */}
+                                <div className="lg:w-16 shrink-0">
+                                    <p className="text-[11px] uppercase tracking-wide text-slate-400">Sold</p>
+                                    <p className="font-semibold text-slate-700">{sold}</p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center justify-between lg:justify-end gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPromoteFor(product)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium inline-flex items-center gap-1 transition-colors ${product.isPromoted ? 'border border-[#e67e22]/30 text-[#e67e22] hover:bg-[#e67e22]/10' : 'border border-[#e67e22]/40 text-[#e67e22] hover:bg-[#e67e22]/10'}`}
+                                        title="Feature this product on the homepage"
+                                    >
+                                        <SparklesIcon size={13} /> {product.isPromoted ? 'Extend' : 'Promote'}
+                                    </button>
+                                    <label className="relative inline-flex items-center cursor-pointer" title={product.disabled ? "Disabled — click to enable" : "Enabled — click to disable"}>
+                                        <input type="checkbox" className="sr-only peer" checked={!product.disabled}
+                                            onChange={() => toast.promise(toggleStatus(product), { loading: "Updating…", success: product.disabled ? "Product enabled" : "Product disabled", error: "Could not update status" })} />
                                         <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-[#2582eb] transition-colors duration-200"></div>
-                                        <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
+                                        <span className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
                                     </label>
+                                    <Link href={`/store/manage-product/${product.id}/edit`} className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors" title="Edit">
+                                        <PencilIcon size={15} />
+                                    </Link>
                                     <button
                                         onClick={() => {
                                             if (window.confirm(`Delete "${product.name}"? This removes it from your store.`)) {
-                                                toast.promise(handleDelete(product.id), {
-                                                    loading: "Deleting…",
-                                                    success: "Product deleted",
-                                                    error: "Could not delete product",
-                                                })
+                                                toast.promise(handleDelete(product.id), { loading: "Deleting…", success: "Product deleted", error: "Could not delete product" })
                                             }
                                         }}
-                                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 active:scale-95 transition-colors"
+                                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 active:scale-95 transition-colors"
                                         title="Delete product"
                                     >
-                                        <Trash2Icon size={16} />
+                                        <Trash2Icon size={15} />
                                     </button>
                                 </div>
-                            </td>
-                        </tr>
+                            </div>
                         )
                     })}
-                </tbody>
-            </table>
-            </div>
+                </div>
             )}
 
-            <Pagination currentPage={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
-        </>
+            <Pagination page={currentPage} totalPages={totalPages} totalItems={filtered.length} pageSize={ITEMS_PER_PAGE} onChange={setCurrentPage} />
+
+            {/* Promote modal */}
+            {promoteFor && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !promoting && setPromoteFor(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="w-9 h-9 rounded-xl bg-[#e67e22]/10 flex items-center justify-center"><SparklesIcon size={18} className="text-[#e67e22]" /></span>
+                                <h3 className="font-semibold text-slate-800">Feature this product</h3>
+                            </div>
+                            <button onClick={() => !promoting && setPromoteFor(null)} className="text-slate-400 hover:text-slate-600"><XIcon size={18} /></button>
+                        </div>
+                        <p className="text-sm text-slate-500 mt-3">
+                            Promote <span className="font-medium text-slate-700">{promoteFor.name}</span> to the homepage <span className="font-medium">Featured</span> section. The fee is <span className="font-medium text-slate-700">charged from your seller wallet balance</span>. If many sellers are featuring, items rotate through a queue.
+                        </p>
+                        {promoteFor.isPromoted && promotedDaysLeft(promoteFor.promotedUntil) && (
+                            <p className="text-xs text-[#e67e22] bg-[#e67e22]/10 rounded-lg px-3 py-2 mt-3">
+                                Currently featured — {promotedDaysLeft(promoteFor.promotedUntil)} day{promotedDaysLeft(promoteFor.promotedUntil) === 1 ? '' : 's'} left. Buying again adds to that.
+                            </p>
+                        )}
+                        <div className="mt-5 grid grid-cols-2 gap-3">
+                            {PROMO_PLANS.map((plan) => (
+                                <button
+                                    key={plan.id}
+                                    type="button"
+                                    disabled={promoting}
+                                    onClick={() => handlePromote(promoteFor, plan.id)}
+                                    className="rounded-xl border border-slate-200 hover:border-[#e67e22] hover:bg-[#e67e22]/5 p-4 text-center transition-colors disabled:opacity-50"
+                                >
+                                    <p className="text-sm text-slate-500">{plan.label}</p>
+                                    <p className="text-xl font-bold text-slate-800 mt-1">{currency} {plan.price}</p>
+                                </button>
+                            ))}
+                        </div>
+                        {promoting && <p className="text-xs text-slate-400 mt-3 text-center">Processing…</p>}
+                    </div>
+                </div>
+            )}
+        </div>
     )
 }

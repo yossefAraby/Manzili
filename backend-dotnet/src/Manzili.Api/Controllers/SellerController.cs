@@ -12,11 +12,48 @@ public sealed class SellerController : ApiController
 {
     private readonly SellerService _seller;
     private readonly WarehouseService _warehouses;
+    private readonly PromotionService _promotions;
 
-    public SellerController(SellerService seller, WarehouseService warehouses)
+    public SellerController(SellerService seller, WarehouseService warehouses, PromotionService promotions)
     {
         _seller = seller;
         _warehouses = warehouses;
+        _promotions = promotions;
+    }
+
+    // ----- Promotions (paid "feature my item") -----
+
+    [HttpGet("promotions")]
+    public async Task<IActionResult> ListPromotions()
+    {
+        var list = await _promotions.GetSellerActiveAsync(RequireSellerId);
+        return ApiOk(new
+        {
+            promotions = list.Select(p => new
+            {
+                id = p.Promotionid.ToString(),
+                productId = p.Productid.ToString(),
+                plan = p.Plan,
+                amount = p.Amount,
+                expiresAt = p.ExpiresAt.ToString("yyyy-MM-ddTHH:mm:ss") + "Z",
+            }),
+        });
+    }
+
+    [HttpPost("promotions")]
+    public async Task<IActionResult> CreatePromotion([FromBody] CreatePromotionRequest req)
+    {
+        if (!int.TryParse(req?.ProductId, out var pid))
+            throw new Manzili.Application.Common.AppException("A valid productId is required", 400, "VALIDATION_ERROR");
+        var p = await _promotions.CreateAsync(RequireSellerId, pid, req!.Plan);
+        return ApiOk(new
+        {
+            id = p.Promotionid.ToString(),
+            productId = p.Productid.ToString(),
+            plan = p.Plan,
+            amount = p.Amount,
+            expiresAt = p.ExpiresAt.ToString("yyyy-MM-ddTHH:mm:ss") + "Z",
+        }, statusCode: 201);
     }
 
     [HttpGet("dashboard")]

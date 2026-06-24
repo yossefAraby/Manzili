@@ -53,7 +53,8 @@ public sealed class CheckoutService
     /// payment method so a COD quote excludes the Stripe processing fee.</summary>
     public Task<CheckoutBreakdown> QuoteAsync(CheckoutRequest req) =>
         _pricing.QuoteAsync(req.Items, req.Coupon?.DiscountAmount ?? 0m,
-            string.Equals(req.PaymentMethod, "COD", StringComparison.OrdinalIgnoreCase) ? "COD" : "STRIPE");
+            string.Equals(req.PaymentMethod, "COD", StringComparison.OrdinalIgnoreCase) ? "COD" : "STRIPE",
+            addressId: req.AddressId);
 
     /// <summary>A positive Stripe line item for a fee/shipping charge.</summary>
     private SessionLineItemOptions MoneyLine(string name, decimal amount) => new()
@@ -143,7 +144,7 @@ public sealed class CheckoutService
             // Buyer also pays their 25% shipping share + the Stripe fee; a coupon discount is
             // applied as a one-time Stripe coupon so the charged total matches Order.Totalamount.
             var discount = req.Coupon?.DiscountAmount ?? 0m;
-            var breakdown = await _pricing.QuoteAsync(req.Items, discount, "STRIPE");
+            var breakdown = await _pricing.QuoteAsync(req.Items, discount, "STRIPE", addressId: req.AddressId);
             if (breakdown.BuyerShippingShare > 0m)
                 lineItems.Add(MoneyLine("Shipping (your 25% share)", breakdown.BuyerShippingShare));
             if (breakdown.StripeFee > 0m)

@@ -1,6 +1,7 @@
 'use client'
 import ProductDescription from "@/components/ProductDescription";
 import ProductDetails from "@/components/ProductDetails";
+import ProductRecommendations from "@/components/ProductRecommendations";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -46,11 +47,14 @@ export default function Product() {
                     {t('navbar.home')} / {t('shop.title')} / {product?.category}
                 </div>
 
-                {/* Product Details */}
+                {/* Product Details (the delivery estimate now renders under the price inside it) */}
                 {product && (<ProductDetails product={product} />)}
 
                 {/* Description & Reviews */}
                 {product && (<ProductDescription product={product} />)}
+
+                {/* AI-powered "Recommended for you" — sits above the layout footer */}
+                {product && (<ProductRecommendations product={product} />)}
             </div>
         </div>
     );

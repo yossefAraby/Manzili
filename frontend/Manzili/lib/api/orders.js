@@ -27,9 +27,9 @@ function adaptOrderItem(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const product = raw.product || {};
   const productId = raw.productId ?? product.id ?? raw.product_id ?? null;
-  // Images may live on the item (legacy `image`) or on a nested product.
+  // Images may live on the item as `imageUrl` (the order DTO), legacy `image`, or a nested product.
   const images = toImageList(
-    product.images ?? raw.images ?? (raw.image ? [raw.image] : [])
+    product.images ?? raw.images ?? (raw.imageUrl ? [raw.imageUrl] : (raw.image ? [raw.image] : []))
   );
   return {
     productId: productId != null ? String(productId) : null,
@@ -47,18 +47,31 @@ function adaptOrderItem(raw) {
 function adaptAddress(raw) {
   if (!raw || typeof raw !== 'object') {
     // OrderItem reads order.address.* directly — never hand it undefined.
-    return { name: '', street: '', city: '', state: '', zip: '', country: '', phone: '' };
+    return { name: '', street: '', city: '', zone: '', district: '', state: '', zip: '', country: '', phone: '' };
   }
+  // The backend address carries city / zone / district / postalCode (NOT state/zip/country).
+  // Map those through, and ALSO fill the legacy state/zip/country fields the UI used to read so
+  // the address never renders as empty "·, ·, ·".
+  const zone = raw.zone ?? '';
+  const district = raw.district ?? '';
+  const postal = raw.postalCode ?? raw.postalcode ?? raw.zip ?? '';
   return {
     id: raw.id != null ? String(raw.id) : undefined,
     name: raw.name ?? '',
     email: raw.email ?? '',
-    street: raw.street ?? '',
-    city: raw.city ?? '',
-    state: raw.state ?? '',
-    zip: raw.zip != null ? String(raw.zip) : '',
-    country: raw.country ?? '',
     phone: raw.phone ?? '',
+    street: raw.street ?? '',
+    building: raw.building ?? '',
+    floor: raw.floor ?? '',
+    apartment: raw.apartment ?? '',
+    city: raw.city ?? '',
+    zone,
+    district,
+    postalCode: postal != null ? String(postal) : '',
+    // legacy aliases still read by some views
+    state: district || zone || raw.state || '',
+    zip: postal != null ? String(postal) : '',
+    country: raw.country ?? 'Egypt',
   };
 }
 
@@ -100,7 +113,9 @@ export function adaptOrder(raw) {
   return {
     id: raw.id != null ? String(raw.id) : null,
     storeId: raw.storeId != null ? String(raw.storeId) : (raw.store?.id != null ? String(raw.store.id) : null),
+    storeName: raw.storeName ?? raw.store?.name ?? null,
     total: Number(raw.total ?? 0),
+    shippingTotal: Number(raw.shippingTotal ?? raw.shipment?.shippingCost ?? 0),
     status: raw.status ?? 'ORDER_PLACED',
     paymentMethod: raw.paymentMethod ?? 'COD',
     isPaid: Boolean(raw.isPaid),

@@ -106,3 +106,30 @@ export async function reconcileSession(session) {
 export async function apiLogout() {
   try { await apiPost('/auth/logout', null, { auth: false }); } catch { /* ignore */ }
 }
+
+/**
+ * Rehydrate the ADMIN session from the admin cookie (separate from the storefront cookie).
+ * Hits /admin/auth/me; on a 401 it tries a one-shot admin refresh, then re-probes. Returns the
+ * session shape (role === 'admin') or null. Used by AdminLayout to restore the admin on reload
+ * without touching the buyer/seller session.
+ */
+export async function fetchAdminSession() {
+  try {
+    const r = await apiGet('/admin/auth/me', { auth: false });
+    return toSession(r.data.user);
+  } catch (e) {
+    if (e?.status !== 401) return null;
+    try {
+      await apiPost('/admin/auth/refresh', null, { auth: false });
+      const r2 = await apiGet('/admin/auth/me', { auth: false });
+      return toSession(r2.data.user);
+    } catch {
+      return null;
+    }
+  }
+}
+
+/** Clears the ADMIN cookies server-side (best-effort; never throws). */
+export async function apiAdminLogout() {
+  try { await apiPost('/admin/auth/logout', null, { auth: false }); } catch { /* ignore */ }
+}

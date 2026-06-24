@@ -15,6 +15,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import ReportButton from "@/components/ReportButton";
+import ProductShipping from "@/components/ProductShipping";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslate } from "@/lib/i18n/LocaleContext";
@@ -204,6 +205,8 @@ const ProductDetails = ({ product }) => {
             </p>
           )}
         </div>
+        {/* Estimated delivery — directly under the price; buyer's share, size + distance aware */}
+        <ProductShipping product={product} />
         {discountPercent > 0 && (
           <div className="flex items-center gap-2 text-slate-500">
             <TagIcon size={14} />

@@ -77,41 +77,26 @@ export default function Orders() {
             linkText={t('navbar.home')}
           />
 
-          <table className="w-full max-w-5xl text-slate-500 table-auto border-separate border-spacing-y-12 border-spacing-x-4">
-            <thead>
-              <tr className="max-sm:text-sm text-slate-600 max-md:hidden">
-                <th className="text-left">Product</th>
-                <th className="text-center">Total Price</th>
-                <th className="text-left">{t('orderSummary.address')}</th>
-                <th className="text-left">{t('orders.status')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <React.Fragment key={order.id}>
-                  <OrderItem
-                    order={{
-                      ...order,
-                      user: { name: "You", email: "" },
-                    }}
-                    onAdvance={reloadOrders}
-                  />
-                  {order.status === "DELIVERED" && (
-                    <tr key={order.id + "-report"}>
-                      <td colSpan={4} className="pb-2 pl-2">
-                        <ReportButton
-                          type="SELLER_MISCONDUCT"
-                          storeId={order.storeId}
-                          storeOrderId={order.id}
-                          label={t('reportButton.report')}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+          <div className="mt-8 flex flex-col gap-6">
+            {orders.map((order) => (
+              <div key={order.id}>
+                <OrderItem
+                  order={{ ...order, user: { name: "You", email: "" } }}
+                  onAdvance={reloadOrders}
+                />
+                {order.status === "DELIVERED" && (
+                  <div className="mt-2 pl-1">
+                    <ReportButton
+                      type="SELLER_MISCONDUCT"
+                      storeId={order.storeId}
+                      storeOrderId={order.id}
+                      label={t('reportButton.report')}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="min-h-[80vh] mx-6 flex items-center justify-center text-slate-400">

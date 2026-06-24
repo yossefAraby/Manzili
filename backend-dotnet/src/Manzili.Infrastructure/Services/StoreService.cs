@@ -54,6 +54,36 @@ public sealed class StoreService
         return await BuildStoreDetailAsync(seller);
     }
 
+    /// <summary>
+    /// Search APPROVED, active stores by store name or @username for the custom-order private-vendor
+    /// picker. Sourced from the seller table directly, so it finds sellers even before they've listed
+    /// any product (the old product-dedup approach missed them) and never returns a hidden store.
+    /// </summary>
+    public async Task<IReadOnlyList<StoreSearchItemDto>> SearchStoresAsync(string? q, int limit = 20)
+    {
+        var query = (q ?? "").Trim().ToLower();
+        var sellers = _db.Sellers.AsNoTracking()
+            .Where(s => s.IsActive == true && s.StoreStatus == StatusMaps.StoreStatus.Approved);
+
+        if (query.Length > 0)
+            sellers = sellers.Where(s =>
+                (s.Storename != null && s.Storename.ToLower().Contains(query)) ||
+                (s.Username != null && s.Username.ToLower().Contains(query)));
+
+        return await sellers
+            .OrderBy(s => s.Storename)
+            .Take(Math.Clamp(limit, 1, 50))
+            .Select(s => new StoreSearchItemDto
+            {
+                Id = s.Sellerid.ToString(),
+                Name = s.Storename ?? "",
+                Username = s.Username,
+                Description = s.StoreDescription ?? "",
+                Logo = s.LogoUrl,
+            })
+            .ToListAsync();
+    }
+
     private async Task<StoreDetailDto> BuildStoreDetailAsync(Seller seller)
     {
         var id = seller.Sellerid;

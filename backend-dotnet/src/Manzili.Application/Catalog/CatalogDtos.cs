@@ -33,6 +33,11 @@ public sealed class StoreRefDto
     public string Name { get; set; } = "";
     /// <summary>Store handle — powers the "View store" → /shop/{username} link on product pages.</summary>
     public string? Username { get; set; }
+    /// <summary>Seller's city (from their default pickup warehouse, falling back to free-text address).
+    /// Lets the recommender favour items physically NEAR the buyer. Null when the seller has no address.</summary>
+    public string? City { get; set; }
+    /// <summary>Bosta city id of the seller's default warehouse — a normalized geo key for proximity matching.</summary>
+    public string? BostaCityId { get; set; }
 }
 
 // ---- Product card (list / featured / latest / store products) ----
@@ -54,6 +59,8 @@ public sealed class ProductCardDto
     public int ReviewCount { get; set; }
     public bool IsWishlisted { get; set; }
     public IReadOnlyList<string> Category { get; set; } = new List<string>();
+    /// <summary>Short product description (truncated) — gives the AI recommender/search semantic context.</summary>
+    public string? Description { get; set; }
     public bool InStock { get; set; }
     public int Stock { get; set; }
     public StoreRefDto? Store { get; set; }
@@ -71,6 +78,8 @@ public sealed class SearchProductDto
     public int ReviewCount { get; set; }
     public bool IsWishlisted { get; set; }
     public string Category { get; set; } = "";
+    /// <summary>Short product description (truncated) — semantic context for AI search.</summary>
+    public string? Description { get; set; }
     public bool InStock { get; set; }
     public int Stock { get; set; }
     public StoreRefDto? Store { get; set; }
@@ -128,6 +137,10 @@ public sealed class ProductDetailDto
     /// <summary>Units available for a simple (non-variant) product; variant stock lives per option.</summary>
     public int Stock { get; set; }
     public bool InStock { get; set; }
+    /// <summary>Package size (SMALL/MEDIUM/LARGE) — lets the product page show an "estimated shipping" widget.</summary>
+    public string? ShippingSize { get; set; }
+    /// <summary>Bulky class (NORMAL/LIGHT/HEAVY) — together with size it drives the delivery estimate.</summary>
+    public string? ShippingBulkyCategory { get; set; }
     public StoreRefDto? Store { get; set; }
     public IReadOnlyList<ProductVariantDto>? Variants { get; set; }
     public ProductReviewsDto Reviews { get; set; } = new();

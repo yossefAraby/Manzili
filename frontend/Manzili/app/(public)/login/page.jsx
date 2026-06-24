@@ -5,9 +5,10 @@ import Image from 'next/image'
 import { assets } from '@/assets/assets'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { setSession } from '@/lib/features/auth/authSlice'
-import { clearCart } from '@/lib/features/cart/cartSlice'
+import { hydrateCart } from '@/lib/features/cart/cartSlice'
+import { mergeServerCart } from '@/lib/api/cart'
 import { hydrateAddresses } from '@/lib/features/address/addressSlice'
 import { useTranslate } from '@/lib/i18n/LocaleContext'
 import { apiLogin } from '@/lib/api/auth'
@@ -17,6 +18,7 @@ function LoginInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const dispatch = useDispatch()
+    const guestCart = useSelector((s) => s.cart.cartItems)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [submitting, setSubmitting] = useState(false)
@@ -37,11 +39,13 @@ function LoginInner() {
         setSubmitting(true)
         try {
             const session = await apiLogin({ email: email.trim(), password })
-            // Drop any guest/previous-account cart before adopting this session so
-            // the new user never inherits another account's cart on this browser.
-            dispatch(clearCart())
             dispatch(setSession(session))
             dispatch(hydrateAddresses())
+            // Merge any guest cart into THIS account's saved cart, then show the unified
+            // account cart. The cart now lives on the account, so it survives logout and
+            // follows the buyer across devices — nothing is left browser-local.
+            const merged = await mergeServerCart(guestCart)
+            if (merged) dispatch(hydrateCart(merged))
             router.push(redirectDest)
         } catch (err) {
             alert(err?.message || t('login.loginError'))

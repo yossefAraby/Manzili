@@ -62,8 +62,15 @@ const cartSlice = createSlice({
             state.cartItems = {}
             state.total = 0
         },
+        // Replace the whole cart from an authoritative source (the account cart loaded
+        // from the backend). Used on login/refresh so a logged-in cart follows the account.
+        hydrateCart: (state, action) => {
+            const { cartItems = {}, total = 0 } = action.payload || {}
+            state.cartItems = cartItems
+            state.total = total
+        },
     },
 })
 
-export const { addToCart, removeFromCart, clearCart, deleteItemFromCart } = cartSlice.actions
+export const { addToCart, removeFromCart, clearCart, deleteItemFromCart, hydrateCart } = cartSlice.actions
 export default cartSlice.reducer

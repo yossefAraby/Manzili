@@ -1,6 +1,7 @@
 'use client';
 
 import { clearCart } from '@/lib/features/cart/cartSlice';
+import { clearServerCart } from '@/lib/api/cart';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ function SuccessInner() {
     // the backend confirms the charge via webhook. The client just clears the cart
     // and shows the confirmation. There is no local session-verification route.
     useEffect(() => {
+        clearServerCart();
         dispatch(clearCart());
         setStatus('success');
     }, [dispatch]);

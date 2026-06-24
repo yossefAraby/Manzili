@@ -1,5 +1,6 @@
 using System.Text;
 using FluentValidation;
+using Manzili.Api.Common;
 using Manzili.Api.Middleware;
 using Manzili.Application.Auth;
 using Manzili.Application.Configuration;
@@ -71,15 +72,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // Emit the Node-compatible error envelope on 401/403 instead of an empty body.
         options.Events = new JwtBearerEvents
         {
-            // Auth is cookie-based (httpOnly): pull the access JWT from the cookie when
-            // there's no Authorization header, so the browser never has to expose it.
+            // Auth is cookie-based (httpOnly): pull the access JWT from the cookie when there's no
+            // Authorization header. Admin and normal sessions use SEPARATE cookies — on /api/v1/admin/*
+            // routes we read the admin cookie, everywhere else the normal one. This keeps the two
+            // sessions fully isolated: a seller's cookie can't authenticate an admin route, and an
+            // admin login never touches the buyer/seller session.
             OnMessageReceived = ctx =>
             {
-                if (string.IsNullOrEmpty(ctx.Token)
-                    && ctx.Request.Cookies.TryGetValue("manzili_at", out var cookie)
-                    && !string.IsNullOrEmpty(cookie))
+                if (string.IsNullOrEmpty(ctx.Token))
                 {
-                    ctx.Token = cookie;
+                    var path = ctx.Request.Path.Value ?? string.Empty;
+                    var isAdmin = path.StartsWith(AuthCookies.AdminPath, StringComparison.OrdinalIgnoreCase);
+                    var cookieName = isAdmin ? AuthCookies.AdminAccessCookie : AuthCookies.AccessCookie;
+                    if (ctx.Request.Cookies.TryGetValue(cookieName, out var cookie) && !string.IsNullOrEmpty(cookie))
+                        ctx.Token = cookie;
                 }
                 return Task.CompletedTask;
             },

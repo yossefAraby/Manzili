@@ -19,7 +19,7 @@ const StoreNavbar = () => {
     };
 
     return (
-        <div className="flex items-center justify-between px-12 py-3 border-b border-slate-200 transition-all">
+        <div className="hidden sm:flex items-center justify-between px-12 py-3 border-b border-slate-200 transition-all">
             <Link href="/" className="flex items-center gap-3 relative text-5xl font-bold font-sans">
                 <div className="relative flex items-baseline">
                     <span className="text-[#1c355e]">M</span>

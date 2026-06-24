@@ -9,20 +9,29 @@ is no mock or dummy data.
 npm install
 npm run dev          # http://localhost:3000
 ```
-Requires the backend running (default `http://localhost:5080`). Configure the API URL in
-`.env.local`:
+Requires the backend running (default `http://localhost:5080`). Copy `.env.example` → `.env.local`
+and fill it in. The essentials:
 ```
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5080/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5080/api/v1   # the .NET backend (base path included)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...          # card checkout
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=...apps.googleusercontent.com  # shows the "Continue with Google" button
+NEXT_PUBLIC_KASHIER_ENABLED=true                        # shows the Mobile Wallet payment radio
 ```
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` is required for the Google button to render at all (it returns `null`
+when unset), and `NEXT_PUBLIC_KASHIER_ENABLED` gates the Mobile Wallet option. On Vercel, set these
+same vars in the project's Environment Variables.
 
 ## How it's wired
-- **`lib/api/`** — the HTTP layer. `client.js` does base-URL + `Authorization: Bearer` injection,
-  unwraps the `{ success, data }` envelope, and transparently refreshes the JWT on 401. One module
-  per domain (`auth`, `products`, `orders`, `wishlist`, `addresses`, `seller`, `custom`, `admin`,
-  `notifications`, `ratings`, `upload`, `shipping`, `store`, `checkout`), each adapting the API DTO
-  to the shape the UI expects.
+- **`lib/api/`** — the HTTP layer. `client.js` prepends the base URL, fetches with
+  `credentials: 'include'` so the browser carries the **httpOnly auth cookies** (no `Authorization`
+  header, no token in JS), unwraps the `{ success, data }` envelope, and on a 401 transparently calls
+  `/auth/refresh` once then retries. One module per domain (`auth`, `products`, `orders`, `wishlist`,
+  `addresses`, `seller`, `custom`, `admin`, `notifications`, `ratings`, `upload`, `shipping`, `store`,
+  `checkout`), each adapting the API DTO to the shape the UI expects.
 - **`lib/features/`** — Redux Toolkit slices. Async data is loaded via `createAsyncThunk` calling
-  `lib/api/*`. Only the **cart** and the **auth session/token** live in `localStorage`.
+  `lib/api/*`. **Auth is never stored on the client** — the session lives in httpOnly cookies and is
+  rehydrated from `GET /auth/me` on load. Only the **cart** (and the locale preference) is persisted
+  in `localStorage`.
 - **`app/`** — App Router pages: public storefront under `(public)/`, seller dashboard under
   `store/`, admin under `admin/`.
 
@@ -33,8 +42,8 @@ components/     UI components
 lib/
   api/          HTTP client + per-domain API modules  ← the data layer
   features/     Redux slices
-  storage/      localStorage envelope (cart + session only)
-  services/     localStateBootstrap (cart + auth session persistence)
+  storage/      localStorage envelope (cart only)
+  services/     localStateBootstrap (cart persistence; auth is cookie-backed, not stored here)
   i18n/ ai/ …   locale, AI helpers, utilities
 assets/         brand images, icons
 ```

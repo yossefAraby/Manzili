@@ -109,6 +109,35 @@ const en = {
     showing: "Showing {count} of {total} products",
   },
 
+  forYou: {
+    title: "For You",
+    subtitle: "Hand-picked by AI from across Manzili",
+    persona: "Picked for a {persona} like you",
+  },
+
+  recommend: {
+    title: "Recommended for you",
+  },
+
+  searchAi: {
+    toggle: "AI search",
+    placeholder: "Describe what you're looking for…",
+    hint: "Tell the AI what you want — it finds the closest matches near you",
+    searching: "Finding matches…",
+    noResults: "No matches yet — try describing it differently",
+    poweredBy: "AI-powered",
+  },
+
+  productShipping: {
+    title: "Estimated delivery:",
+    near: "Near you — same city as the seller ({city})",
+    nearby: "Ships from a nearby city",
+    far: "Ships from another governorate — a little longer & pricier",
+    toCity: "Estimated to {city}",
+    toCityShort: "(to {city})",
+    addAddress: "Add your delivery address for an exact estimate",
+  },
+
   productCard: {
     outOfStock: "Out of Stock",
     toggleWishlist: "Toggle wishlist",
@@ -188,12 +217,15 @@ const en = {
     next: "Next →",
     page: "Page {current} of {total}",
     perPage: "Per page",
+    showing: "Showing {from}–{to} of {total}",
+    productsOne: "{total} product",
+    productsMany: "{total} products",
   },
 
   orderSummary: {
     paymentSummary: "Payment Summary",
     paymentMethod: "Payment Method",
-    cod: "COD",
+    cod: "Cash on Delivery (COD)",
     stripe: "Card (Stripe)",
     mobileWallet: "Mobile Wallet",
     fawry: "Fawry",
@@ -781,6 +813,9 @@ const en = {
       estimatedPrice: "Estimated:",
       priceBasedOn: "Based on {count} similar item(s) in the catalog",
       priceLowConfidence: "Rough estimate — no similar items found yet, so treat this as a ballpark",
+      shippingEstimate: "Estimated delivery",
+      shippingBasedOn: "Based on a {size} parcel — varies with the artisan's location",
+      shippingPickSize: "Set the item size or dimensions above to estimate delivery",
       requiredFieldsBegin: "Required fields are marked with ",
       requiredFieldsEnd: " on the main form.",
       // Validation

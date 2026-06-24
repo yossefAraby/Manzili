@@ -16,6 +16,7 @@ public sealed class AppOptions
     public BostaOptions Bosta { get; set; } = new();
     public FeesOptions Fees { get; set; } = new();
     public EmailOptions Email { get; set; } = new();
+    public EmbeddingsOptions Embeddings { get; set; } = new();
 
     /// <summary>Comma-separated list of allowed CORS origins. "*" allows any.</summary>
     public string CorsOrigin { get; set; } = "*";
@@ -148,8 +149,8 @@ public sealed class FeesOptions
 {
     public decimal CommissionStandard { get; set; } = 0.15m;
     public decimal CommissionCustom { get; set; } = 0.10m;
-    public decimal ShippingSellerShare { get; set; } = 0.75m;
-    public decimal ShippingBuyerShare { get; set; } = 0.25m;
+    public decimal ShippingSellerShare { get; set; } = 0.65m;
+    public decimal ShippingBuyerShare { get; set; } = 0.35m;
     /// <summary>Stripe percentage fee (e.g. 2.9%).</summary>
     public decimal StripeFeePercent { get; set; } = 0.029m;
     /// <summary>Stripe fixed fee per charge (in the store currency).</summary>
@@ -164,6 +165,26 @@ public sealed class FeesOptions
     public decimal StripeFee(decimal baseAmount) => Round(baseAmount * StripeFeePercent + StripeFeeFixed);
 
     private static decimal Round(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
+}
+
+/// <summary>
+/// Semantic-search embeddings. Products + queries are embedded into vectors stored in pgvector
+/// (manzili.products.embedding). Jina (v5-text-small) is the primary provider; Cohere (embed-v4)
+/// is the standby. Both at 1024 dims, multilingual. The index is single-provider — if the primary
+/// changes, the catalog is re-embedded. Leave keys blank to disable semantic search (falls back
+/// to lexical search), so the app still runs without it.
+/// </summary>
+public sealed class EmbeddingsOptions
+{
+    public bool Enabled { get; set; } = true;
+    public int Dimensions { get; set; } = 1024;
+    public string? JinaApiKey { get; set; }
+    public string JinaModel { get; set; } = "jina-embeddings-v5-text-small";
+    public string? CohereApiKey { get; set; }
+    public string CohereModel { get; set; } = "embed-v4.0";
+
+    public bool IsConfigured => Enabled
+        && (!string.IsNullOrWhiteSpace(JinaApiKey) || !string.IsNullOrWhiteSpace(CohereApiKey));
 }
 
 public sealed class BostaOptions
