@@ -13,7 +13,7 @@ import { useTranslate } from "@/lib/i18n/LocaleContext";
 // matches by MEANING in a dropdown; pressing Enter opens the full /shop results page.
 // Used in both the desktop navbar and the mobile expandable bar / drawer so mobile gets
 // the exact same AI search.
-export default function AiSearchBox({ autoFocus = false, onNavigate, dropdownAlign = "left" }) {
+export default function AiSearchBox({ autoFocus = false, onNavigate, onClose, dropdownAlign = "left" }) {
   const t = useTranslate();
   const router = useRouter();
   const currency = getCurrencySymbol();
@@ -101,6 +101,10 @@ export default function AiSearchBox({ autoFocus = false, onNavigate, dropdownAli
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
+          // On mobile, losing focus collapses the search bar back to the icons.
+          // Delayed so a tap on a dropdown result (which blurs the input) still
+          // navigates first via onNavigate.
+          onBlur={onClose ? () => setTimeout(() => onClose(), 150) : undefined}
         />
         {loading ? (
           <Loader2 size={18} className="animate-spin text-[#2582eb] shrink-0" />

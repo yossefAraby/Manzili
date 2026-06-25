@@ -87,10 +87,13 @@ const Navbar = () => {
       <div className="mx-6">
         <div className="flex items-center justify-between max-w-7xl mx-auto py-4 transition-all">
 
-          {/* Logo — image-only on mobile/tablet, full wordmark on desktop */}
+          {/* Logo — image-only on mobile/tablet, full wordmark on desktop.
+              Hidden on mobile while the search is open so the bar is all search. */}
           <Link
             href="/"
-            className="flex items-center gap-3 relative text-5xl font-bold font-sans shrink-0"
+            className={`items-center gap-3 relative text-5xl font-bold font-sans shrink-0 ${
+              mobileSearchOpen ? "hidden lg:flex" : "flex"
+            }`}
           >
             {/* Wordmark shows only on desktop (lg+). On mobile/tablet just the image logo,
                 so the bar stays compact and leaves room for the search. */}
@@ -111,10 +114,25 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Mobile/tablet AI search — expands inline when toggled (same AI search as desktop) */}
+          {/* Mobile/tablet AI search — takes the WHOLE bar when open (logo + icons hide),
+              so the input is full-width. Closes on submit, result tap, blur, or the X. */}
           {mobileSearchOpen && (
-            <div className="lg:hidden flex-1 mx-3">
-              <AiSearchBox autoFocus onNavigate={() => setMobileSearchOpen(false)} />
+            <div className="lg:hidden flex-1 flex items-center gap-2">
+              <div className="flex-1">
+                <AiSearchBox
+                  autoFocus
+                  onNavigate={() => setMobileSearchOpen(false)}
+                  onClose={() => setMobileSearchOpen(false)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                aria-label={t('navbar.closeSearch')}
+                className="p-1.5 text-slate-600 shrink-0"
+              >
+                <XIcon size={22} />
+              </button>
             </div>
           )}
 
@@ -277,8 +295,9 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile/tablet quick-access icons (below lg) */}
-          <div className="lg:hidden flex items-center gap-2">
+          {/* Mobile/tablet quick-access icons (below lg). Hidden while search is open
+              so the search bar gets the whole row. */}
+          <div className={`lg:hidden items-center gap-2 ${mobileSearchOpen ? "hidden" : "flex"}`}>
             {/* Search toggle — replaces wishlist on mobile bar */}
             <button
               type="button"
