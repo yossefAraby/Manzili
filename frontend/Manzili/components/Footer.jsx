@@ -41,8 +41,8 @@ const Footer = () => {
     {
       title: t('footer.contact'),
       links: [
-        { text: "01223755058", path: "/", icon: PhoneIcon },
-        { text: "manziliproject@gmail.com", path: "/", icon: MailIcon },
+        { text: "01223755058", path: "https://wa.me/201223755058", icon: PhoneIcon },
+        { text: "manziliproject@gmail.com", path: "mailto:manziliproject@gmail.com", icon: MailIcon },
       ],
     },
   ];
@@ -138,17 +138,30 @@ const Footer = () => {
                   {section.title}
                 </h3>
                 <ul className="space-y-2.5">
-                  {section.links.map((link, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      {link.icon && <link.icon />}
-                      <Link
-                        href={link.path}
-                        className="hover:underline transition"
-                      >
-                        {link.text}
-                      </Link>
-                    </li>
-                  ))}
+                  {section.links.map((link, i) => {
+                    // tel:/mailto:/external links must be real anchors, not router navigation.
+                    const isAction = /^(tel:|mailto:|https?:)/i.test(link.path);
+                    const isExternal = /^https?:/i.test(link.path);
+                    return (
+                      <li key={i} className="flex items-center gap-2">
+                        {link.icon && <link.icon />}
+                        {isAction ? (
+                          <a
+                            href={link.path}
+                            target={isExternal ? "_blank" : undefined}
+                            rel={isExternal ? "noopener noreferrer" : undefined}
+                            className="hover:underline transition break-all"
+                          >
+                            {link.text}
+                          </a>
+                        ) : (
+                          <Link href={link.path} className="hover:underline transition">
+                            {link.text}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}

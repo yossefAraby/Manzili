@@ -119,9 +119,12 @@ const OrderItem = ({ order, onAdvance }) => {
         </span>
       </div>
 
-      <div className="grid md:grid-cols-[1fr_300px]">
+      {/* Stacks vertically on mobile/tablet; side-by-side (items | delivery) only on
+          desktop (lg+). Below lg the fixed 300px sidebar would overflow the card —
+          and the card clips (overflow-hidden) — so it would get cut off. */}
+      <div className="grid lg:grid-cols-[1fr_300px]">
         {/* Items */}
-        <div className="p-5 space-y-4 md:border-r border-slate-100">
+        <div className="p-5 space-y-4 lg:border-r border-slate-100">
           {(order.orderItems || []).map((item, index) => {
             const rated = item?.product?.id
               ? ratings.find((r) => r.orderId === order.id && r.productId === item.product.id)

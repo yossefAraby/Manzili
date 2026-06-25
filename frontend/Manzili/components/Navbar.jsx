@@ -1,18 +1,17 @@
 "use client";
-import { Search, ShoppingCart, CircleUserRound, Star, MenuIcon, XIcon, HomeIcon, StoreIcon, PaletteIcon, LogOutIcon, UserIcon, PackageIcon, WalletIcon, Sparkles, Loader2, MapPin } from "lucide-react";
+import { ShoppingCart, CircleUserRound, Star, MenuIcon, XIcon, HomeIcon, StoreIcon, PaletteIcon, LogOutIcon, UserIcon, PackageIcon, WalletIcon, Search } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearSession, selectIsLoggedIn, selectIsSeller, selectAuthBootstrapped } from "@/lib/features/auth/authSlice";
 import { setAddressList } from "@/lib/features/address/addressSlice";
 import { clearCart } from "@/lib/features/cart/cartSlice";
 import { hydrateWishlist, clearWishlist } from "@/lib/features/wishlist/wishlistSlice";
 import { apiLogout } from "@/lib/api/auth";
-import { searchProductsSemantic, fetchSearchIntro } from "@/lib/api/products";
-import { getCurrencySymbol } from "@/lib/currency";
+import AiSearchBox from "./AiSearchBox";
 import NotificationBell from "./NotificationBell";
 import { useLocale, useTranslate } from "@/lib/i18n/LocaleContext";
 
@@ -21,22 +20,8 @@ const Navbar = () => {
   const { locale, setLocale } = useLocale();
   const router = useRouter();
   const dispatch = useDispatch();
-  const [search, setSearch] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const mobileSearchInputRef = useRef(null);
-
-  // AI search: a sparkles toggle inside the search pill flips the bar into
-  // "describe what you want" mode and surfaces AI-ranked matches in a dropdown.
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiResults, setAiResults] = useState([]);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiPersona, setAiPersona] = useState("");
-  // One-line LLM blurb introducing the AI search results (generated client-side from the result
-  // names via /api/ai/search-intro). Empty when there are no semantic results or no AI provider.
-  const [aiIntro, setAiIntro] = useState("");
-  const aiBoxRef = useRef(null);
-  const currency = getCurrencySymbol();
 
   const cartCount = useSelector((state) => state.cart.total);
   const wishlistCount = useSelector((state) => state.wishlist.total);
@@ -78,13 +63,6 @@ const Navbar = () => {
     return undefined;
   }, [mobileMenuOpen]);
 
-  // Auto-focus the mobile search input when expanded
-  useEffect(() => {
-    if (mobileSearchOpen && mobileSearchInputRef.current) {
-      mobileSearchInputRef.current.focus();
-    }
-  }, [mobileSearchOpen]);
-
   const closeMobile = () => setMobileMenuOpen(false);
   const navigate = (path) => {
     closeMobile();
@@ -102,109 +80,21 @@ const Navbar = () => {
     router.push("/");
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    router.push(`/shop?search=${search}`);
-  };
-
-  const handleMobileSearch = (e) => {
-    e.preventDefault();
-    if (!search.trim()) return;
-    setMobileSearchOpen(false);
-    closeMobile();
-    router.push(`/shop?search=${encodeURIComponent(search.trim())}`);
-  };
-
-  const handleMobileSearchKeyDown = (e) => {
-    if (e.key === "Escape") {
-      setMobileSearchOpen(false);
-    }
-  };
-
-  const toggleMobileSearch = () => {
-    setMobileSearchOpen((prev) => {
-      if (!prev) setSearch("");
-      return !prev;
-    });
-  };
-
-  const toggleAiSearch = () => {
-    setAiOpen((prev) => {
-      if (prev) {
-        setAiResults([]);
-        setAiPersona("");
-        setAiLoading(false);
-      }
-      return !prev;
-    });
-  };
-
-  // Debounced semantic "describe-it" search: while AI mode is on and there's a query, hit the
-  // pgvector embeddings endpoint for the closest matches by MEANING (instant, ~no tokens). The
-  // pill keeps its looped "thinking" animation (driven by aiLoading) until results land.
-  useEffect(() => {
-    if (!aiOpen) {
-      setAiResults([]);
-      setAiIntro("");
-      setAiLoading(false);
-      return undefined;
-    }
-    const q = search.trim();
-    if (q.length < 5) {
-      setAiResults([]);
-      setAiIntro("");
-      setAiLoading(false);
-      return undefined;
-    }
-    let alive = true;
-    setAiLoading(true);
-    setAiIntro("");
-    const handle = setTimeout(() => {
-      searchProductsSemantic(q, 6)
-        .then(({ items, mode }) => {
-          if (!alive) return;
-          setAiResults(items);
-          // Generate a warm one-line intro ONLY over genuinely-semantic results (skip the lexical
-          // fallback / empty so we never claim AI when it isn't). The blurb streams in after the
-          // product rows — it never blocks them.
-          if (items.length > 0 && mode === "semantic") {
-            fetchSearchIntro(q, items).then((intro) => { if (alive) setAiIntro(intro); });
-          } else {
-            setAiIntro("");
-          }
-        })
-        .catch(() => { if (alive) { setAiResults([]); setAiIntro(""); } })
-        .finally(() => { if (alive) setAiLoading(false); });
-    }, 800);
-    return () => { alive = false; clearTimeout(handle); };
-  }, [aiOpen, search]);
-
-  // Close the AI dropdown on an outside click.
-  useEffect(() => {
-    if (!aiOpen) return undefined;
-    const onDown = (e) => {
-      if (aiBoxRef.current && !aiBoxRef.current.contains(e.target)) setAiOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [aiOpen]);
+  const toggleMobileSearch = () => setMobileSearchOpen((prev) => !prev);
 
   return (
     <nav className="relative bg-white">
       <div className="mx-6">
         <div className="flex items-center justify-between max-w-7xl mx-auto py-4 transition-all">
 
-          {/* Logo — shrinks to image-only when mobile search is open */}
+          {/* Logo — image-only on mobile/tablet, full wordmark on desktop */}
           <Link
             href="/"
             className="flex items-center gap-3 relative text-5xl font-bold font-sans shrink-0"
           >
-            {/* Text part fades out on mobile when search is open */}
-            <div
-              className={`relative flex items-baseline transition-all duration-300 ease-in-out sm:flex ${
-                mobileSearchOpen ? "hidden" : "flex"
-              }`}
-            >
+            {/* Wordmark shows only on desktop (lg+). On mobile/tablet just the image logo,
+                so the bar stays compact and leaves room for the search. */}
+            <div className="relative hidden lg:flex items-baseline">
               <span className="text-[#1c355e]">M</span>
               <span className="bg-gradient-to-b from-[#e3cda8] to-[#aa804c] text-transparent bg-clip-text">
                 anzili
@@ -221,138 +111,22 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Mobile search bar — expands inline when toggled */}
+          {/* Mobile/tablet AI search — expands inline when toggled (same AI search as desktop) */}
           {mobileSearchOpen && (
-            <form
-              onSubmit={handleMobileSearch}
-              className="sm:hidden flex-1 mx-3 flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-full"
-            >
-              <Search size={16} className="text-slate-500 shrink-0" />
-              <input
-                ref={mobileSearchInputRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleMobileSearchKeyDown}
-                placeholder={t('navbar.searchProducts') + '…'}
-                className="w-full bg-transparent outline-none text-sm placeholder-slate-500"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="text-slate-400 hover:text-slate-600"
-                  aria-label={t('navbar.clearSearch')}
-                >
-                  <XIcon size={14} />
-                </button>
-              )}
-            </form>
+            <div className="lg:hidden flex-1 mx-3">
+              <AiSearchBox autoFocus onNavigate={() => setMobileSearchOpen(false)} />
+            </div>
           )}
 
-          {/* Desktop Menu */}
-          <div className="hidden sm:flex items-center gap-4 lg:gap-8 text-slate-600">
+          {/* Desktop Menu (lg+). Below lg the mobile cluster + expandable search take over. */}
+          <div className="hidden lg:flex items-center gap-4 xl:gap-8 text-slate-600">
             <Link href="/">{t('navbar.home')}</Link>
             <Link href="/shop">{t('navbar.shop')}</Link>
             <Link href="/custom">{t('navbar.customProduct')}</Link>
 
-            <div ref={aiBoxRef} className="relative hidden xl:block">
-              <form
-                onSubmit={handleSearch}
-                className={`flex items-center w-xs text-sm gap-2 bg-slate-100 px-4 py-3 rounded-full transition-shadow ${
-                  aiLoading ? "ai-search-active" : aiOpen ? "ai-search-on" : ""
-                }`}
-              >
-                <Search size={18} className={aiOpen ? "text-[#2582eb]" : "text-slate-600"} />
-                <input
-                  suppressHydrationWarning
-                  className="w-full bg-transparent outline-none placeholder-slate-600"
-                  type="text"
-                  placeholder={aiOpen ? t('searchAi.placeholder') : t('navbar.searchProducts')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  required={!aiOpen}
-                />
-                {/* Sparkles toggle — flips the bar into AI "describe it" mode (non-submitting). */}
-                <button
-                  type="button"
-                  onClick={toggleAiSearch}
-                  aria-label={t('searchAi.toggle')}
-                  aria-pressed={aiOpen}
-                  className={`shrink-0 transition-colors ${
-                    aiOpen ? "text-[#2582eb]" : "text-slate-400 hover:text-[#2582eb]"
-                  }`}
-                >
-                  {aiLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                </button>
-              </form>
-
-              {/* AI search dropdown — recommendation-based results for the typed query. */}
-              {aiOpen && (
-                <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white border border-slate-100 shadow-xl rounded-2xl p-3 animate-fade-in">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#2582eb] mb-2">
-                    <Sparkles size={12} />
-                    {t('searchAi.poweredBy')}
-                  </div>
-
-                  {/* AI one-line intro over the results (streams in after the rows; hidden while empty). */}
-                  {!aiLoading && aiIntro && (
-                    <p className="text-[12px] leading-snug text-slate-600 px-1 pb-2 mb-2 border-b border-slate-100">
-                      {aiIntro}
-                    </p>
-                  )}
-
-                  {aiLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-slate-500 px-1 py-3">
-                      <Loader2 size={16} className="animate-spin" />
-                      {t('searchAi.searching')}
-                    </div>
-                  ) : aiResults.length > 0 ? (
-                    <div className="flex flex-col gap-1 max-h-96 overflow-y-auto card-scrollbar">
-                      {aiResults.map((p) => (
-                        <Link
-                          key={p.id}
-                          href={`/product/${p.id}`}
-                          onClick={() => setAiOpen(false)}
-                          className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors"
-                        >
-                          <div className="relative w-12 h-12 shrink-0 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
-                            {p.images?.[0] && (
-                              <Image
-                                src={p.images[0]}
-                                alt=""
-                                width={48}
-                                height={48}
-                                className="object-contain max-w-full max-h-full"
-                                suppressHydrationWarning
-                              />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm text-slate-800 truncate">{p.name}</p>
-                            {p.reason ? (
-                              <p className="text-[11px] text-slate-500 line-clamp-1">{p.reason}</p>
-                            ) : p.store?.city ? (
-                              <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                                <MapPin size={10} />
-                                {p.store.city}
-                              </p>
-                            ) : null}
-                          </div>
-                          <span className="text-sm text-slate-700 shrink-0">
-                            {currency}
-                            {p.price}
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : search.trim().length >= 2 ? (
-                    <p className="text-sm text-slate-500 px-1 py-3">{t('searchAi.noResults')}</p>
-                  ) : (
-                    <p className="text-sm text-slate-500 px-1 py-3">{t('searchAi.hint')}</p>
-                  )}
-                </div>
-              )}
+            {/* The search IS the AI search — always on, no toggle. */}
+            <div className="w-56 xl:w-72">
+              <AiSearchBox />
             </div>
 
             <Link
@@ -503,8 +277,8 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile quick-access icons */}
-          <div className="sm:hidden flex items-center gap-2">
+          {/* Mobile/tablet quick-access icons (below lg) */}
+          <div className="lg:hidden flex items-center gap-2">
             {/* Search toggle — replaces wishlist on mobile bar */}
             <button
               type="button"
@@ -547,9 +321,9 @@ const Navbar = () => {
       </div>
       <hr className="border-gray-300" />
 
-      {/* Mobile drawer + backdrop */}
+      {/* Mobile/tablet drawer + backdrop (below lg) */}
       <div
-        className={`sm:hidden fixed inset-0 z-[60] transition-opacity ${
+        className={`lg:hidden fixed inset-0 z-[60] transition-opacity ${
           mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         aria-hidden={!mobileMenuOpen}
@@ -582,19 +356,9 @@ const Navbar = () => {
             </button>
           </div>
 
-          <form
-            onSubmit={handleMobileSearch}
-            className="mx-5 mt-4 flex items-center gap-2 bg-slate-100 px-4 py-2.5 rounded-full"
-          >
-            <Search size={18} className="text-slate-500 shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('navbar.searchProducts')}
-              className="w-full bg-transparent outline-none text-sm placeholder-slate-500"
-            />
-          </form>
+          <div className="mx-5 mt-4">
+            <AiSearchBox onNavigate={closeMobile} />
+          </div>
 
           <nav className="flex flex-col mt-4 px-2">
             <MobileLink onClick={() => navigate("/")} icon={HomeIcon} label={t('navbar.home')} />
