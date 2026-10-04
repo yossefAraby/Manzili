@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A multi-vendor marketplace for <strong>handmade Egyptian products</strong> — <em>where real craft finds its home</em>.
+  A multi-vendor marketplace for <strong>handmade Egyptian products</strong>, <em>where real craft finds its home</em>.
 </p>
 
 <p align="center">
@@ -110,17 +110,15 @@ Comprehensive documentation is available in the `docs/` folder:
 | **[Database Documentation](docs/database-documentation.html)** | Database schema, ERD, relationships, and data models |
 | **[Interactive Defense Presentation](docs/Manzili-Interactive-Presentation.html)** | Interactive presentation used for graduation project defense |
 | **[BMC (PDF)](docs/BMC.pdf)** | Business Model Canvas detailed document |
-| **[Business Model Canvas](assets/bmc.png)** | Visual representation of the business model |
 
 ## 🎬 Media
 
 - **[Watch Trailer](https://www.youtube.com/watch?v=jK2qTUqlOd0)** - Manzili Trailer - MIS Graduation Project
-- **[Project Logo](assets/logo.png)** - Official Manzili logo
 
 ## 🌐 Live Deployment
 
 - **Frontend**: [https://manzili-mis.vercel.app](https://manzili-mis.vercel.app) (Deployed on Vercel)
-- **Backend**: Deployed as Docker container (`backend-dotnet/Dockerfile`)
+- **Backend**: AWS Deployed as Docker container (`backend-dotnet/Dockerfile`)
 - **Database**: PostgreSQL hosted on Supabase
 
 ## ⚙️ Deployment Notes
@@ -134,13 +132,3 @@ Comprehensive documentation is available in the `docs/` folder:
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE.md).
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
-
----
-
-<p align="center">
-  <strong>Manzili</strong> — Connecting Egyptian artisans with the world, one handmade creation at a time.
-</p>
