@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manzili Backend — .NET Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Milligram-style sizing: 62.5% root, rem-based, generous line-height — themed to Manzili. */
+  :root{
+    --paper:#faf8f5; --surface:#fffdfb; --inset:#f4efe4; --paper-2:#fcfbf9;
+    --ink:#23303f; --navy:#1c355e; --muted:#6f7b89; --faint:#9aa4b0;
+    --line:#e8e0d2; --line-2:#efe9dd;
+    --terra:#d35400; --terra-soft:#e67e22; --sage:#5f7a5a; --rose:#9c4024;
+    --code-bg:#15233b; --code-ink:#dfe7f2;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --sans:'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --serif:'Fraunces', Georgia, 'Times New Roman', serif;
+  }
+  html[data-theme="dark"]{
+    --paper:#11151c; --surface:#161c26; --inset:#1c2330; --paper-2:#141a23;
+    --ink:#e3e7ec; --navy:#b8cdec; --muted:#98a4b3; --faint:#6a7686;
+    --line:#28313f; --line-2:#212935;
+    --terra:#ec975f; --terra-soft:#ec975f; --sage:#8fb389; --rose:#e3906e;
+    --code-bg:#0c1018; --code-ink:#dfe7f2;
+  }
+  html[data-theme="dark"] ::selection{background:#3a2f22;}
+  /* at-a-glance summary list */
+  .summary{list-style:none; padding:0; margin:24px 0;}
+  .summary li{padding:10px 0; border-bottom:1px solid var(--line-2); max-width:74ch;}
+  .summary b{color:var(--navy); font-weight:600;}
+  .summary a{font-size:1.2rem;}
+  *{box-sizing:border-box;}
+  html{font-size:62.5%; scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:1.62rem; line-height:1.72; font-weight:400; letter-spacing:.005em;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;}
+  a{color:var(--navy); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--navy) 25%, transparent);}
+  a:hover{border-bottom-color:var(--terra-soft); color:var(--terra);}
+  code{font-family:var(--mono); font-size:.86em;}
+
+  .shell{display:grid; grid-template-columns:282px 1fr; min-height:100vh;}
+  aside{position:sticky; top:0; height:100vh; overflow-y:auto; background:var(--paper-2);
+    border-right:1px solid var(--line); padding-bottom:40px;}
+  main{max-width:840px; margin:0 auto; padding:64px 56px 140px; width:100%;}
+
+  /* sidebar */
+  .brand{padding:30px 26px 22px; border-bottom:1px solid var(--line);}
+  .brand .mark{font-family:var(--serif); font-size:2.4rem; font-weight:500; color:var(--navy); letter-spacing:-.01em;}
+  .brand .mark b{color:var(--terra);}
+  .brand .tag{font-size:1.25rem; color:var(--muted); font-style:italic; font-family:var(--serif); margin-top:2px;}
+  .brand .stk{font-size:1.15rem; color:var(--faint); margin-top:10px; letter-spacing:.02em;}
+  nav{padding:18px 16px;}
+  nav .grp{font-size:1.05rem; text-transform:uppercase; letter-spacing:.14em; color:var(--faint);
+    font-weight:600; margin:20px 12px 7px;}
+  nav a{display:block; color:var(--muted); padding:5px 14px; font-size:1.42rem; border:0; border-left:2px solid transparent; line-height:1.4;}
+  nav a:hover{color:var(--navy); background:transparent;}
+  nav a.active{color:var(--navy); font-weight:600; border-left-color:var(--terra);}
+
+  /* top control */
+  .topctl{display:flex; justify-content:flex-end; margin-bottom:30px;}
+  .qbtn{background:none; border:0; border-bottom:1px dashed var(--line); color:var(--muted); cursor:pointer;
+    font-family:var(--sans); font-size:1.28rem; padding:2px 2px 3px; letter-spacing:.01em;}
+  .qbtn:hover{color:var(--terra);}
+
+  /* eyebrow + headings */
+  .eyebrow{text-transform:uppercase; letter-spacing:.18em; font-size:1.12rem; font-weight:600;
+    color:var(--terra); margin:0 0 4px;}
+  h1.title{font-family:var(--serif); font-weight:500; font-size:4.4rem; line-height:1.08; letter-spacing:-.015em;
+    margin:0 0 14px; color:var(--navy);}
+  h2.sec{font-family:var(--serif); font-weight:500; font-size:3rem; letter-spacing:-.01em; color:var(--navy);
+    margin:64px 0 4px; padding-top:12px;}
+  h3{font-family:var(--sans); font-weight:600; font-size:2rem; letter-spacing:-.01em; margin:36px 0 6px; color:var(--navy);}
+  h4{font-weight:600; font-size:1.6rem; margin:24px 0 4px; color:var(--ink);}
+  .lead{font-size:1.92rem; line-height:1.5; color:var(--ink); font-weight:300; max-width:64ch;}
+  p{max-width:70ch;}
+  .muted{color:var(--muted);}
+  hr.rule{border:0; border-top:1px solid var(--line); margin:52px 0;}
+  ul,ol{padding-left:20px;} li{margin:4px 0;}
+  ::selection{background:#f3d9c2;}
+
+  /* intro meta as a definition list, not stat cards */
+  dl.facts{display:grid; grid-template-columns:auto 1fr; gap:2px 26px; margin:26px 0; font-size:1.5rem;}
+  dl.facts dt{color:var(--faint); text-transform:uppercase; font-size:1.12rem; letter-spacing:.1em; font-weight:600; padding-top:7px;}
+  dl.facts dd{margin:0; padding:6px 0; border-bottom:1px solid var(--line-2);}
+  dl.facts dt{border-bottom:1px solid var(--line-2);}
+
+  /* understated tags */
+  .tags{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0;}
+  .tag{font-size:1.25rem; color:var(--muted); border:1px solid var(--line); border-radius:2px; padding:3px 11px;}
+  .tag b{color:var(--navy); font-weight:600;}
+
+  /* notes — thin rule, small-caps label, barely-there tint */
+  .note{border-left:2px solid var(--navy); padding:6px 0 6px 18px; margin:18px 0; max-width:72ch;}
+  .note .lab{display:block; font-size:1.12rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+    color:var(--navy); margin-bottom:2px;}
+  .note.beginner{border-color:var(--sage);} .note.beginner .lab{color:var(--sage);}
+  .note.warn{border-color:var(--terra);} .note.warn .lab{color:var(--terra);}
+  .expert{border-left:2px solid var(--rose); padding:6px 0 6px 18px; margin:18px 0; max-width:72ch;}
+  .expert .lab{display:block; font-size:1.12rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+    color:var(--rose); margin-bottom:2px;}
+  html.hide-expert .expert{display:none;}
+  .note p, .expert p{margin:0;}
+
+  /* code */
+  .code{margin:18px 0; border-radius:4px; overflow:hidden; border:1px solid #1d2d49;}
+  .code .bar{display:flex; align-items:center; justify-content:space-between; background:#101b2e;
+    padding:6px 14px; border-bottom:1px solid #233455;}
+  .code .lang{font-size:1.05rem; text-transform:uppercase; letter-spacing:.14em; color:#7d90b0; font-weight:600;}
+  .code pre{margin:0; padding:16px 18px; overflow-x:auto; background:var(--code-bg); color:var(--code-ink);
+    font-family:var(--mono); font-size:1.3rem; line-height:1.62;}
+  .copy{background:none; border:1px solid #2c3f63; color:#8fa3c4; border-radius:3px; padding:2px 10px;
+    font-size:1.05rem; cursor:pointer; font-family:var(--sans);}
+  .copy:hover{color:#fff; border-color:var(--terra-soft);}
+  .tk{color:#e3a06b;} .ts{color:#9ec79f;} .tc{color:#6f86a8; font-style:italic;}
+  .tn{color:#d8b46a;} .ty{color:#86b0e6;} .ta{color:#c98a6a;}
+  code.in{background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:1px 6px; color:var(--rose);}
+
+  /* tables — minimal, horizontal rules only */
+  table{width:100%; border-collapse:collapse; margin:18px 0; font-size:1.45rem;}
+  th,td{text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--line-2); vertical-align:top;}
+  th{color:var(--faint); font-size:1.1rem; text-transform:uppercase; letter-spacing:.1em; font-weight:600; border-bottom-color:var(--line);}
+  tbody tr:hover{background:var(--paper-2);}
+
+  /* tabs */
+  .tabs{display:flex; gap:22px; border-bottom:1px solid var(--line); margin:20px 0 0;}
+  .tabs button{background:none; border:0; border-bottom:2px solid transparent; color:var(--muted);
+    padding:8px 0; cursor:pointer; font-size:1.42rem; font-family:var(--sans); font-weight:500;}
+  .tabs button.active{color:var(--navy); border-bottom-color:var(--terra);}
+  .tabpane{display:none;} .tabpane.active{display:block;}
+
+  /* method + auth markers — text, lightly tinted, not chunky badges */
+  .m{font-family:var(--mono); font-size:1.08rem; font-weight:600; letter-spacing:.04em; width:54px; display:inline-block;}
+  .m.get{color:#2f6fb0;} .m.post{color:#4a7d46;} .m.put{color:#b07d1f;} .m.patch{color:#8a5ea3;} .m.delete{color:#b14a3c;}
+  .auth{font-size:1.12rem; color:var(--muted); letter-spacing:.02em;}
+  .auth.seller{color:var(--terra);} .auth.admin{color:var(--rose);} .auth.buyer{color:var(--sage);}
+
+  /* endpoint explorer */
+  .controls{margin:18px 0 4px;}
+  #ep-search{width:100%; background:var(--surface); border:1px solid var(--line); color:var(--ink);
+    padding:11px 14px; border-radius:3px; font-size:1.5rem; font-family:var(--sans);}
+  #ep-search:focus{outline:none; border-color:var(--terra-soft);}
+  .chips{display:flex; gap:18px; flex-wrap:wrap; margin:16px 0 6px;}
+  .chip{cursor:pointer; color:var(--muted); font-size:1.35rem; border-bottom:2px solid transparent; padding-bottom:2px;}
+  .chip.active{color:var(--navy); font-weight:600; border-bottom-color:var(--terra);}
+  .ep-count{color:var(--faint); font-size:1.25rem; margin:8px 0;}
+  .ep{border-bottom:1px solid var(--line-2);}
+  .ep-head{display:flex; align-items:baseline; gap:16px; padding:11px 4px; cursor:pointer;}
+  .ep-head:hover{background:var(--paper-2);}
+  .ep-path{font-family:var(--mono); font-size:1.32rem; color:var(--ink); flex:1; word-break:break-all;}
+  .ep-sum{color:var(--faint); font-size:1.25rem;}
+  .ep-body{display:none; padding:2px 4px 16px 74px;}
+  .ep.open .ep-body{display:block;}
+  .ep-meta{display:grid; grid-template-columns:auto 1fr; gap:3px 20px; font-size:1.4rem; margin-top:6px;}
+  .ep-meta b{color:var(--faint); font-weight:600; font-size:1.08rem; text-transform:uppercase; letter-spacing:.08em;}
+  @media (max-width:1000px){ .ep-body{padding-left:4px;} }
+
+  /* arch diagram */
+  .arch{width:100%; height:auto; margin:22px 0;}
+  .arch .box{fill:var(--surface); stroke:var(--line); stroke-width:1.5;}
+  .arch .box.api{stroke:#3f6da3;} .arch .box.app{stroke:var(--terra-soft);}
+  .arch .box.infra{stroke:#b8893f;} .arch .box.dom{stroke:#9c6b8a;}
+  .arch .t-title{fill:var(--navy); font-family:var(--sans); font-weight:600; font-size:13px;}
+  .arch .t-sub{fill:var(--muted); font-family:var(--sans); font-size:10.5px;}
+  .arch .arrow{stroke:#bcae98; stroke-width:1.5; fill:none; marker-end:url(#ah);}
+  .arch .lbl{fill:var(--faint); font-family:var(--sans); font-size:10px;}
+
+  details.faq{border-bottom:1px solid var(--line-2);}
+  details.faq summary{padding:13px 2px; cursor:pointer; font-weight:500; list-style:none; color:var(--navy);}
+  details.faq summary::-webkit-details-marker{display:none;}
+  details.faq summary::before{content:"+"; color:var(--terra); margin-right:12px; font-weight:600;}
+  details.faq[open] summary::before{content:"\2013";}
+  details.faq .b{padding:0 2px 14px 26px; color:var(--muted); max-width:70ch;}
+
+  .colophon{margin-top:72px; padding-top:26px; border-top:1px solid var(--line); color:var(--faint); font-size:1.28rem;}
+  kbd{background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:1px 6px; font-family:var(--mono); font-size:1.15rem;}
+  @media (max-width:780px){
+    .shell{grid-template-columns:1fr;} aside{position:static; height:auto;}
+    main{padding:36px 22px 90px;} h1.title{font-size:3.4rem;} .lead{font-size:1.7rem;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <div class="mark">Manzili<b>.</b></div>
+      <div class="tag">where real craft finds its home</div>
+      <div class="stk">.NET 10 · ASP.NET Core · EF Core · PostgreSQL</div>
+    </div>
+    <nav id="nav">
+      <div class="grp">Get oriented</div>
+      <a href="#overview">Overview</a>
+      <a href="#tldr">At a glance</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#stack">Technology stack</a>
+      <div class="grp">Architecture</div>
+      <a href="#architecture">Layers &amp; flow</a>
+      <a href="#request-lifecycle">Request lifecycle</a>
+      <a href="#layout">Project layout</a>
+      <div class="grp">Core concepts</div>
+      <a href="#envelope">Response envelope</a>
+      <a href="#auth">Authentication &amp; JWT</a>
+      <a href="#errors">Error handling</a>
+      <a href="#data">Data layer (EF Core)</a>
+      <a href="#validation">Validation</a>
+      <a href="#config">Configuration</a>
+      <a href="#enums">Status maps</a>
+      <div class="grp">Deep dives</div>
+      <a href="#order-splitting">Order splitting</a>
+      <a href="#wallet">Wallet idempotency</a>
+      <a href="#webhooks">Webhooks &amp; raw body</a>
+      <div class="grp">Platform capabilities</div>
+      <a href="#fulfillment">Fulfillment lifecycle</a>
+      <a href="#fees">Fees &amp; commission</a>
+      <a href="#payouts">Wallet &amp; payouts</a>
+      <a href="#warehouses">Warehouses</a>
+      <a href="#verification">Store verification</a>
+      <a href="#moderators">Moderators &amp; permissions</a>
+      <a href="#reports">Reports &amp; chat</a>
+      <a href="#email">Email</a>
+      <div class="grp">Reference</div>
+      <a href="#api">API explorer</a>
+      <a href="#deploy">Build &amp; deploy</a>
+      <a href="#testing">Testing</a>
+      <a href="#glossary">Glossary</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topctl">
+      <button class="qbtn" id="themeToggle">Dark mode</button>
+      <span style="color:var(--faint); margin:0 14px;">·</span>
+      <button class="qbtn" id="expertToggle">Hide expert notes</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview">
+      <p class="eyebrow">Backend documentation</p>
+      <h1 class="title">The Manzili API, rebuilt in&nbsp;.NET.</h1>
+      <p class="lead">A multi-vendor marketplace for handmade Egyptian products — ported from Node/Express/Prisma to
+        ASP.NET Core with full feature parity, running against the very same PostgreSQL database.</p>
+
+      <dl class="facts">
+        <dt>Runtime</dt><dd>.NET 10 (LTS) · ASP.NET Core controller Web API</dd>
+        <dt>Data</dt><dd>EF Core 10 · Npgsql · PostgreSQL (database-first)</dd>
+        <dt>Auth</dt><dd>JWT (HS256) in httpOnly cookies · BCrypt — buyer/seller and admin sessions isolated</dd>
+        <dt>Integrations</dt><dd>Stripe · Cloudinary · Bosta · SMTP email</dd>
+        <dt>Surface</dt><dd>5 projects · ~95 endpoints · 47 entities · ~28 services · 4 layers</dd>
+      </dl>
+
+      <div class="note beginner"><span class="lab">New to .NET? Read this first</span>
+        <p>This backend is a web server that answers HTTP requests with JSON. The code is organised as a
+        <em>solution</em> (<code class="in">Manzili.sln</code>) made of several <em>projects</em>. Terms you don't recognise are
+        defined in the <a href="#glossary">Glossary</a>; the rose-coloured <em>Expert notes</em> add depth and can be hidden
+        with the control at the top right.</p></div>
+
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>A pragmatic Clean-Architecture-lite split (Domain / Application / Infrastructure / Api). Because the port is
+        database-first, generated POCO entities and concrete services both live in Infrastructure; controllers depend on them
+        directly via DI. Mockability is traded for velocity and recovered through <code class="in">WebApplicationFactory</code>
+        integration tests.</p></div>
+    </section>
+
+    <!-- AT A GLANCE -->
+    <section id="tldr">
+      <p class="eyebrow">The two-minute version</p>
+      <h2 class="sec" style="margin-top:6px">At a glance</h2>
+      <p class="lead" style="font-size:1.74rem">Everything that matters, condensed. Each point links to the full detail.</p>
+      <ul class="summary">
+        <li><b>What it is.</b> A multi-vendor marketplace API for handmade goods, ported Node→.NET with feature parity against the <em>same</em> PostgreSQL database. <a href="#overview">Overview</a></li>
+        <li><b>Stack.</b> .NET 10 (LTS), ASP.NET Core controllers, EF Core 10 + Npgsql, JWT + BCrypt, FluentValidation, Stripe / Cloudinary / Bosta. <a href="#stack">Stack</a></li>
+        <li><b>Shape.</b> 4 layers — Api → Application → Infrastructure → Domain — with a strict one-way dependency rule; each feature self-registers via <code class="in">Add{Feature}()</code>. <a href="#architecture">Architecture</a></li>
+        <li><b>Every response</b> uses one envelope: <code class="in">{ success, data, …meta }</code> on success, <code class="in">{ success:false, error:{ message, code, details? } }</code> on failure. <a href="#envelope">Envelope</a></li>
+        <li><b>Auth.</b> <code class="in">register / login / refresh</code> → 15-min access + 7-day refresh JWT delivered as <strong>httpOnly cookies</strong> (<code class="in">manzili_at</code> / <code class="in">manzili_rt</code>); claims <code class="in">sub · email · role · sellerId</code>; the admin portal uses a <strong>separate</strong> cookie pair scoped to <code class="in">/api/v1/admin</code>, so admin and buyer/seller sessions stay isolated. <a href="#auth">Auth</a></li>
+        <li><b>Errors.</b> Services <em>throw</em> typed exceptions; one middleware maps them (404 / 400 / 401 / 403 / 409 / 500). No try/catch in controllers. <a href="#errors">Errors</a></li>
+        <li><b>Data.</b> Database-first: 47 entities + <code class="in">ManziliDbContext</code> scaffolded from the live schema; reads use <code class="in">AsNoTracking()</code>, atomic writes use transactions. <a href="#data">Data layer</a></li>
+        <li><b>Config.</b> Typed <code class="in">AppOptions</code> (section <code class="in">"Manzili"</code>); secrets via user-secrets (dev) or env vars with <code class="in">__</code> (prod). <a href="#config">Config</a></li>
+        <li><b>Surface.</b> ~95 endpoints under <code class="in">/api/v1</code>, grouped Auth · Products · Wishlist · Orders · Account · Store · Seller · Custom · Admin · Integrations. <a href="#api">API explorer</a></li>
+        <li><b>The tricky bits.</b> Per-seller <em>order splitting</em>, idempotent <em>wallet</em> ledger, and raw-body <em>Stripe webhook</em> signing. <a href="#order-splitting">Deep dives</a></li>
+        <li><b>The platform.</b> End-to-end <em>fulfillment</em> (Stripe + Bosta), a transparent <em>fee &amp; commission</em> model, seller <em>payouts</em>, <em>warehouses</em>, <em>store verification</em>, <em>moderators</em>, <em>reports</em> &amp; chat monitoring, and <em>email</em>. <a href="#fulfillment">Platform capabilities</a></li>
+        <li><b>Run it.</b> <code class="in">dotnet run --project src/Manzili.Api</code> → Swagger at <code class="in">/swagger</code>, health at <code class="in">/api/v1/health</code>. <a href="#quickstart">Quick start</a></li>
+        <li><b>Ship it.</b> Multi-stage <code class="in">Dockerfile</code>; configure entirely through environment variables. <a href="#deploy">Build &amp; deploy</a></li>
+        <li><b>Test it.</b> xUnit + <code class="in">WebApplicationFactory</code> in-process integration tests. <a href="#testing">Testing</a></li>
+      </ul>
+    </section>
+
+    <!-- QUICK START -->
+    <section id="quickstart">
+      <h2 class="sec">Quick start</h2>
+      <p>You need the <strong>.NET 10 SDK</strong>. Secrets (DB connection, JWT, Stripe/Cloudinary/Bosta keys) come from
+        <a href="#config">user-secrets</a> in development — nothing sensitive is committed.</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div><pre>
+cd backend-dotnet
+dotnet build
+dotnet run --project src/Manzili.Api          # Development env loads user-secrets
+
+# Swagger UI : https://localhost:&lt;port&gt;/swagger
+# Health     : GET /api/v1/health -&gt; { "success": true, "data": { "status": "ok", "database": "connected" } }
+
+dotnet test                                    # in-process integration tests</pre></div>
+      <p class="muted">Register → the response sets httpOnly auth cookies → reuse the cookie jar on a protected route:</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div><pre>
+curl -X POST http://localhost:5080/api/v1/auth/register -c cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"secret123"}'
+
+curl http://localhost:5080/api/v1/users/me -b cookies.txt   # manzili_at cookie sent automatically</pre></div>
+    </section>
+
+    <!-- STACK -->
+    <section id="stack">
+      <h2 class="sec">Technology stack</h2>
+      <table>
+        <thead><tr><th>Concern</th><th>Choice</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Runtime</td><td>.NET 10 (LTS)</td><td>GA Nov 2025, supported to Nov 2028.</td></tr>
+          <tr><td>Web framework</td><td>ASP.NET Core, controllers</td><td>MVC controllers + attribute routing.</td></tr>
+          <tr><td>ORM</td><td>EF Core 10 + Npgsql</td><td>Database-first; entities scaffolded from the live schema.</td></tr>
+          <tr><td>Database</td><td>PostgreSQL (Supabase)</td><td>Schema <code class="in">manzili</code>, shared with the legacy app.</td></tr>
+          <tr><td>Auth</td><td>JWT (HS256) in httpOnly cookies + BCrypt</td><td>Tokens ride httpOnly cookies; admin portal uses a separate path-scoped cookie pair.</td></tr>
+          <tr><td>Validation</td><td>FluentValidation</td><td>Replaces the Zod schemas.</td></tr>
+          <tr><td>Payments</td><td>Stripe.net</td><td>Checkout sessions + signed webhooks.</td></tr>
+          <tr><td>Images</td><td>CloudinaryDotNet</td><td>Uploads → CDN URLs.</td></tr>
+          <tr><td>Shipping</td><td>Bosta (typed HttpClient)</td><td>City/zone lookups, estimates, status webhooks.</td></tr>
+          <tr><td>Logging / Docs / Tests</td><td>Serilog · Swashbuckle · xUnit</td><td>Structured logs, Swagger UI, integration tests.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ARCHITECTURE -->
+    <section id="architecture">
+      <p class="eyebrow">Architecture</p>
+      <h2 class="sec" style="margin-top:6px">Four layers, one direction</h2>
+      <p>Outer layers know about inner layers, never the reverse — a kitchen where the waiter never cooks and the kitchen never
+        talks to customers.</p>
+
+      <svg class="arch" viewBox="0 0 760 300" role="img" aria-label="Architecture diagram">
+        <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 Z" fill="#bcae98"/></marker></defs>
+        <rect class="box api" x="20" y="28" width="184" height="84" rx="6"/>
+        <text class="t-title" x="36" y="56">Manzili.Api</text>
+        <text class="t-sub" x="36" y="76">controllers · Program.cs</text>
+        <text class="t-sub" x="36" y="92">middleware · JWT · CORS</text>
+        <rect class="box infra" x="20" y="170" width="184" height="100" rx="6"/>
+        <text class="t-title" x="36" y="198">Manzili.Infrastructure</text>
+        <text class="t-sub" x="36" y="218">DbContext + 47 entities</text>
+        <text class="t-sub" x="36" y="234">services · integrations</text>
+        <text class="t-sub" x="36" y="250">Stripe · Cloudinary · Bosta</text>
+        <rect class="box app" x="304" y="100" width="184" height="100" rx="6"/>
+        <text class="t-title" x="320" y="128">Manzili.Application</text>
+        <text class="t-sub" x="320" y="148">DTOs · validators</text>
+        <text class="t-sub" x="320" y="164">options · status maps</text>
+        <text class="t-sub" x="320" y="180">common helpers</text>
+        <rect class="box dom" x="566" y="116" width="174" height="70" rx="6"/>
+        <text class="t-title" x="582" y="144">Manzili.Domain</text>
+        <text class="t-sub" x="582" y="164">enums · value objects</text>
+        <path class="arrow" d="M204,70 C254,70 274,135 304,135"/>
+        <path class="arrow" d="M204,210 C254,210 274,170 304,170"/>
+        <path class="arrow" d="M488,150 L566,150"/>
+        <text class="lbl" x="234" y="92">references</text>
+        <text class="lbl" x="234" y="196">references</text>
+        <text class="lbl" x="502" y="142">references</text>
+      </svg>
+
+      <h4>Manzili.Api</h4>
+      <p class="muted">The HTTP edge — controllers, the middleware pipeline, JWT + CORS, and <code class="in">Program.cs</code>, the
+        composition root that wires everything together.</p>
+      <h4>Manzili.Application</h4>
+      <p class="muted">The shared contract — request/response DTOs, validators, strongly-typed options, ported helpers (status maps,
+        pagination, error types). No database knowledge.</p>
+      <h4>Manzili.Infrastructure</h4>
+      <p class="muted">The "how" — the EF Core <code class="in">DbContext</code>, the 47 scaffolded entities, every feature service,
+        and the external integrations. The only layer that touches the database or the network.</p>
+      <h4>Manzili.Domain</h4>
+      <p class="muted">Reserved for pure domain types; minimal here because the data model is generated from the existing schema.</p>
+
+      <div class="expert"><span class="lab">Expert note — dependency direction</span>
+        <p>References flow <code class="in">Api → Application, Infrastructure</code>; <code class="in">Infrastructure → Application, Domain</code>;
+        <code class="in">Application → Domain</code>. DTOs sit in Application so producing services and returning controllers both see them
+        without an inward dependency. Each feature self-registers via an <code class="in">Add{Feature}()</code> extension that
+        <code class="in">AddInfrastructure()</code> calls, keeping <code class="in">Program.cs</code> stable as features grow.</p></div>
+    </section>
+
+    <section id="request-lifecycle">
+      <h3>Request lifecycle</h3>
+      <p>What happens to <code class="in">GET /api/v1/users/me</code> carrying the auth cookie:</p>
+      <ol class="muted">
+        <li><strong>Exception middleware</strong> wraps the whole pipeline so any thrown error becomes a clean JSON envelope.</li>
+        <li><strong>CORS</strong> → <strong>Authentication</strong> (validate JWT, populate claims) → <strong>Authorization</strong> (<code class="in">[Authorize]</code>).</li>
+        <li>Routing dispatches to <code class="in">UsersController.Me()</code>.</li>
+        <li>The controller reads <code class="in">CurrentPersonId</code> and calls <code class="in">UserService</code>.</li>
+        <li>The service queries through <code class="in">ManziliDbContext</code> (EF Core → SQL → PostgreSQL).</li>
+        <li>The controller returns <code class="in">ApiOk(dto)</code> → <code class="in">{ success: true, data: {…} }</code>.</li>
+      </ol>
+      <div class="expert"><span class="lab">Expert note — middleware order</span>
+        <p>The exception handler is registered first so it surrounds auth. CORS precedes auth; <code class="in">UseAuthentication()</code>
+        precedes <code class="in">UseAuthorization()</code>. The JWT handler runs with <code class="in">MapInboundClaims = false</code> so
+        <code class="in">sub</code>/<code class="in">role</code>/<code class="in">sellerId</code> stay as raw claim names.</p></div>
+    </section>
+
+    <section id="layout">
+      <h3>Project layout</h3>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">tree</span><button class="copy">Copy</button></div><pre>
+backend-dotnet/
+├─ Manzili.sln · Dockerfile · PORTING-CONVENTIONS.md
+├─ src/
+│  ├─ Manzili.Api/
+│  │  ├─ Program.cs                 composition root: DI, auth, CORS, pipeline
+│  │  ├─ Common/ApiController.cs    base controller: envelope + claim accessors
+│  │  ├─ Middleware/ExceptionHandlingMiddleware.cs
+│  │  └─ Controllers/               AuthController, ProductsController … (23)
+│  ├─ Manzili.Application/
+│  │  ├─ Configuration/AppOptions.cs
+│  │  ├─ Common/                    AppErrors · Pagination · StatusMaps
+│  │  └─ {Feature}/                 DTOs + validators per feature
+│  ├─ Manzili.Infrastructure/
+│  │  ├─ DependencyInjection.cs     AddInfrastructure()
+│  │  ├─ Persistence/               ManziliDbContext + Entities/ (47 POCOs)
+│  │  ├─ Security/                  PasswordHasher · TokenService
+│  │  └─ Services/                  ~28 services + {Feature}Module DI
+│  └─ Manzili.Domain/
+└─ tests/Manzili.Tests/            xUnit + WebApplicationFactory</pre></div>
+
+      <h3>Composition root — <code class="in">Program.cs</code></h3>
+      <p>One file wires the whole application: options binding, services, validation, CORS, JWT, and the ordered middleware pipeline.</p>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C# — Program.cs (abridged)</span><button class="copy">Copy</button></div><pre>
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddOptions&lt;AppOptions&gt;()
+    .Bind(builder.Configuration.GetSection("Manzili")).ValidateOnStart();
+builder.Services.AddInfrastructure(builder.Configuration);                 // DbContext + services
+builder.Services.AddValidatorsFromAssemblyContaining&lt;RegisterRequestValidator&gt;();
+builder.Services.AddCors(/* origins from Manzili:CorsOrigin, credentials */);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =&gt; { o.MapInboundClaims = false; o.TokenValidationParameters = /* … */; });
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+app.UseMiddleware&lt;ExceptionHandlingMiddleware&gt;();                           // outermost
+if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+
+public partial class Program { }                                            // for WebApplicationFactory</pre></div>
+
+      <h4>Service lifetimes</h4>
+      <table>
+        <thead><tr><th>Component</th><th>Lifetime</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">ManziliDbContext</code></td><td>Scoped</td><td>One unit-of-work per HTTP request.</td></tr>
+          <tr><td>Feature services (<code class="in">AuthService</code>, <code class="in">OrderService</code>, …)</td><td>Scoped</td><td>Depend on the scoped DbContext.</td></tr>
+          <tr><td><code class="in">PasswordHasher</code>, <code class="in">TokenService</code></td><td>Singleton</td><td>Stateless, thread-safe helpers.</td></tr>
+          <tr><td><code class="in">BostaClient</code></td><td>Typed <code class="in">HttpClient</code></td><td>Pooled message handler via <code class="in">AddHttpClient</code>.</td></tr>
+        </tbody>
+      </table>
+      <div class="expert"><span class="lab">Expert note — the feature-module pattern</span>
+        <p><code class="in">AddInfrastructure()</code> registers the DbContext + security helpers, then calls one
+        <code class="in">Add{Feature}()</code> extension per area (<code class="in">AddCatalog</code>, <code class="in">AddOrders</code>,
+        <code class="in">AddSeller</code>, <code class="in">AddCustom</code>, <code class="in">AddAdmin</code>, <code class="in">AddIntegrations</code>…).
+        New features plug in without touching <code class="in">Program.cs</code> — the open/closed principle applied to DI wiring.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ENVELOPE -->
+    <section id="envelope">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">The response envelope</h2>
+      <p>One consistent shape on every response, ported verbatim so the frontend contract is unchanged.</p>
+      <div class="tabs" data-tabs="env">
+        <button class="active" data-tab="env-ok">Success</button>
+        <button data-tab="env-meta">Success + meta</button>
+        <button data-tab="env-err">Error</button>
+      </div>
+      <div class="tabpane active" id="env-ok">
+        <div class="code" data-lang="json"><div class="bar"><span class="lang">json</span><button class="copy">Copy</button></div><pre>
+{ "success": true, "data": { "id": "42", "name": "Ada", "email": "ada@example.com" } }</pre></div>
+      </div>
+      <div class="tabpane" id="env-meta">
+        <p class="muted">Extra fields (pagination, tokens) merge at the <em>top level</em>, not under <code class="in">data</code>:</p>
+        <div class="code" data-lang="json"><div class="bar"><span class="lang">json</span><button class="copy">Copy</button></div><pre>
+{ "success": true, "data": { "ProductCards": [ … ] }, "total": 120, "page": 1, "limit": 20 }</pre></div>
+      </div>
+      <div class="tabpane" id="env-err">
+        <div class="code" data-lang="json"><div class="bar"><span class="lang">json</span><button class="copy">Copy</button></div><pre>
+{ "success": false, "error": { "message": "Validation failed", "code": "VALIDATION_ERROR",
+    "details": [ { "path": "Email", "message": "'Email' is not a valid email address." } ] } }</pre></div>
+      </div>
+      <p>Controllers never hand-build this — they inherit <code class="in">ApiController</code>:</p>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C#</span><button class="copy">Copy</button></div><pre>
+protected IActionResult ApiOk(object? data, IDictionary&lt;string, object?&gt;? meta = null, int statusCode = 200)
+{
+    var payload = new Dictionary&lt;string, object?&gt; { ["success"] = true, ["data"] = data };
+    if (meta is not null)
+        foreach (var (key, value) in meta) payload[key] = value;   // merge meta at top level
+    return StatusCode(statusCode, payload);
+}</pre></div>
+      <div class="expert"><span class="lab">Expert note — why a Dictionary root</span>
+        <p><code class="in">System.Text.Json</code> serialises dictionary keys verbatim (no camelCase transform), so keys like
+        <code class="in">"ProductCards"</code> and <code class="in">"refreshToken"</code> match the Node output exactly, while nested DTOs
+        keep the default camelCase. OpenAPI fields containing spaces (e.g. <code class="in">"main image"</code>) use
+        <code class="in">[JsonPropertyName]</code>.</p></div>
+    </section>
+
+    <!-- AUTH -->
+    <section id="auth">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Authentication &amp; JWT</h2>
+      <p><code class="in">register</code>, <code class="in">login</code> and <code class="in">refresh</code> issue a short-lived access
+        token (15 min) and a long-lived refresh token (7 days). Both are set as <strong>httpOnly cookies</strong> — never returned to JS
+        and never stored in <code class="in">localStorage</code> — so the browser attaches them automatically and a script can't read them.</p>
+      <div class="note beginner"><span class="lab">What is a JWT?</span>
+        <p>A signed string the server issues on login. The server verifies the signature with a secret key and then trusts the facts inside
+        (who you are, your role) without a database lookup. "Signed" means tampering is detectable — not that the contents are secret. Here
+        the JWT travels in an <strong>httpOnly cookie</strong> (not an <code class="in">Authorization</code> header), so it is invisible to
+        page JavaScript.</p></div>
+      <div class="note warn"><span class="lab">Admin sessions are isolated</span>
+        <p>Buyer/seller sessions use the cookies <code class="in">manzili_at</code> (access) + <code class="in">manzili_rt</code> (refresh) at
+        path <code class="in">/</code>. The <strong>admin portal uses a separate pair</strong> — <code class="in">manzili_admin_at</code> +
+        <code class="in">manzili_admin_rt</code> — <strong>path-scoped to <code class="in">/api/v1/admin</code></strong>. So an admin session
+        and a buyer/seller session are fully isolated and can coexist in one browser; logging into the admin portal can no longer clobber a
+        buyer or seller session (this fixed a real bug). The JWT cookie extractor in <code class="in">Program.cs</code> is path-aware: on
+        <code class="in">/api/v1/admin/*</code> it reads the admin cookie, elsewhere the normal one.</p></div>
+      <table>
+        <thead><tr><th>Claim</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">sub</code></td><td>Person id (primary key of <code class="in">person</code>).</td></tr>
+          <tr><td><code class="in">email</code></td><td>Account email.</td></tr>
+          <tr><td><code class="in">role</code></td><td><code class="in">buyer</code> · <code class="in">seller</code> · <code class="in">admin</code> — drives <code class="in">[Authorize(Roles=…)]</code>.</td></tr>
+          <tr><td><code class="in">sellerId</code></td><td>Present only for sellers; scopes seller queries.</td></tr>
+        </tbody>
+      </table>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C# — role resolution on login</span><button class="copy">Copy</button></div><pre>
+private async Task&lt;(string Role, int? SellerId)&gt; DetermineRoleAsync(int personId)
+{
+    if (await _db.Systemadmins.AnyAsync(a =&gt; a.Personid == personId)) return ("admin", null);
+    var seller = await _db.Sellers.FirstOrDefaultAsync(s =&gt; s.Personid == personId);
+    if (seller is not null) return ("seller", seller.Sellerid);
+    return ("buyer", null);
+}</pre></div>
+      <div class="expert"><span class="lab">Expert note — BCrypt &amp; HS256 interop</span>
+        <p>Passwords use <code class="in">BCrypt.Net-Next</code> (work factor 10) which verifies <code class="in">$2a$/$2b$/$2y$</code>
+        hashes, so Node-created accounts log in unchanged. Tokens are HS256-signed with the same UTF-8 secret bytes as
+        <code class="in">jsonwebtoken</code>, so a token minted by either stack validates on the other. The refresh token is also stored on
+        <code class="in">person.refresh_token</code> and compared on refresh — a server-side revocation hook.</p></div>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C# — token validation parameters</span><button class="copy">Copy</button></div><pre>
+new TokenValidationParameters
+{
+    ValidateIssuer = false,                 // single-audience internal API
+    ValidateAudience = false,
+    ValidateIssuerSigningKey = true,
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+    ValidateLifetime = true,
+    ClockSkew = TimeSpan.FromSeconds(5),    // tight; default is 5 minutes
+    NameClaimType = "sub",
+    RoleClaimType = "role",                 // makes [Authorize(Roles=…)] read our claim
+}</pre></div>
+      <div class="expert"><span class="lab">Expert note — signing key &amp; skew</span>
+        <p>HS256 keys must be at least 256 bits — the configured secrets comfortably exceed that as UTF-8 bytes. Issuer/audience
+        validation is disabled because both stacks issue tokens for one internal audience; <code class="in">ClockSkew</code> is dropped
+        from the 5-minute default to 5 seconds so expiry is enforced tightly. <code class="in">RoleClaimType = "role"</code> is what lets
+        <code class="in">[Authorize(Roles="seller")]</code> match the raw <code class="in">role</code> claim.</p></div>
+      <div class="note warn"><span class="lab">Gotcha that bit us</span>
+        <p><code class="in">JwtSecurityTokenHandler</code> remaps <code class="in">sub</code> to a long URI by default, so
+        <code class="in">FindFirst("sub")</code> returned null. Fixed with <code class="in">MapInboundClaims = false</code> on both the
+        bearer options and the manual refresh validation.</p></div>
+    </section>
+
+    <!-- ERRORS -->
+    <section id="errors">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Error handling</h2>
+      <p>Services throw typed exceptions; one middleware turns them into the error envelope — no <code class="in">try/catch</code>
+        clutter in controllers.</p>
+      <table>
+        <thead><tr><th>Throw</th><th>HTTP</th><th>code</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">NotFoundException</code></td><td>404</td><td>NOT_FOUND</td></tr>
+          <tr><td><code class="in">ValidationAppException</code></td><td>400</td><td>VALIDATION_ERROR</td></tr>
+          <tr><td><code class="in">UnauthorizedException</code></td><td>401</td><td>UNAUTHORIZED</td></tr>
+          <tr><td><code class="in">ForbiddenException</code></td><td>403</td><td>FORBIDDEN</td></tr>
+          <tr><td><code class="in">ConflictException</code></td><td>409</td><td>CONFLICT</td></tr>
+          <tr><td><code class="in">AppException(msg, code, status)</code></td><td>custom</td><td>custom</td></tr>
+        </tbody>
+      </table>
+      <div class="expert"><span class="lab">Expert note — Prisma → EF parity</span>
+        <p>A unique violation surfaces as <code class="in">DbUpdateException</code> with inner
+        <code class="in">PostgresException.SqlState == "23505"</code> → 409 (the Prisma <code class="in">P2002</code> analogue); anything
+        unrecognised is logged and returned as a 500 with no leaked detail.</p></div>
+    </section>
+
+    <!-- DATA -->
+    <section id="data">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">The data layer (EF Core)</h2>
+      <div class="note beginner"><span class="lab">What is EF Core?</span>
+        <p>An <em>ORM</em> — it lets you query the database with C# instead of raw SQL. It is the .NET counterpart to Prisma in the old
+        backend. <code class="in">db.Products.Where(p =&gt; p.InStock).ToListAsync()</code> becomes a <code class="in">SELECT … WHERE …</code>.</p></div>
+      <p>This is <strong>database-first</strong>: the existing schema was reverse-engineered into 47 entities + a
+        <code class="in">ManziliDbContext</code>.</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash — one-time scaffold</span><button class="copy">Copy</button></div><pre>
+dotnet ef dbcontext scaffold "&lt;connection&gt;" Npgsql.EntityFrameworkCore.PostgreSQL \
+  --schema manzili --context ManziliDbContext \
+  --context-dir Persistence --output-dir Persistence/Entities --no-onconfiguring</pre></div>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C# — using it</span><button class="copy">Copy</button></div><pre>
+public sealed class ProductService(ManziliDbContext db)
+{
+    public Task&lt;Product?&gt; GetAsync(int id) =&gt;
+        db.Products
+          .Include(p =&gt; p.ProductImages)
+          .AsNoTracking()                       // read-only: skip change tracking
+          .FirstOrDefaultAsync(p =&gt; p.Productid == id);
+}</pre></div>
+      <p class="muted">Snake_case columns become PascalCase: <code class="in">first_name → FirstName</code>,
+        <code class="in">created_at → CreatedAt</code>.</p>
+      <h4>Pagination</h4>
+      <p>List endpoints share one helper, ported from the Node <code class="in">parsePagination</code>: page is at least 1, limit is
+        clamped to 1–100 (default 20), and <code class="in">Skip</code>/<code class="in">Take</code> are derived for the query.</p>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C#</span><button class="copy">Copy</button></div><pre>
+public static Pagination Parse(int? page, int? limit)
+{
+    var p = Math.Max(1, page ?? 1);
+    var l = Math.Min(100, Math.Max(1, limit ?? 20));
+    return new Pagination(p, l, (p - 1) * l, l);   // Page, Limit, Skip, Take
+}
+// usage:  var pg = Pagination.Parse(page, limit);
+//         var items = await query.Skip(pg.Skip).Take(pg.Take).ToListAsync();</pre></div>
+      <div class="expert"><span class="lab">Expert note — connection &amp; SSL</span>
+        <p>The connection string targets the Supabase pooler with <code class="in">Ssl Mode=Require</code>. The DbContext is registered
+        with <code class="in">UseNpgsql(connectionString)</code> and the string itself never lands in source — it comes from
+        <code class="in">ConnectionStrings:Default</code> in user-secrets (dev) or the <code class="in">ConnectionStrings__Default</code>
+        env var (prod). Migrations are intentionally <em>not</em> used: the schema is owned upstream and reverse-engineered, so the
+        app treats it as read/write but never re-shapes it.</p></div>
+      <div class="expert"><span class="lab">Expert note — tracking, transactions, lifetimes</span>
+        <p>Reads use <code class="in">AsNoTracking()</code>; atomic writes wrap work in
+        <code class="in">BeginTransactionAsync()</code> (EF's <code class="in">$transaction</code>). <code class="in">DbContext</code> is
+        scoped (one per request); DB-bound services are scoped, stateless helpers are singletons.</p></div>
+      <div class="note warn"><span class="lab">One schema fix was required</span>
+        <p>Scaffolding failed on a single FK type mismatch — <code class="in">custom_request.categoryid</code> was
+        <code class="in">integer</code> while <code class="in">category.categoryid</code> is <code class="in">smallint</code>. A one-line
+        <code class="in">ALTER COLUMN … TYPE smallint</code> aligned the DB with its own Prisma declaration.</p></div>
+      <div class="note warn"><span class="lab">Gotcha — <code class="in">timestamp without time zone</code> + Npgsql</span>
+        <p>Several legacy columns are <code class="in">timestamp without time zone</code> — notably
+        <code class="in">coupons.created_at</code>, <code class="in">reports.created_at/resolved_at</code>,
+        <code class="in">notification.created_at</code>, and <code class="in">store_pickup_addresses</code>. Npgsql maps those to a
+        <em>local</em> <code class="in">DateTime</code> and <strong>throws</strong> if you hand it a
+        <code class="in">DateTime</code> whose <code class="in">Kind</code> is <code class="in">Utc</code> (which is what
+        <code class="in">DateTime.UtcNow</code> produces). Every write to those columns therefore uses
+        <code class="in">DateTime.SpecifyKind(value, DateTimeKind.Unspecified)</code>; the read path re-stamps with
+        <code class="in">Utc</code>. This silently 500-ed every notification create until it was fixed across
+        <code class="in">NotificationService</code>, <code class="in">CouponService</code>, <code class="in">AdminService</code> and
+        <code class="in">ReportService</code>.</p></div>
+    </section>
+
+    <!-- VALIDATION -->
+    <section id="validation">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Validation</h2>
+      <p>FluentValidation replaces the Zod schemas. Validators are auto-discovered; a base-controller helper runs them and throws a
+        400 with a <code class="in">details</code> array.</p>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C#</span><button class="copy">Copy</button></div><pre>
+public sealed class RegisterRequestValidator : AbstractValidator&lt;RegisterRequest&gt;
+{
+    public RegisterRequestValidator()
+    {
+        RuleFor(x =&gt; x.Name).NotEmpty().MinimumLength(2).MaximumLength(100);
+        RuleFor(x =&gt; x.Email).NotEmpty().EmailAddress().MaximumLength(100);
+        RuleFor(x =&gt; x.Password).NotEmpty().MinimumLength(6).MaximumLength(50);
+    }
+}
+// controller:  await ValidateAsync(_registerValidator, req);   // -&gt; 400 envelope on failure</pre></div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Configuration</h2>
+      <p>Everything binds to a typed <code class="in">AppOptions</code> tree (section <code class="in">"Manzili"</code>). Secrets live in
+        .NET user-secrets in development, environment variables in production.</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash — dev secrets</span><button class="copy">Copy</button></div><pre>
+dotnet user-secrets set "ConnectionStrings:Default" "Host=…;Database=postgres;Username=…;Password=…;Ssl Mode=Require"
+dotnet user-secrets set "Manzili:Jwt:Secret" "…"
+dotnet user-secrets set "Manzili:Stripe:SecretKey" "sk_test_…"</pre></div>
+      <div class="expert"><span class="lab">Expert note — env var mapping</span>
+        <p>In containers the same keys arrive as env vars with the <code class="in">__</code> separator
+        (<code class="in">ConnectionStrings__Default</code>, <code class="in">Manzili__Jwt__Secret</code>). The provider chain
+        (json → user-secrets → env) lets production override with no code change.</p></div>
+    </section>
+
+    <!-- ENUMS -->
+    <section id="enums">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Status maps</h2>
+      <p>The DB stores statuses as integers; <code class="in">StatusMaps</code> translates both directions so the API speaks strings.</p>
+      <table>
+        <thead><tr><th>Map</th><th>Values</th></tr></thead>
+        <tbody>
+          <tr><td>Order status</td><td><code class="in">0</code> PENDING_PAYMENT · <code class="in">1</code> ORDER_PLACED · <code class="in">2</code> PROCESSING · <code class="in">3</code> SHIPPED · <code class="in">4</code> DELIVERED · <code class="in">5</code> CANCELED · <code class="in">6</code> RETURNED</td></tr>
+          <tr><td>Payment method</td><td><code class="in">0</code> COD · <code class="in">1</code> STRIPE</td></tr>
+          <tr><td>Payment status</td><td><code class="in">0</code> PENDING · <code class="in">1</code> PAID · <code class="in">2</code> FAILED · <code class="in">3</code> REFUNDED</td></tr>
+          <tr><td>Shipment</td><td><code class="in">0</code> CREATED · <code class="in">1</code> PICKED_UP · <code class="in">2</code> IN_TRANSIT · <code class="in">3</code> DELIVERED · <code class="in">4</code> FAILED · <code class="in">5</code> CANCELED · <code class="in">6</code> UNKNOWN</td></tr>
+          <tr><td>Coupon scope</td><td><code class="in">0</code> GLOBAL · <code class="in">10/11</code> STORE · <code class="in">20/21</code> PRODUCTS</td></tr>
+          <tr><td>Store status</td><td><code class="in">pending</code> (awaiting review) · <code class="in">approved</code> (live, sells) · <code class="in">rejected</code> — paired with an <code class="in">is_active</code> flag; seller role is granted only when <code class="in">approved &amp;&amp; active</code>.</td></tr>
+          <tr><td>Wallet transaction type</td><td><code class="in">SALE_CREDIT</code> · <code class="in">COMMISSION_DEBIT</code> · <code class="in">SHIPPING_DEBIT</code> · <code class="in">COD_RELEASE</code> · <code class="in">SALE_REVERSAL</code> · <code class="in">PAYOUT</code> — see <a href="#payouts">Wallet &amp; payouts</a>.</td></tr>
+        </tbody>
+      </table>
+      <div class="expert"><span class="lab">Expert note — string statuses vs integer enums</span>
+        <p>Order/payment/shipment statuses are stored as integers and translated by <code class="in">StatusMaps</code>. Store status,
+        by contrast, is a free <em>string</em> column (<code class="in">pending</code>/<code class="in">approved</code>/<code class="in">rejected</code>)
+        carried over from the legacy schema and compared as-is in <code class="in">AuthService.DetermineRoleAsync</code> — a parity
+        decision, not a redesign.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- DEEP DIVES -->
+    <section id="order-splitting">
+      <p class="eyebrow">Deep dive</p>
+      <h2 class="sec" style="margin-top:6px">Order splitting</h2>
+      <p>A single cart can hold items from several sellers. One <code class="in">order</code> splits into one
+        <code class="in">store_order</code> per seller, each with its own line items.</p>
+      <div class="note beginner"><span class="lab">The cart is account-linked, not browser-stored</span>
+        <p>The cart is <strong>persisted server-side</strong> and tied to the account — it is no longer kept in the browser /
+        <code class="in">localStorage</code>. It survives logout and follows the account across devices, and a guest's in-session cart is
+        <strong>merged</strong> into the account on login / register / Google sign-in. <code class="in">CartController</code> at
+        <code class="in">/api/v1/cart</code> exposes <code class="in">GET</code> (load), <code class="in">PUT</code> (replace),
+        <code class="in">POST /cart/merge</code> (merge a guest cart, summing quantities) and <code class="in">DELETE</code> (clear).
+        <code class="in">CartService</code> stores the cart as a variant-faithful JSON snapshot in a new <code class="in">items_json</code>
+        column on the <code class="in">cart</code> table (added idempotently by <code class="in">SchemaMigrator</code>). The cart is re-priced
+        server-side at checkout, so stored line hints can't drive a wrong charge.</p></div>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">model</span><button class="copy">Copy</button></div><pre>
+order  (totals, payment method/status, address)
+ ├─ store_order  (seller A)  → store_order_items[]   (price_at_purchase snapshot)
+ └─ store_order  (seller B)  → store_order_items[]</pre></div>
+      <ul class="muted">
+        <li>Items are grouped by seller in <strong>first-seen order</strong> (insertion-ordered, like the JS <code class="in">Map</code>).</li>
+        <li>Price, name and image are snapshotted per line, so history survives later product edits.</li>
+        <li>Discount is split <strong>pro-rata</strong> by subtotal, rounded to 2 dp away-from-zero.</li>
+        <li>Stock is decremented; the whole thing runs in one transaction and the order is re-read after commit.</li>
+      </ul>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>Order status follows payment method (<code class="in">STRIPE → 0 PENDING_PAYMENT</code>, <code class="in">COD → 1 ORDER_PLACED</code>).
+        The coupon is stored as a JSON <code class="in">coupon_snapshot</code> and the client-supplied discount is trusted, exactly as
+        Node did — a faithful parity decision, flagged rather than endorsed.</p></div>
+    </section>
+
+    <section id="wallet">
+      <p class="eyebrow">Deep dive</p>
+      <h2 class="sec" style="margin-top:6px">Wallet idempotency</h2>
+      <p>Each seller has a wallet with a <strong>pending</strong> and an <strong>available</strong> balance plus an immutable ledger.</p>
+      <div class="note beginner"><span class="lab">Why idempotency?</span>
+        <p>A webhook or retry might deliver the same "credit the seller" event twice. <em>Idempotency</em> means doing it twice has the
+        same effect as once — so money is never double-counted.</p></div>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C# — the guard</span><button class="copy">Copy</button></div><pre>
+var already = await db.WalletTransactions
+    .AnyAsync(t =&gt; t.WalletId == walletId &amp;&amp; t.IdempotencyKey == key);
+if (already) return PostResult.Skipped;        // do NOT touch the balance
+// else: insert the ledger row AND adjust the bucket balance inside one transaction.</pre></div>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>Buckets: <code class="in">PENDING → PendingBalance</code>, else <code class="in">AvailableBalance</code>; a payout posts a
+        negative available amount and is rejected if funds are insufficient. The unique <code class="in">(wallet_id, idempotency_key)</code>
+        constraint is the real backstop — even under a race the DB rejects the duplicate and the balance change rolls back with it.
+        Ledger rows are only inserted, never updated.</p></div>
+    </section>
+
+    <section id="webhooks">
+      <p class="eyebrow">Deep dive</p>
+      <h2 class="sec" style="margin-top:6px">Webhooks &amp; the raw body</h2>
+      <p><strong>Stripe</strong> signs each webhook against the exact raw bytes it sent. If middleware re-serialises the JSON first, the
+        signature breaks.</p>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C#</span><button class="copy">Copy</button></div><pre>
+[HttpPost("stripe"), AllowAnonymous]
+public async Task&lt;IActionResult&gt; Stripe()
+{
+    var json = await new StreamReader(Request.Body).ReadToEndAsync();   // raw, unparsed
+    var evt = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"], _webhookSecret);
+    if (evt.Type == "checkout.session.completed") { /* mark order paid, update store_orders */ }
+    return Ok(new { received = true });
+}</pre></div>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>The action takes no body-bound parameter, so MVC model binding never consumes the stream. Webhook responses return plain
+        <code class="in">{ received: true }</code> (not the envelope), as Stripe/Bosta expect. <strong>Bosta</strong> webhooks are
+        de-duplicated by a SHA-256 hash of the payload stored per shipment in <code class="in">shipment_events</code> under a unique
+        constraint.</p></div>
+      <div class="note warn"><span class="lab">Operational note</span>
+        <p>Stripe verification needs <code class="in">Manzili:Stripe:WebhookSecret</code> set, otherwise the webhook returns 400.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ===================== PLATFORM CAPABILITIES ===================== -->
+
+    <!-- FULFILLMENT -->
+    <section id="fulfillment">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Fulfillment lifecycle</h2>
+      <p>Once a payment is confirmed, <code class="in">FulfillmentService</code> turns the paid order into real, trackable
+        shipments — one per seller — and keeps the buyer, the seller and the wallet in sync as parcels move.</p>
+
+      <div class="note beginner"><span class="lab">The story in one line</span>
+        <p>Buyer pays → each seller gets a delivery booked with the courier (Bosta) and a tracking number → seller is told to prepare
+        the parcel, buyer gets the tracking link → when it is delivered, the seller's money unlocks and the buyer can leave a review.</p></div>
+
+      <div class="note warn"><span class="lab">No phantom orders — paid means placed</span>
+        <p>An online-payment order (Stripe / Mobile Wallet / Fawry) only appears as a real placed order once it is actually
+        <strong>PAID</strong>. Unpaid/abandoned online orders, and canceled orders, are filtered out of <em>both</em> the buyer's orders
+        list and the seller's orders list. <strong>COD is the exception</strong> (pay-on-delivery → shown immediately). Abandoned gateway
+        attempts are cancelled server-side and never leave a phantom order.</p></div>
+
+      <div class="note beginner"><span class="lab">What the orders list returns</span>
+        <p>The orders list DTO carries a per-vendor breakdown <code class="in">storeOrders[]</code> — each with
+        <code class="in">storeName</code>, its items (including <code class="in">imageUrl</code>), the delivery total, and the Bosta shipment +
+        tracking timeline — plus the delivery <code class="in">address</code>. The buyer's orders page renders one rich card
+        <strong>per vendor</strong>, with item thumbnails, per-vendor delivery, and a status timeline.</p></div>
+
+      <h3>On payment confirmed</h3>
+      <p>The single entry point is <code class="in">MarkOrderPaidAndFulfillAsync</code> — called by <em>both</em> the Stripe webhook and
+        the <code class="in">POST /checkout/confirm</code> endpoint, and idempotent so running it twice is harmless. For each
+        <code class="in">store_order</code> it:</p>
+      <ul class="muted">
+        <li>Books <strong>one Bosta delivery</strong> (<code class="in">BostaClient.CreateDeliveryAsync</code>) collecting from the
+          seller's default warehouse, and persists a <code class="in">Shipment</code> with its tracking number and carrier.</li>
+        <li><strong>Bosta is required — no fake fallback.</strong> If Bosta isn't connected
+          (<code class="in">BostaOptions.IntegrationEnabled = false</code> / no auth) or the create-delivery call fails,
+          fulfillment <strong>errors</strong> (<code class="in">BOSTA_NOT_CONNECTED</code> / <code class="in">BOSTA_DELIVERY_FAILED</code>)
+          rather than minting a synthetic tracking number — a <code class="in">Shipment</code> only ever reflects a real Bosta delivery.</li>
+        <li>Seeds a <code class="in">ShipmentEvent</code> timeline (the first "created/processing" rows).</li>
+        <li>Moves the store-order to <code class="in">PROCESSING</code>, posts the seller's wallet
+          <code class="in">SALE_CREDIT</code> + <code class="in">SHIPPING_DEBIT</code> as <strong>pending</strong> funds, and notifies the
+          seller ("prepare pickup") and the buyer ("track your order").</li>
+      </ul>
+
+      <h3>Status transitions</h3>
+      <p>A store-order advances through <code class="in">SHIPPED → DELIVERED</code> via one shared method,
+        <code class="in">TransitionStoreOrderStatusAsync</code>, driven from two sources:</p>
+      <table>
+        <thead><tr><th>Trigger</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">PATCH /seller/orders/{id}/status</code></td><td>Seller marks the parcel shipped / delivered by hand.</td></tr>
+          <tr><td><code class="in">POST /webhooks/bosta</code></td><td>The courier's webhook reports real movement (deduped per shipment).</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">On <code class="in">SHIPPED</code> the buyer is notified; on <code class="in">DELIVERED</code> the seller's
+        <strong>pending wallet funds are released to available</strong>, the buyer is told they can now review, and reviews unlock once
+        <code class="in">RollupOrderStatusAsync</code> aggregates the seller's store-orders up to a <code class="in">DELIVERED</code> parent
+        <code class="in">order</code>.</p>
+
+      <div class="note beginner"><span class="lab">Why a separate confirm endpoint?</span>
+        <p>Webhooks can be delayed or blocked in local development. <code class="in">POST /checkout/confirm</code> lets the success
+        page verify the Stripe session server-side and fulfill immediately — without waiting for Stripe to call back. Because both paths
+        run the same idempotent method, whichever fires first wins and the second is a no-op.</p></div>
+
+      <div class="expert"><span class="lab">Expert note — webhook-independent confirmation</span>
+        <p>The frontend's <code class="in">/orders</code> page calls <code class="in">/checkout/confirm</code> on the
+        <code class="in">?session_id=</code> return. <code class="in">ConfirmSessionAsync</code> re-fetches the session from Stripe (it does
+        not trust the client), checks <code class="in">payment_status == "paid"</code>, then delegates to
+        <code class="in">MarkOrderPaidAndFulfillAsync</code> — the exact code path the webhook uses. Custom-order milestones reuse the same
+        machinery: paying the final milestone creates a real <code class="in">Order</code> + <code class="in">StoreOrder</code> (backed by a
+        hidden, disabled placeholder product to satisfy the line-item FK) and runs the identical pipeline.</p></div>
+    </section>
+
+    <!-- FEES -->
+    <section id="fees">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Fees &amp; commission model</h2>
+      <p>Every price the buyer sees is computed server-side by <code class="in">CheckoutPricingService.QuoteAsync</code>, exposed at
+        <code class="in">POST /checkout/quote</code> and driven from <code class="in">FeesOptions</code> (config section
+        <code class="in">Manzili:Fees</code>). The cart shows <em>exactly</em> what will be charged.</p>
+      <table>
+        <thead><tr><th>Charge</th><th>Rate</th><th>Borne by</th></tr></thead>
+        <tbody>
+          <tr><td>Platform commission — standard order</td><td><strong>15%</strong> of goods</td><td>Seller (deducted from payout)</td></tr>
+          <tr><td>Platform commission — custom order</td><td><strong>10%</strong> of goods</td><td>Seller (deducted from payout)</td></tr>
+          <tr><td>Bosta shipping — seller share</td><td><strong>65%</strong></td><td>Seller (deducted from payout)</td></tr>
+          <tr><td>Bosta shipping — buyer share</td><td><strong>35%</strong></td><td>Buyer (added at checkout)</td></tr>
+          <tr><td>Stripe processing fee</td><td><strong>~2.9%</strong></td><td>Buyer (added at checkout)</td></tr>
+        </tbody>
+      </table>
+      <p>So the <strong>buyer pays</strong> goods − discount + 35% of shipping + the Stripe fee; the <strong>seller's wallet</strong> nets
+        the sale minus the 15%/10% commission and minus 65% of shipping.</p>
+
+      <div class="note beginner"><span class="lab">Worked example — a 500 EGP basket</span>
+        <p>Subtotal <b>500</b> → commission <b>75</b> (15%), seller shipping share <b>32.5</b> (65%), buyer shipping share <b>17.5</b> (35%),
+        Stripe fee <b>15.01</b>. The <b>buyer pays 532.51</b>; the <b>seller nets 392.5</b> into the wallet. (Verified against a live
+        quote.)</p></div>
+
+      <div class="expert"><span class="lab">Expert note — charged equals displayed</span>
+        <p>The discount is applied as a one-time Stripe coupon on the session, so the amount Stripe actually charges always equals the
+        figure the quote displayed — there is no rounding drift between the cart and the receipt. Custom orders charge the Stripe fee on
+        <em>every</em> milestone and add the 35% shipping share on the final one. Defaults:
+        <code class="in">CommissionStandard .15</code>, <code class="in">CommissionCustom .10</code>,
+        <code class="in">ShippingSellerShare .65</code>, <code class="in">ShippingBuyerShare .35</code>,
+        <code class="in">StripeFeePercent .029</code>, <code class="in">DefaultShipping 50</code> per store.</p></div>
+    </section>
+
+    <!-- PAYOUTS -->
+    <section id="payouts">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Seller wallet &amp; payouts</h2>
+      <p>Each seller wallet holds two buckets — a <strong>PENDING</strong> balance (money earned but not yet collectable) and an
+        <strong>AVAILABLE</strong> balance (cleared, withdrawable) — plus an append-only ledger of every movement.</p>
+      <ul class="muted">
+        <li>A sale lands in <strong>pending</strong> at fulfillment, then moves to <strong>available</strong> when the parcel is delivered.</li>
+        <li>A <code class="in">PAYOUT</code> posts a negative <em>available</em> amount and is rejected if funds are insufficient.</li>
+        <li>A return reverses the original credit (<code class="in">SALE_REVERSAL</code>), protecting the platform from paying out money for goods that came back.</li>
+      </ul>
+      <p>The ledger is <strong>idempotent</strong> — each write carries a store-order-derived key, and a unique
+        <code class="in">(wallet_id, idempotency_key)</code> constraint is the real backstop against double-crediting. This is covered in
+        depth in the <a href="#wallet">Wallet idempotency</a> deep dive.</p>
+
+      <div class="expert"><span class="lab">Expert note — payouts in-house, not Stripe Connect</span>
+        <p>Bank details are stored in our own schema and only the <strong>last four digits</strong> are retained
+        (<code class="in">GET /seller/wallet</code> returns <code class="in">bankDetails { bankName, accountHolder, last4, configured }</code>;
+        set via <code class="in">POST /seller/wallet/bank-details</code>). Stripe Connect onboarding was deliberately descoped: it would
+        couple every seller to a Stripe-managed identity flow, whereas an in-house ledger keeps the marketplace modular and the demo
+        self-contained. The trade-off — actual money movement to banks is manual/out-of-band — is an accepted, documented limitation.</p></div>
+    </section>
+
+    <!-- WAREHOUSES -->
+    <section id="warehouses">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Warehouses (pickup locations)</h2>
+      <p>A seller can keep <strong>several pickup locations</strong>. Bosta always collects parcels from the seller's
+        <strong>default</strong> warehouse; the first one is seeded automatically from the address on the store application.</p>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">CRUD — /api/v1/seller/warehouses</span><button class="copy">Copy</button></div><pre>
+GET    /seller/warehouses                list
+POST   /seller/warehouses                add
+PUT    /seller/warehouses/{id}           edit
+POST   /seller/warehouses/{id}/default   make this the pickup location
+DELETE /seller/warehouses/{id}           remove (default promotes oldest survivor)</pre></div>
+      <p class="muted">Fulfillment picks the pickup point with
+        <code class="in">OrderByDescending(IsDefault).ThenBy(PickupId)</code>, so the chosen default is used and deletion never leaves a
+        seller without one.</p>
+      <div class="expert"><span class="lab">Expert note — a 1:1 table made 1:many</span>
+        <p>Originally <code class="in">store_pickup_addresses</code> had a UNIQUE index on <code class="in">sellerid</code> (one address per
+        seller). To support multiple warehouses the unique index was dropped and <code class="in">label</code> + <code class="in">is_default</code>
+        columns added (DDL run directly against the <code class="in">manzili</code> schema; the table name is the <em>plural</em>
+        <code class="in">store_pickup_addresses</code>). The EF nav changed from a single <code class="in">StorePickupAddress</code> to a
+        <code class="in">StorePickupAddresses</code> collection (<code class="in">WithMany</code>), and exactly one default is enforced in
+        <code class="in">WarehouseService</code>.</p></div>
+    </section>
+
+    <!-- VERIFICATION -->
+    <section id="verification">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Store verification</h2>
+      <p>Becoming a seller is gated. A buyer applies (<code class="in">POST /stores/apply</code>); an admin then approves or rejects the
+        application, and only an <strong>approved &amp; active</strong> store grants the seller role.</p>
+      <p>The gate lives in <code class="in">AuthService.DetermineRoleAsync</code>: it returns the <code class="in">seller</code> role and a
+        <code class="in">sellerId</code> claim <em>only</em> when <code class="in">StoreStatus == "approved" &amp;&amp; IsActive</code>.
+        Pending, rejected or disabled applicants simply log in as a <strong>buyer</strong>; on approval they re-login (or a token refresh)
+        to pick up the seller role.</p>
+      <ul class="muted">
+        <li><code class="in">GET /stores/my-application</code> surfaces the caller's own status —
+          <code class="in">{ hasApplication, status, isActive, storeId, name }</code> — so the apply page shows
+          pending/approved/rejected instead of re-showing the form.</li>
+        <li><code class="in">AdminService.UpdateStoreStatusAsync</code> persists the new status + active flag and
+          <strong>notifies the applicant</strong> on approve / reject / disable / enable.</li>
+      </ul>
+      <div class="expert"><span class="lab">Expert note — why gate at role resolution</span>
+        <p>Putting the check in <code class="in">DetermineRoleAsync</code> means authorization flows from a <em>single</em> source of
+        truth: the JWT's <code class="in">role</code>/<code class="in">sellerId</code> claims. No controller needs a bespoke "is this store
+        approved?" guard — <code class="in">[Authorize(Roles="seller")]</code> already can't be satisfied unless the store passed review.</p></div>
+    </section>
+
+    <!-- MODERATORS -->
+    <section id="moderators">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Moderators &amp; permissions</h2>
+      <p>Admins come in two tiers. A <strong>super-admin</strong> can do anything; a <strong>moderator</strong> is an admin restricted to
+        specific sections of the dashboard.</p>
+      <p>A moderator is just a <code class="in">systemadmin</code> row whose <code class="in">Supervisorid</code> points at a super-admin
+        (full admins have <code class="in">Supervisorid = null</code>). The seeded third admin <code class="in">smak</code> is a moderator.
+        Each moderator's reachable sections are rows in <code class="in">person_permission</code>:</p>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">section codes</span><button class="copy">Copy</button></div><pre>
+orders1 · products2 · stores3 · reports4 · requests5 · coupons6</pre></div>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Who</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">GET /admin/me</code></td><td>Any admin</td><td>Returns <code class="in">{ isSuperAdmin, permissions[] }</code> — the UI hides links accordingly.</td></tr>
+          <tr><td><code class="in">GET /admin/moderators</code></td><td>Super-admin only</td><td>List moderators.</td></tr>
+          <tr><td><code class="in">PUT /admin/moderators/{id}/permissions</code></td><td>Super-admin only</td><td>Set a moderator's sections.</td></tr>
+        </tbody>
+      </table>
+      <div class="expert"><span class="lab">Expert note — enforced server-side, not just hidden</span>
+        <p>Hiding sidebar links is cosmetic; the real check is <code class="in">AdminService.EnsureSectionAsync(personId, section)</code>,
+        invoked at the top of every admin <em>mutation</em> (product, store, report, coupon actions). A moderator must hold the matching
+        section or it throws <code class="in">403 FORBIDDEN</code>; super-admins bypass the check. Moderator management itself is
+        super-admin-only, so a moderator can never grant itself new sections.</p></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="reports">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Reports &amp; chat monitoring</h2>
+      <p>Any signed-in user can flag content with <code class="in">POST /reports</code> (a real, persisted PENDING report — it used to be a
+        fake client-side acknowledgement). Admins review the queue at <code class="in">GET /admin/reports</code> and resolve via
+        <code class="in">POST /admin/reports/{id}/action</code>.</p>
+      <p>The admin report DTO is enriched with the <strong>reporter's name</strong> and the target's identifiers
+        (<code class="in">productId</code> / <code class="in">storeId</code> / <code class="in">storeOrderId</code> /
+        <code class="in">customRequestId</code>), so a moderator sees both <em>who</em> reported and <em>what</em> was reported.</p>
+      <h3>Chat monitoring</h3>
+      <p>Admins can read the buyer↔seller custom-order negotiations <strong>read-only</strong> through
+        <code class="in">GET /admin/conversations</code> and <code class="in">GET /admin/conversations/{id}</code>.</p>
+      <div class="expert"><span class="lab">Expert note — which table is the chat?</span>
+        <p>The negotiation chat is stored in <code class="in">OfferMessages</code> (the offer thread), not the legacy
+        <code class="in">Conversation</code>/<code class="in">Message</code> tables, which are unused. Reports reuse the
+        <code class="in">timestamp without time zone</code> handling described in the <a href="#data">data layer</a> gotcha —
+        <code class="in">reports.created_at/resolved_at</code> are written with <code class="in">DateTimeKind.Unspecified</code>.</p></div>
+    </section>
+
+    <!-- EMAIL -->
+    <section id="email">
+      <p class="eyebrow">Platform capability</p>
+      <h2 class="sec" style="margin-top:6px">Email</h2>
+      <p><code class="in">EmailService</code> sends transactional mail over SMTP (<code class="in">System.Net.Mail</code>). It powers the
+        public contact and newsletter forms:</p>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Auth</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">POST /contact</code></td><td>Anonymous</td><td>Emails the configured recipient with the visitor's message (reply-to set to the sender).</td></tr>
+          <tr><td><code class="in">POST /newsletter</code></td><td>Anonymous</td><td>Sends a welcome mail and pings the inbox with the new subscriber.</td></tr>
+        </tbody>
+      </table>
+      <div class="note beginner"><span class="lab">Off by default — and that's fine</span>
+        <p>Email is disabled until <code class="in">Manzili:Email</code> is configured. When off, sends are
+        <strong>logged and skipped</strong> and the form still returns success (<code class="in">{ received: true, emailed: false }</code>),
+        so the demo never breaks. To enable, set SMTP credentials (e.g. Gmail <code class="in">smtp.gmail.com:587</code> with an app
+        password, or SendGrid / Mailgun / SES).</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- API EXPLORER -->
+    <section id="api">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">API explorer</h2>
+      <p>Every route lives under <code class="in">/api/v1</code>. Filter by group or search; click a row for detail.</p>
+      <div class="controls">
+        <input id="ep-search" type="search" placeholder="Search — e.g. 'order', 'wallet', 'POST'…" autocomplete="off">
+      </div>
+      <div class="chips" id="ep-chips"></div>
+      <div class="ep-count" id="ep-count"></div>
+      <div id="ep-list"></div>
+    </section>
+
+    <!-- BUILD & DEPLOY -->
+    <section id="deploy">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Build &amp; deploy</h2>
+      <p>A multi-stage <code class="in">Dockerfile</code> builds with the SDK image and ships only the published output on the
+        slim ASP.NET runtime image.</p>
+      <div class="code" data-lang="docker"><div class="bar"><span class="lang">Dockerfile</span><button class="copy">Copy</button></div><pre>
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet restore src/Manzili.Api/Manzili.Api.csproj
+RUN dotnet publish src/Manzili.Api/Manzili.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish ./
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+ENTRYPOINT ["dotnet", "Manzili.Api.dll"]</pre></div>
+
+      <h4>Configuration via environment</h4>
+      <p>In production every setting is an environment variable. Nested keys use the <code class="in">__</code> separator.</p>
+      <table>
+        <thead><tr><th>Variable</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">ConnectionStrings__Default</code></td><td>PostgreSQL connection (<code class="in">Ssl Mode=Require</code>).</td></tr>
+          <tr><td><code class="in">Manzili__Jwt__Secret</code> / <code class="in">__RefreshSecret</code></td><td>HS256 signing keys (≥ 256-bit).</td></tr>
+          <tr><td><code class="in">Manzili__Jwt__ExpiresIn</code> / <code class="in">__RefreshExpiresIn</code></td><td>Token lifetimes (<code class="in">15m</code> / <code class="in">7d</code>).</td></tr>
+          <tr><td><code class="in">Manzili__CorsOrigin</code></td><td>Comma-separated allowed origins (or <code class="in">*</code>).</td></tr>
+          <tr><td><code class="in">Manzili__Stripe__SecretKey</code> / <code class="in">__WebhookSecret</code></td><td>Stripe API + webhook signing.</td></tr>
+          <tr><td><code class="in">Manzili__Cloudinary__CloudName</code> / <code class="in">__ApiKey</code> / <code class="in">__ApiSecret</code></td><td>Image uploads.</td></tr>
+          <tr><td><code class="in">Manzili__Bosta__ApiKey</code> / <code class="in">__IntegrationEnabled</code> / <code class="in">__WebhookAuthHeaderValue</code></td><td>Shipping + webhook auth.</td></tr>
+          <tr><td><code class="in">Manzili__AdminActionsSecret</code></td><td>Legacy privileged-action gate.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Health &amp; logging</h4>
+      <p><code class="in">GET /api/v1/health</code> returns <code class="in">{ success, data: { status, database } }</code> and performs a
+        real <code class="in">CanConnectAsync()</code> probe — use it for container liveness/readiness checks. Request logging is
+        structured via Serilog (the equivalent of Node's <code class="in">morgan</code>).</p>
+      <div class="expert"><span class="lab">Expert note — provider chain &amp; secrets</span>
+        <p>Configuration resolves in order json → user-secrets (Development only) → environment variables, last-wins. That means the
+        committed <code class="in">appsettings.json</code> carries no secrets, developers use user-secrets locally, and production
+        overrides purely through env vars — the same binary in every environment.</p></div>
+    </section>
+
+    <!-- TESTING -->
+    <section id="testing">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Testing</h2>
+      <p>Integration tests boot the app in-process with <code class="in">WebApplicationFactory&lt;Program&gt;</code> and exercise the HTTP
+        surface — envelope, validation and auth gating, without mocks.</p>
+      <div class="code" data-lang="csharp"><div class="bar"><span class="lang">C#</span><button class="copy">Copy</button></div><pre>
+[Fact]
+public async Task ProtectedEndpoint_WithoutToken_Returns_401_Envelope()
+{
+    var res = await _factory.CreateClient().GetAsync("/api/v1/users/me");
+    Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+    var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+    Assert.Equal("UNAUTHORIZED", doc.RootElement.GetProperty("error").GetProperty("code").GetString());
+}</pre></div>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p><code class="in">public partial class Program { }</code> is exposed so the test host can reference the entry point. Config is
+        injected via env vars at <code class="in">dotnet test</code> time, keeping the suite independent of developer user-secrets.</p></div>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section id="glossary">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Glossary</h2>
+      <details class="faq"><summary>ORM (Object-Relational Mapper)</summary><div class="b">Maps database rows to objects so you query with code, not SQL. Here: EF Core (was Prisma).</div></details>
+      <details class="faq"><summary>DI (Dependency Injection)</summary><div class="b">The framework creates your objects and supplies their dependencies. You register services once and ask for them by type.</div></details>
+      <details class="faq"><summary>Middleware</summary><div class="b">A step in the request pipeline that can act before/after the next step — e.g. the exception handler, CORS, authentication.</div></details>
+      <details class="faq"><summary>DTO (Data Transfer Object)</summary><div class="b">A plain class describing the exact shape of a request or response, decoupled from database entities.</div></details>
+      <details class="faq"><summary>Claim</summary><div class="b">A key/value fact inside a JWT (e.g. <code class="in">role=seller</code>) trusted after the signature is verified.</div></details>
+      <details class="faq"><summary>Scoped / Singleton (service lifetime)</summary><div class="b">Scoped = one instance per HTTP request (e.g. the DbContext). Singleton = one for the app's lifetime (stateless helpers).</div></details>
+      <details class="faq"><summary>DbContext</summary><div class="b">EF Core's gateway to the database — exposes <code class="in">DbSet&lt;T&gt;</code> collections queried with LINQ.</div></details>
+      <details class="faq"><summary>Scaffolding (database-first)</summary><div class="b">Generating C# entities + a DbContext from an existing schema, rather than defining classes first.</div></details>
+      <details class="faq"><summary>Idempotency</summary><div class="b">An operation that yields the same result run once or many times — essential for safely retrying webhooks and payments.</div></details>
+
+      <div class="colophon">
+        Manzili backend · .NET 10 documentation · base path <code class="in">/api/v1</code> · envelope
+        <code class="in">{ success, data, … }</code> · legacy Node service preserved in <code class="in">legacy-backend/</code>.
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const EP = [
+  ["GET","/health","Public","Liveness + DB connectivity probe."],
+  ["POST","/auth/register","Public","Create a buyer account; returns tokens."],
+  ["POST","/auth/login","Public","Authenticate; returns user + tokens."],
+  ["POST","/auth/refresh","Public","Exchange a refresh token for a new token pair."],
+  ["GET","/products","Public","List products (paginated, category filter, sort)."],
+  ["GET","/products/featured","Public","Featured products."],
+  ["GET","/products/latest","Public","Newest products."],
+  ["GET","/products/{id}","Public","Product detail (images, variants, reviews)."],
+  ["GET","/search","Public","Full-text product search (q, page, limit)."],
+  ["GET","/store/{id}","Public","Store profile."],
+  ["GET","/store/{id}/products","Public","Products for a store."],
+  ["GET","/stores/by-username/{username}","Public","Store profile by username."],
+  ["GET","/stores/search","Public","Search approved, active stores by name or @username (from the seller table)."],
+  ["POST","/stores/apply","Buyer","Apply to become a seller (pending review)."],
+  ["GET","/stores/my-application","Buyer","The caller's own store-verification status."],
+  ["GET","/ratings","Public","List ratings."],
+  ["POST","/ratings","Buyer","Create a product rating/review."],
+  ["GET","/wishlist","Buyer","Get wishlist cards."],
+  ["POST","/wishlist/{productId}","Buyer","Add product to wishlist."],
+  ["DELETE","/wishlist/{productId}","Buyer","Remove product from wishlist."],
+  ["DELETE","/wishlist","Buyer","Clear the wishlist."],
+  ["GET","/users/me","Buyer","Current user's profile."],
+  ["PATCH","/users/me","Buyer","Update profile (name, image)."],
+  ["GET","/users/me/addresses","Buyer","List saved addresses."],
+  ["POST","/users/me/addresses","Buyer","Add an address."],
+  ["DELETE","/users/me/addresses/{id}","Buyer","Delete an address."],
+  ["GET","/cart","Buyer","Load the account-linked cart (server-side snapshot)."],
+  ["PUT","/cart","Buyer","Replace the account-linked cart."],
+  ["POST","/cart/merge","Buyer","Merge a guest cart into the account (sums quantities)."],
+  ["DELETE","/cart","Buyer","Clear the cart."],
+  ["POST","/orders","Buyer","Create an order from cart items (splits per seller)."],
+  ["GET","/orders","Buyer","List the buyer's orders."],
+  ["GET","/orders/{id}","Buyer","Order detail."],
+  ["POST","/orders/{id}/return","Buyer","Request a return; books Bosta reverse logistics."],
+  ["GET","/notifications","Buyer","List notifications + unread count."],
+  ["PATCH","/notifications/{id}/read","Buyer","Mark a notification read."],
+  ["GET","/custom/requests","Buyer","List the buyer's custom requests."],
+  ["POST","/custom/requests","Buyer","Create a custom (made-to-order) request."],
+  ["GET","/custom/requests/{id}","Buyer","Custom request detail."],
+  ["PUT","/custom/requests/{id}","Buyer","Update a custom request."],
+  ["DELETE","/custom/requests/{id}","Buyer","Delete a custom request."],
+  ["GET","/custom/requests/{id}/offers","Buyer","Offers on a request."],
+  ["POST","/custom/requests/{id}/offers","Seller","Seller submits an offer on a request."],
+  ["GET","/custom/requests/{id}/active-offer","Buyer","The accepted/active offer."],
+  ["GET","/custom/offers/{id}/messages","Buyer","Offer chat messages."],
+  ["POST","/custom/offers/{id}/messages","Buyer","Send an offer chat message."],
+  ["PATCH","/custom/offers/{id}","Buyer","Offer lifecycle: accept | decline | block | progress | ready."],
+  ["POST","/custom/offers/{id}/payments","Buyer","Record a milestone payment on an offer."],
+  ["POST","/custom/offers/{id}/checkout","Buyer","Open a Stripe portal for a milestone payment."],
+  ["GET","/seller/dashboard","Seller","Seller dashboard stats."],
+  ["GET","/seller/products","Seller","List the seller's products."],
+  ["POST","/seller/products","Seller","Create a product."],
+  ["PUT","/seller/products/{id}","Seller","Update a product."],
+  ["DELETE","/seller/products/{id}","Seller","Soft-delete a product."],
+  ["GET","/seller/orders","Seller","List the seller's store-orders."],
+  ["PATCH","/seller/orders/{id}/status","Seller","Update a store-order's status."],
+  ["GET","/seller/coupons","Seller","List the seller's coupons."],
+  ["POST","/seller/coupons","Seller","Create a coupon."],
+  ["DELETE","/seller/coupons/{id}","Seller","Delete a coupon."],
+  ["POST","/seller/coupon","Seller","Validate a coupon code."],
+  ["GET","/seller/settings","Seller","Get store settings."],
+  ["PUT","/seller/settings","Seller","Update store settings."],
+  ["GET","/seller/warehouses","Seller","List pickup locations (warehouses)."],
+  ["POST","/seller/warehouses","Seller","Add a pickup location."],
+  ["PUT","/seller/warehouses/{id}","Seller","Edit a pickup location."],
+  ["POST","/seller/warehouses/{id}/default","Seller","Set the default pickup location."],
+  ["DELETE","/seller/warehouses/{id}","Seller","Remove a pickup location."],
+  ["GET","/seller/wallet","Seller","Balances + transaction ledger."],
+  ["POST","/seller/wallet/payout","Seller","Request a payout."],
+  ["POST","/seller/wallet/bank-details","Seller","Set bank details for payouts."],
+  ["GET","/seller/returns","Seller","List return requests."],
+  ["POST","/seller/orders/{id}/return","Seller","Process a return."],
+  ["GET","/seller/custom-requests","Seller","Custom requests visible to the seller."],
+  ["POST","/admin/auth/login","Public","Admin-portal login (admin accounts only); sets the admin httpOnly cookie pair."],
+  ["POST","/admin/auth/refresh","Public","Exchange the admin refresh cookie for a fresh admin token pair."],
+  ["GET","/admin/auth/me","Admin","Signed-in admin identity from the admin cookie."],
+  ["POST","/admin/auth/logout","Admin","Clear the admin cookie pair."],
+  ["GET","/admin/me","Admin","Signed-in admin identity + section permissions."],
+  ["GET","/admin/stats","Admin","Platform-wide stats."],
+  ["GET","/admin/orders","Admin","All orders."],
+  ["GET","/admin/products","Admin","All products."],
+  ["GET","/admin/stores","Admin","All seller stores."],
+  ["POST","/admin/stores","Admin","Approve / reject / toggle a store."],
+  ["GET","/admin/reports","Admin","User reports."],
+  ["POST","/admin/reports/{id}/action","Admin","Resolve / dismiss a report."],
+  ["GET","/admin/requests","Admin","All custom requests."],
+  ["GET","/admin/coupons","Admin","List platform coupons."],
+  ["POST","/admin/coupons","Admin","Create a coupon (GLOBAL or STORE scope)."],
+  ["DELETE","/admin/coupons/{id}","Admin","Delete a coupon."],
+  ["GET","/admin/moderators","Admin","List moderators (super-admin only)."],
+  ["PUT","/admin/moderators/{id}/permissions","Admin","Set a moderator's sections (super-admin only)."],
+  ["GET","/admin/conversations","Admin","Monitor buyer↔seller offer chats (read-only)."],
+  ["GET","/admin/conversations/{id}","Admin","One offer conversation (read-only)."],
+  ["POST","/reports","Buyer","Flag content; creates a PENDING report for admin review."],
+  ["POST","/contact","Public","Contact-us; emails the team when SMTP is configured."],
+  ["POST","/newsletter","Public","Subscribe to the newsletter."],
+  ["POST","/checkout","Buyer","Create a Stripe Checkout session."],
+  ["POST","/checkout/quote","Buyer","Money breakdown (subtotal, shipping split, fee, commission, total)."],
+  ["POST","/checkout/confirm","Buyer","Confirm a paid Stripe session server-side and fulfill (webhook-independent)."],
+  ["POST","/webhooks/stripe","Public","Stripe webhook (raw body, signed)."],
+  ["POST","/webhooks/bosta","Public","Bosta shipment-status webhook (deduped)."],
+  ["POST","/upload","Buyer","Upload an image to Cloudinary."],
+  ["GET","/bosta/cities","Buyer","Bosta cities."],
+  ["GET","/bosta/cities/{cityId}/zones","Buyer","Zones for a city."],
+  ["GET","/bosta/cities/{cityId}/districts","Buyer","Districts for a city."],
+  ["POST","/shipping/estimate","Buyer","Estimate shipping cost for a cart."],
+];
+const GROUPS=["All","Auth","Products","Wishlist","Orders","Account","Store","Seller","Custom","Admin","Integrations"];
+function groupOf(p){
+  if(p.startsWith("/admin"))return"Admin";          // incl. /admin/auth/login
+  if(p.startsWith("/auth")||p==="/health")return"Auth";
+  if(p.startsWith("/products")||p.startsWith("/search")||p.startsWith("/ratings"))return"Products";
+  if(p.startsWith("/wishlist"))return"Wishlist";
+  if(p.startsWith("/orders")||p.startsWith("/checkout")||p.startsWith("/cart"))return"Orders";
+  if(p.startsWith("/users")||p.startsWith("/notifications")||p.startsWith("/reports"))return"Account";
+  if(p.startsWith("/store"))return"Store";
+  if(p.startsWith("/seller"))return"Seller";
+  if(p.startsWith("/custom"))return"Custom";
+  return"Integrations";   // upload · bosta · shipping · webhooks · contact · newsletter
+}
+let activeGroup="All",query="";
+function renderChips(){
+  const c=document.getElementById("ep-chips");
+  c.innerHTML=GROUPS.map(g=>`<span class="chip ${g===activeGroup?'active':''}" data-g="${g}">${g}</span>`).join("");
+  c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{activeGroup=ch.dataset.g;renderChips();renderList();});
+}
+function renderList(){
+  const list=document.getElementById("ep-list");
+  const q=query.trim().toLowerCase();
+  const rows=EP.filter(([m,p,a,s])=>{
+    if(activeGroup!=="All"&&groupOf(p)!==activeGroup)return false;
+    if(!q)return true;
+    return (m+" "+p+" "+a+" "+s+" /api/v1").toLowerCase().includes(q);
+  });
+  document.getElementById("ep-count").textContent=`${rows.length} endpoint${rows.length!==1?'s':''}`;
+  list.innerHTML=rows.map(([m,p,a,s])=>`
+    <div class="ep">
+      <div class="ep-head">
+        <span class="m ${m.toLowerCase()}">${m}</span>
+        <span class="ep-path">/api/v1${p}</span>
+        <span class="auth ${a.toLowerCase()}">${a}</span>
+      </div>
+      <div class="ep-body">
+        <p style="margin:8px 0 0">${s}</p>
+        <div class="ep-meta">
+          <b>Group</b><span>${groupOf(p)}</span>
+          <b>Auth</b><span>${a==="Public"?"none":a==="Buyer"?"any authenticated user":a+" role"}</span>
+          <b>Path</b><span><code class="in">/api/v1${p}</code></span>
+        </div>
+      </div>
+    </div>`).join("")||`<div class="ep-count">No endpoints match.</div>`;
+  list.querySelectorAll(".ep-head").forEach(h=>h.onclick=()=>h.parentElement.classList.toggle("open"));
+}
+document.getElementById("ep-search").addEventListener("input",e=>{query=e.target.value;renderList();});
+renderChips();renderList();
+
+// theme toggle (persisted)
+const root=document.documentElement, themeBtn=document.getElementById("themeToggle");
+function applyTheme(t){root.setAttribute("data-theme",t);themeBtn.textContent=t==="dark"?"Light mode":"Dark mode";}
+let savedTheme="light"; try{savedTheme=localStorage.getItem("manzili-docs-theme")||"light";}catch(e){}
+applyTheme(savedTheme);
+themeBtn.onclick=()=>{const next=root.getAttribute("data-theme")==="dark"?"light":"dark";applyTheme(next);try{localStorage.setItem("manzili-docs-theme",next);}catch(e){}};
+
+// expert toggle
+const expBtn=document.getElementById("expertToggle");
+expBtn.onclick=()=>{const hidden=document.documentElement.classList.toggle("hide-expert");expBtn.textContent=hidden?"Show expert notes":"Hide expert notes";};
+
+// tabs
+document.querySelectorAll(".tabs").forEach(t=>{
+  t.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    t.querySelectorAll("button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    let el=t.nextElementSibling;
+    while(el&&el.classList.contains("tabpane")){el.classList.toggle("active",el.id===b.dataset.tab);el=el.nextElementSibling;}
+  });
+});
+
+// copy
+document.querySelectorAll(".code .copy").forEach(btn=>btn.onclick=()=>{
+  const pre=btn.closest(".code").querySelector("pre");
+  navigator.clipboard.writeText(pre.innerText.trim()).then(()=>{const t=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=t,1200);});
+});
+
+// lightweight highlight
+const KW={csharp:["public","private","protected","internal","sealed","abstract","class","interface","record","struct","void","async","await","return","var","new","static","readonly","using","namespace","if","else","for","foreach","while","throw","try","catch","is","not","null","true","false","string","int","bool","object","this","get","set"],bash:["cd","dotnet","curl","echo","export"],json:[],text:[]};
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+document.querySelectorAll(".code").forEach(block=>{
+  const lang=(block.dataset.lang||"text").toLowerCase();
+  const pre=block.querySelector("pre");if(!pre)return;
+  let html=esc(pre.textContent.replace(/^\n/,""));
+  if(lang==="csharp")html=html.replace(/(\/\/[^\n]*)/g,'<span class="tc">$1</span>');
+  if(lang==="bash"||lang==="text")html=html.replace(/(#[^\n]*)/g,'<span class="tc">$1</span>');
+  html=html.replace(/(&quot;[^&]*?&quot;)/g,'<span class="ts">$1</span>').replace(/('[^']*?')/g,'<span class="ts">$1</span>');
+  const kws=KW[lang]||[];if(kws.length){html=html.replace(new RegExp("\\b("+kws.join("|")+")\\b","g"),'<span class="tk">$1</span>');}
+  html=html.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="tn">$1</span>');
+  if(lang==="csharp")html=html.replace(/(\[[A-Za-z][\w]*(?:\([^\)]*\))?\])/g,'<span class="ta">$1</span>');
+  pre.innerHTML=html;
+});
+
+// scrollspy
+const navLinks=[...document.querySelectorAll("#nav a")];
+const sections=navLinks.map(a=>document.querySelector(a.getAttribute("href"))).filter(Boolean);
+const spy=()=>{const y=window.scrollY+130;let cur=sections[0];for(const s of sections){if(s.offsetTop<=y)cur=s;}navLinks.forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#"+cur.id));};
+window.addEventListener("scroll",spy,{passive:true});spy();
+</script>
+</body>
+</html>

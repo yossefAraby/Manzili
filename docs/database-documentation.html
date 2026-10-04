@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manzili Database — Schema Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Milligram-style sizing: 62.5% root, rem-based, generous line-height — themed to Manzili. */
+  :root{
+    --paper:#faf8f5; --surface:#fffdfb; --inset:#f4efe4; --paper-2:#fcfbf9;
+    --ink:#23303f; --navy:#1c355e; --muted:#6f7b89; --faint:#9aa4b0;
+    --line:#e8e0d2; --line-2:#efe9dd;
+    --terra:#d35400; --terra-soft:#e67e22; --sage:#5f7a5a; --rose:#9c4024;
+    --code-bg:#15233b; --code-ink:#dfe7f2;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --sans:'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --serif:'Fraunces', Georgia, 'Times New Roman', serif;
+  }
+  html[data-theme="dark"]{
+    --paper:#11151c; --surface:#161c26; --inset:#1c2330; --paper-2:#141a23;
+    --ink:#e3e7ec; --navy:#b8cdec; --muted:#98a4b3; --faint:#6a7686;
+    --line:#28313f; --line-2:#212935;
+    --terra:#ec975f; --terra-soft:#ec975f; --sage:#8fb389; --rose:#e3906e;
+    --code-bg:#0c1018; --code-ink:#dfe7f2;
+  }
+  html[data-theme="dark"] ::selection{background:#3a2f22;}
+  /* at-a-glance summary list */
+  .summary{list-style:none; padding:0; margin:24px 0;}
+  .summary li{padding:10px 0; border-bottom:1px solid var(--line-2); max-width:74ch;}
+  .summary b{color:var(--navy); font-weight:600;}
+  .summary a{font-size:1.2rem;}
+  *{box-sizing:border-box;}
+  html{font-size:62.5%; scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:1.62rem; line-height:1.72; font-weight:400; letter-spacing:.005em;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;}
+  a{color:var(--navy); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--navy) 25%, transparent);}
+  a:hover{border-bottom-color:var(--terra-soft); color:var(--terra);}
+  code{font-family:var(--mono); font-size:.86em;}
+
+  .shell{display:grid; grid-template-columns:282px 1fr; min-height:100vh;}
+  aside{position:sticky; top:0; height:100vh; overflow-y:auto; background:var(--paper-2);
+    border-right:1px solid var(--line); padding-bottom:40px;}
+  main{max-width:840px; margin:0 auto; padding:64px 56px 140px; width:100%;}
+
+  /* sidebar */
+  .brand{padding:30px 26px 22px; border-bottom:1px solid var(--line);}
+  .brand .mark{font-family:var(--serif); font-size:2.4rem; font-weight:500; color:var(--navy); letter-spacing:-.01em;}
+  .brand .mark b{color:var(--terra);}
+  .brand .tag{font-size:1.25rem; color:var(--muted); font-style:italic; font-family:var(--serif); margin-top:2px;}
+  .brand .stk{font-size:1.15rem; color:var(--faint); margin-top:10px; letter-spacing:.02em;}
+  nav{padding:18px 16px;}
+  nav .grp{font-size:1.05rem; text-transform:uppercase; letter-spacing:.14em; color:var(--faint);
+    font-weight:600; margin:20px 12px 7px;}
+  nav a{display:block; color:var(--muted); padding:5px 14px; font-size:1.42rem; border:0; border-left:2px solid transparent; line-height:1.4;}
+  nav a:hover{color:var(--navy); background:transparent;}
+  nav a.active{color:var(--navy); font-weight:600; border-left-color:var(--terra);}
+
+  /* top control */
+  .topctl{display:flex; justify-content:flex-end; margin-bottom:30px;}
+  .qbtn{background:none; border:0; border-bottom:1px dashed var(--line); color:var(--muted); cursor:pointer;
+    font-family:var(--sans); font-size:1.28rem; padding:2px 2px 3px; letter-spacing:.01em;}
+  .qbtn:hover{color:var(--terra);}
+
+  /* eyebrow + headings */
+  .eyebrow{text-transform:uppercase; letter-spacing:.18em; font-size:1.12rem; font-weight:600;
+    color:var(--terra); margin:0 0 4px;}
+  h1.title{font-family:var(--serif); font-weight:500; font-size:4.4rem; line-height:1.08; letter-spacing:-.015em;
+    margin:0 0 14px; color:var(--navy);}
+  h2.sec{font-family:var(--serif); font-weight:500; font-size:3rem; letter-spacing:-.01em; color:var(--navy);
+    margin:64px 0 4px; padding-top:12px;}
+  h3{font-family:var(--sans); font-weight:600; font-size:2rem; letter-spacing:-.01em; margin:36px 0 6px; color:var(--navy);}
+  h4{font-weight:600; font-size:1.6rem; margin:24px 0 4px; color:var(--ink);}
+  .lead{font-size:1.92rem; line-height:1.5; color:var(--ink); font-weight:300; max-width:64ch;}
+  p{max-width:70ch;}
+  .muted{color:var(--muted);}
+  hr.rule{border:0; border-top:1px solid var(--line); margin:52px 0;}
+  ul,ol{padding-left:20px;} li{margin:4px 0;}
+  ::selection{background:#f3d9c2;}
+
+  /* intro meta as a definition list, not stat cards */
+  dl.facts{display:grid; grid-template-columns:auto 1fr; gap:2px 26px; margin:26px 0; font-size:1.5rem;}
+  dl.facts dt{color:var(--faint); text-transform:uppercase; font-size:1.12rem; letter-spacing:.1em; font-weight:600; padding-top:7px;}
+  dl.facts dd{margin:0; padding:6px 0; border-bottom:1px solid var(--line-2);}
+  dl.facts dt{border-bottom:1px solid var(--line-2);}
+
+  /* understated tags */
+  .tags{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0;}
+  .tag{font-size:1.25rem; color:var(--muted); border:1px solid var(--line); border-radius:2px; padding:3px 11px;}
+  .tag b{color:var(--navy); font-weight:600;}
+
+  /* notes — thin rule, small-caps label, barely-there tint */
+  .note{border-left:2px solid var(--navy); padding:6px 0 6px 18px; margin:18px 0; max-width:72ch;}
+  .note .lab{display:block; font-size:1.12rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+    color:var(--navy); margin-bottom:2px;}
+  .note.beginner{border-color:var(--sage);} .note.beginner .lab{color:var(--sage);}
+  .note.warn{border-color:var(--terra);} .note.warn .lab{color:var(--terra);}
+  .expert{border-left:2px solid var(--rose); padding:6px 0 6px 18px; margin:18px 0; max-width:72ch;}
+  .expert .lab{display:block; font-size:1.12rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+    color:var(--rose); margin-bottom:2px;}
+  html.hide-expert .expert{display:none;}
+  .note p, .expert p{margin:0;}
+
+  /* code */
+  .code{margin:18px 0; border-radius:4px; overflow:hidden; border:1px solid #1d2d49;}
+  .code .bar{display:flex; align-items:center; justify-content:space-between; background:#101b2e;
+    padding:6px 14px; border-bottom:1px solid #233455;}
+  .code .lang{font-size:1.05rem; text-transform:uppercase; letter-spacing:.14em; color:#7d90b0; font-weight:600;}
+  .code pre{margin:0; padding:16px 18px; overflow-x:auto; background:var(--code-bg); color:var(--code-ink);
+    font-family:var(--mono); font-size:1.3rem; line-height:1.62;}
+  .copy{background:none; border:1px solid #2c3f63; color:#8fa3c4; border-radius:3px; padding:2px 10px;
+    font-size:1.05rem; cursor:pointer; font-family:var(--sans);}
+  .copy:hover{color:#fff; border-color:var(--terra-soft);}
+  .tk{color:#e3a06b;} .ts{color:#9ec79f;} .tc{color:#6f86a8; font-style:italic;}
+  .tn{color:#d8b46a;} .ty{color:#86b0e6;} .ta{color:#c98a6a;}
+  code.in{background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:1px 6px; color:var(--rose);}
+
+  /* tables — minimal, horizontal rules only */
+  table{width:100%; border-collapse:collapse; margin:18px 0; font-size:1.45rem;}
+  th,td{text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--line-2); vertical-align:top;}
+  th{color:var(--faint); font-size:1.1rem; text-transform:uppercase; letter-spacing:.1em; font-weight:600; border-bottom-color:var(--line);}
+  tbody tr:hover{background:var(--paper-2);}
+
+  /* tabs */
+  .tabs{display:flex; gap:22px; border-bottom:1px solid var(--line); margin:20px 0 0;}
+  .tabs button{background:none; border:0; border-bottom:2px solid transparent; color:var(--muted);
+    padding:8px 0; cursor:pointer; font-size:1.42rem; font-family:var(--sans); font-weight:500;}
+  .tabs button.active{color:var(--navy); border-bottom-color:var(--terra);}
+  .tabpane{display:none;} .tabpane.active{display:block;}
+
+  /* method + auth markers — text, lightly tinted, not chunky badges */
+  .m{font-family:var(--mono); font-size:1.08rem; font-weight:600; letter-spacing:.04em; width:54px; display:inline-block;}
+  .m.get{color:#2f6fb0;} .m.post{color:#4a7d46;} .m.put{color:#b07d1f;} .m.patch{color:#8a5ea3;} .m.delete{color:#b14a3c;}
+  .auth{font-size:1.12rem; color:var(--muted); letter-spacing:.02em;}
+  .auth.seller{color:var(--terra);} .auth.admin{color:var(--rose);} .auth.buyer{color:var(--sage);}
+
+  /* endpoint / schema explorer */
+  .controls{margin:18px 0 4px;}
+  #ep-search{width:100%; background:var(--surface); border:1px solid var(--line); color:var(--ink);
+    padding:11px 14px; border-radius:3px; font-size:1.5rem; font-family:var(--sans);}
+  #ep-search:focus{outline:none; border-color:var(--terra-soft);}
+  .chips{display:flex; gap:18px; flex-wrap:wrap; margin:16px 0 6px;}
+  .chip{cursor:pointer; color:var(--muted); font-size:1.35rem; border-bottom:2px solid transparent; padding-bottom:2px;}
+  .chip.active{color:var(--navy); font-weight:600; border-bottom-color:var(--terra);}
+  .ep-count{color:var(--faint); font-size:1.25rem; margin:8px 0;}
+  .ep{border-bottom:1px solid var(--line-2);}
+  .ep-head{display:flex; align-items:baseline; gap:16px; padding:11px 4px; cursor:pointer;}
+  .ep-head:hover{background:var(--paper-2);}
+  .ep-path{font-family:var(--mono); font-size:1.32rem; color:var(--ink); flex:1; word-break:break-all;}
+  .ep-sum{color:var(--faint); font-size:1.25rem;}
+  .ep-body{display:none; padding:2px 4px 16px 16px;}
+  .ep.open .ep-body{display:block;}
+  .ep-meta{display:grid; grid-template-columns:auto 1fr; gap:3px 20px; font-size:1.4rem; margin-top:6px;}
+  .ep-meta b{color:var(--faint); font-weight:600; font-size:1.08rem; text-transform:uppercase; letter-spacing:.08em;}
+  .ep-grp-badge{font-size:1.05rem; color:var(--faint); border:1px solid var(--line); border-radius:2px; padding:1px 9px; white-space:nowrap;}
+  /* schema column table */
+  .cols{width:100%; border-collapse:collapse; margin:10px 0 2px; font-size:1.32rem;}
+  .cols th,.cols td{padding:5px 12px 5px 0; border-bottom:1px solid var(--line-2);}
+  .cols .kpk{color:var(--terra); font-weight:600; font-family:var(--mono); font-size:1.05rem;}
+  .cols .kfk{color:var(--rose); font-weight:600; font-family:var(--mono); font-size:1.05rem;}
+  .cols .cn{font-family:var(--mono); font-size:1.2rem; color:var(--ink);}
+  .cols .ct{font-family:var(--mono); font-size:1.12rem; color:var(--muted);}
+  @media (max-width:1000px){ .ep-body{padding-left:4px;} }
+
+  /* ER diagram */
+  .arch{width:100%; height:auto; margin:22px 0;}
+  .arch .box{fill:var(--surface); stroke:var(--line); stroke-width:1.5;}
+  .arch .box.api{stroke:#3f6da3;} .arch .box.app{stroke:var(--terra-soft);}
+  .arch .box.infra{stroke:#b8893f;} .arch .box.dom{stroke:#9c6b8a;} .arch .box.acct{stroke:#5f7a5a;}
+  .arch .t-title{fill:var(--navy); font-family:var(--sans); font-weight:600; font-size:13px;}
+  .arch .t-sub{fill:var(--muted); font-family:var(--sans); font-size:10.5px;}
+  .arch .arrow{stroke:#bcae98; stroke-width:1.5; fill:none; marker-end:url(#ah);}
+  .arch .lbl{fill:var(--faint); font-family:var(--sans); font-size:10px;}
+
+  details.faq{border-bottom:1px solid var(--line-2);}
+  details.faq summary{padding:13px 2px; cursor:pointer; font-weight:500; list-style:none; color:var(--navy);}
+  details.faq summary::-webkit-details-marker{display:none;}
+  details.faq summary::before{content:"+"; color:var(--terra); margin-right:12px; font-weight:600;}
+  details.faq[open] summary::before{content:"\2013";}
+  details.faq .b{padding:0 2px 14px 26px; color:var(--muted); max-width:70ch;}
+
+  .colophon{margin-top:72px; padding-top:26px; border-top:1px solid var(--line); color:var(--faint); font-size:1.28rem;}
+  kbd{background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:1px 6px; font-family:var(--mono); font-size:1.15rem;}
+  @media (max-width:780px){
+    .shell{grid-template-columns:1fr;} aside{position:static; height:auto;}
+    main{padding:36px 22px 90px;} h1.title{font-size:3.4rem;} .lead{font-size:1.7rem;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <div class="mark">Manzili<b>.</b></div>
+      <div class="tag">where real craft finds its home</div>
+      <div class="stk">PostgreSQL · Supabase · EF Core · database-first</div>
+    </div>
+    <nav id="nav">
+      <div class="grp">Get oriented</div>
+      <a href="#overview">Overview</a>
+      <a href="#tldr">At a glance</a>
+      <a href="#access">Technology &amp; access</a>
+      <div class="grp">The model</div>
+      <a href="#er">ER overview</a>
+      <a href="#explorer">Schema explorer</a>
+      <div class="grp">Design</div>
+      <a href="#decisions">Key relationships</a>
+      <a href="#conventions">Data types &amp; gotchas</a>
+      <a href="#vs-erd">Active DB vs the ERD</a>
+      <div class="grp">Reference</div>
+      <a href="#glossary">Glossary</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topctl">
+      <button class="qbtn" id="themeToggle">Dark mode</button>
+      <span style="color:var(--faint); margin:0 14px;">·</span>
+      <button class="qbtn" id="expertToggle">Hide expert notes</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview">
+      <p class="eyebrow">Database documentation</p>
+      <h1 class="title">The data behind&nbsp;Manzili.</h1>
+      <p class="lead">A multi-vendor marketplace for handmade Egyptian products, persisted in a single
+        PostgreSQL database on Supabase — schema <code class="in">manzili</code>, ~45 tables, read and written
+        by an EF Core <em>database-first</em> backend.</p>
+
+      <dl class="facts">
+        <dt>Engine</dt><dd>PostgreSQL 15 (Supabase, on AWS <code class="in">eu-west-3</code>)</dd>
+        <dt>Schema</dt><dd><code class="in">manzili</code> — <em>not</em> <code class="in">public</code></dd>
+        <dt>Access</dt><dd>Supabase connection pooler · SSL required · EF Core 10 + Npgsql</dd>
+        <dt>Approach</dt><dd>Database-first — the schema is the source of truth, scaffolded into ~45 entities</dd>
+        <dt>Shape</dt><dd>Identity · Catalog · Cart/Wishlist · Orders &amp; fulfillment · Payments &amp; wallet · Custom orders · Coupons · Reviews/Reports · Messaging</dd>
+      </dl>
+
+      <div class="note beginner"><span class="lab">New to databases? Read this first</span>
+        <p>A <em>relational database</em> stores data in <strong>tables</strong> (like spreadsheets). Each row has a
+        <strong>primary key</strong> (PK) that identifies it; a <strong>foreign key</strong> (FK) is a column that points at
+        another table's primary key, which is how tables link together. Terms you don't recognise are defined in the
+        <a href="#glossary">Glossary</a>; the rose-coloured <em>Expert notes</em> add depth and can be hidden with the control at
+        the top right.</p></div>
+
+      <div class="expert"><span class="lab">Expert note — one DB, two stacks</span>
+        <p>This is the same physical database the project's original Node/Prisma backend used; the .NET rebuild was scaffolded
+        against it <em>without</em> reshaping it. Because the schema is owned upstream, the application uses no EF migrations — it
+        treats the schema as read/write but never re-shapes it. Supabase also injects its own managed schemas
+        (<code class="in">auth</code>, <code class="in">storage</code>, <code class="in">realtime</code>, <code class="in">vault</code>);
+        the application maps only the <code class="in">manzili</code> schema and references the Supabase enums/extensions just so
+        the model validates.</p></div>
+    </section>
+
+    <!-- AT A GLANCE -->
+    <section id="tldr">
+      <p class="eyebrow">The two-minute version</p>
+      <h2 class="sec" style="margin-top:6px">At a glance</h2>
+      <p class="lead" style="font-size:1.74rem">Everything that matters about the schema, condensed. Each point links to the full detail.</p>
+      <ul class="summary">
+        <li><b>What it stores.</b> Everything a multi-vendor handmade marketplace needs: people, stores, products, carts, orders, shipments, wallets, custom commissions, coupons, reviews and reports. <a href="#er">ER overview</a></li>
+        <li><b>Where it lives.</b> A single PostgreSQL database on Supabase, schema <code class="in">manzili</code> (the Supabase Table Editor defaults to <code class="in">public</code> and looks empty — that trips everyone up). <a href="#access">Technology &amp; access</a></li>
+        <li><b>The identity spine.</b> One <code class="in">person</code> row per human; <code class="in">enduser</code>, <code class="in">seller</code> and <code class="in">systemadmin</code> are 1:1 role tables hanging off it — a supertype/subtype design. <a href="#decisions">Identity</a></li>
+        <li><b>The big idea.</b> A buyer's cart can span several sellers, so one <code class="in">orders</code> row fans out into one <code class="in">store_orders</code> per seller, each with snapshotted <code class="in">store_order_items</code>. <a href="#decisions">Order split</a></li>
+        <li><b>Money.</b> A <code class="in">seller_wallet</code> with pending/available buckets, an append-only <code class="in">wallet_transactions</code> ledger (idempotent), and <code class="in">payout</code> requests. <a href="#decisions">Wallet ledger</a></li>
+        <li><b>Fulfillment.</b> One <code class="in">shipment</code> per store-order plus a de-duplicated <code class="in">shipment_events</code> timeline. <a href="#decisions">Fulfillment</a></li>
+        <li><b>Commissions.</b> Custom requests negotiate through <code class="in">offers</code> + an <code class="in">offer_messages</code> chat and milestone <code class="in">offer_payments</code>. <a href="#decisions">Custom orders</a></li>
+        <li><b>Types.</b> Money is <code class="in">numeric(12,2)</code>, ids are <code class="in">integer</code>, statuses are small integers translated by the app's StatusMaps. <a href="#conventions">Conventions</a></li>
+        <li><b>The gotcha.</b> A handful of tables use <code class="in">timestamp WITHOUT time zone</code>, so writes must use <code class="in">DateTimeKind.Unspecified</code> or Npgsql throws. <a href="#conventions">Gotchas</a></li>
+        <li><b>Paper vs reality.</b> A frank comparison of the team's original ERDPlus design against the schema that actually shipped. <a href="#vs-erd">Active DB vs the ERD</a></li>
+      </ul>
+    </section>
+
+    <hr class="rule">
+
+    <!-- TECHNOLOGY & ACCESS -->
+    <section id="access">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Technology &amp; access</h2>
+      <table>
+        <thead><tr><th>Concern</th><th>Choice</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Engine</td><td>PostgreSQL</td><td>Managed by Supabase, hosted on AWS <code class="in">eu-west-3</code>.</td></tr>
+          <tr><td>Schema</td><td><code class="in">manzili</code></td><td>All application tables live here, not in <code class="in">public</code>.</td></tr>
+          <tr><td>Connection</td><td>Supabase pooler</td><td>Host <code class="in">aws-0-eu-west-3.pooler.supabase.com</code>; database <code class="in">postgres</code>.</td></tr>
+          <tr><td>Transport</td><td>SSL required</td><td>The connection string carries <code class="in">Ssl Mode=Require</code>.</td></tr>
+          <tr><td>Driver / ORM</td><td>Npgsql + EF Core 10</td><td>Database-first; entities scaffolded from the live schema.</td></tr>
+          <tr><td>Migrations</td><td>None (by design)</td><td>The schema is owned upstream and reverse-engineered; the app never re-shapes it.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note warn"><span class="lab">The schema trap</span>
+        <p>Opening the project in the Supabase Table Editor shows an empty database — because the editor defaults to the
+        <code class="in">public</code> schema. Every Manzili table is under <code class="in">manzili</code>. Switch the schema selector (or
+        run <code class="in">SET search_path TO manzili;</code>) to see the data.</p></div>
+
+      <p>The model was generated once with the EF Core scaffold command, pointed at the <code class="in">manzili</code> schema:</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash — one-time scaffold</span><button class="copy">Copy</button></div><pre>
+dotnet ef dbcontext scaffold "&lt;connection&gt;" Npgsql.EntityFrameworkCore.PostgreSQL \
+  --schema manzili --context ManziliDbContext \
+  --context-dir Persistence --output-dir Persistence/Entities --no-onconfiguring</pre></div>
+      <div class="expert"><span class="lab">Expert note — one schema fix was required</span>
+        <p>Scaffolding initially failed on a single FK type mismatch: <code class="in">custom_request.categoryid</code> was
+        <code class="in">integer</code> while <code class="in">category.categoryid</code> is <code class="in">smallint</code>. A one-line
+        <code class="in">ALTER COLUMN … TYPE smallint</code> aligned the database with its own declaration so EF could map the relationship.
+        Later DDL (run directly via Npgsql against the <code class="in">manzili</code> schema) dropped the 1:1 unique index on
+        <code class="in">store_pickup_addresses.sellerid</code> and added <code class="in">label</code> + <code class="in">is_default</code>,
+        turning warehouses into a 1:many.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ER OVERVIEW -->
+    <section id="er">
+      <p class="eyebrow">The model</p>
+      <h2 class="sec" style="margin-top:6px">ER overview</h2>
+      <p>The schema has one clear spine. A human is a <code class="in">person</code>; the roles
+        <code class="in">enduser</code> (buyer), <code class="in">seller</code> and <code class="in">systemadmin</code> are 1:1 tables that
+        extend it. Buyers browse a <code class="in">products</code> catalog organised by <code class="in">category</code>, fill a
+        <code class="in">cart</code>, and place an <code class="in">orders</code> row that fans out into per-seller
+        <code class="in">store_orders</code>. Each store-order ships via a <code class="in">shipment</code> and credits a
+        <code class="in">seller_wallet</code>. Made-to-order work flows through <code class="in">custom_request</code> →
+        <code class="in">offers</code> → <code class="in">offer_payments</code>.</p>
+
+      <svg class="arch" viewBox="0 0 760 360" role="img" aria-label="ER overview diagram">
+        <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 Z" fill="#bcae98"/></marker></defs>
+        <!-- identity spine -->
+        <rect class="box acct" x="300" y="14" width="160" height="44" rx="6"/>
+        <text class="t-title" x="318" y="34">person</text>
+        <text class="t-sub" x="318" y="50">one row per human</text>
+        <rect class="box acct" x="120" y="96" width="150" height="40" rx="6"/>
+        <text class="t-title" x="136" y="121">enduser (buyer)</text>
+        <rect class="box acct" x="305" y="96" width="150" height="40" rx="6"/>
+        <text class="t-title" x="321" y="121">seller</text>
+        <rect class="box acct" x="490" y="96" width="150" height="40" rx="6"/>
+        <text class="t-title" x="506" y="121">systemadmin</text>
+        <path class="arrow" d="M360,96 L335,58"/><path class="arrow" d="M380,96 L380,58"/><path class="arrow" d="M420,96 L440,58"/>
+        <text class="lbl" x="250" y="80">1:1 subtype tables</text>
+        <!-- catalog -->
+        <rect class="box dom" x="20" y="176" width="150" height="40" rx="6"/>
+        <text class="t-title" x="36" y="201">products</text>
+        <rect class="box dom" x="20" y="240" width="150" height="36" rx="6"/>
+        <text class="t-title" x="36" y="263">category</text>
+        <path class="arrow" d="M95,240 L95,216"/>
+        <path class="arrow" d="M305,116 C230,150 170,165 170,196"/>
+        <text class="lbl" x="180" y="150">sells</text>
+        <!-- order split -->
+        <rect class="box app" x="300" y="176" width="160" height="40" rx="6"/>
+        <text class="t-title" x="316" y="201">orders</text>
+        <text class="t-sub" x="316" y="200" dy="-0"> </text>
+        <rect class="box app" x="300" y="240" width="160" height="40" rx="6"/>
+        <text class="t-title" x="316" y="261">store_orders</text>
+        <text class="t-sub" x="316" y="274">one per seller</text>
+        <rect class="box app" x="300" y="304" width="160" height="40" rx="6"/>
+        <text class="t-title" x="316" y="325">store_order_items</text>
+        <text class="t-sub" x="316" y="338"> </text>
+        <path class="arrow" d="M380,216 L380,240"/>
+        <path class="arrow" d="M380,280 L380,304"/>
+        <path class="arrow" d="M170,196 C235,205 250,256 300,258"/>
+        <path class="arrow" d="M380,136 C380,150 380,160 380,176"/>
+        <text class="lbl" x="466" y="232">1 → many</text>
+        <!-- fulfillment + wallet -->
+        <rect class="box infra" x="500" y="176" width="160" height="40" rx="6"/>
+        <text class="t-title" x="516" y="201">shipment</text>
+        <text class="t-sub" x="516" y="200"> </text>
+        <rect class="box infra" x="500" y="240" width="160" height="40" rx="6"/>
+        <text class="t-title" x="516" y="261">seller_wallet</text>
+        <rect class="box infra" x="500" y="304" width="160" height="40" rx="6"/>
+        <text class="t-title" x="516" y="325">wallet_transactions</text>
+        <path class="arrow" d="M460,258 L500,256"/>
+        <path class="arrow" d="M460,270 C480,285 490,300 500,316"/>
+        <path class="arrow" d="M580,280 L580,304"/>
+        <text class="lbl" x="466" y="300">credits</text>
+      </svg>
+      <p class="muted" style="font-size:1.3rem">Simplified spine. Custom orders (<code class="in">custom_request → offers → offer_messages / offer_payments</code>),
+      coupons (<code class="in">coupons → user_coupons</code>), reviews, reports, notifications, addresses and warehouses hang off these
+      core tables — browse them all in the Schema explorer below.</p>
+
+      <h4>The core flows, in words</h4>
+      <ul class="muted">
+        <li><strong>Identity.</strong> <code class="in">person</code> ⊃ <code class="in">enduser</code> / <code class="in">seller</code> / <code class="in">systemadmin</code> (each 1:1). <code class="in">person_permissions</code> grants moderators section access; <code class="in">systemadmin.supervisorid</code> is a self-reference distinguishing super-admins from moderators.</li>
+        <li><strong>Catalog.</strong> <code class="in">products</code> belong to a <code class="in">seller</code> and a <code class="in">category</code>, with <code class="in">product_images</code>, <code class="in">product_variants</code> → <code class="in">variant_options</code>.</li>
+        <li><strong>Cart &amp; wishlist.</strong> The cart is now <strong>account-linked and persisted server-side</strong> — <code class="in">cart</code> carries an <code class="in">items_json text</code> column holding the active cart snapshot (added idempotently by the app's <code class="in">SchemaMigrator</code>); the legacy <code class="in">cart_contain</code> M:N junction still exists. <code class="in">wishlist</code> + <code class="in">whishlist_contain</code>.</li>
+        <li><strong>Orders &amp; fulfillment.</strong> <code class="in">orders</code> → <code class="in">store_orders</code> → <code class="in">store_order_items</code>; each store-order gets one <code class="in">shipment</code> with a <code class="in">shipment_events</code> timeline; <code class="in">returns</code> + <code class="in">proof_as_images</code> handle reverse logistics.</li>
+        <li><strong>Payments &amp; wallet.</strong> <code class="in">seller_wallet</code> (pending/available) ← <code class="in">wallet_transactions</code> ledger; <code class="in">payout</code> drains the available balance.</li>
+        <li><strong>Custom orders.</strong> <code class="in">custom_request</code> (+ <code class="in">visual_inspiration</code>, <code class="in">voicememo</code>, <code class="in">color_palette</code>) → <code class="in">offers</code> → <code class="in">offer_messages</code> + <code class="in">offer_payments</code>.</li>
+        <li><strong>Coupons.</strong> <code class="in">coupons</code> (+ <code class="in">coupon_product</code>) and the redemption record <code class="in">user_coupons</code>.</li>
+        <li><strong>Reviews &amp; reports.</strong> <code class="in">reviewing_and_rating</code> (one per buyer+product); <code class="in">reports</code> for moderation.</li>
+        <li><strong>Messaging &amp; misc.</strong> <code class="in">notification</code>; <code class="in">conversation</code> + <code class="in">messages</code> (legacy chat, superseded by offer messages); <code class="in">addresses</code> with Bosta city/zone/district ids; <code class="in">bosta_address_mapping</code>.</li>
+      </ul>
+    </section>
+
+    <hr class="rule">
+
+    <!-- SCHEMA EXPLORER -->
+    <section id="explorer">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Schema explorer</h2>
+      <p>Every table in the <code class="in">manzili</code> schema. Filter by group or search by table or column name; click a row for
+        its key columns, primary key and notable foreign keys. Mappings are taken verbatim from
+        <code class="in">ManziliDbContext.OnModelCreating</code>.</p>
+      <div class="controls">
+        <input id="ep-search" type="search" placeholder="Search — e.g. 'order', 'wallet', 'sellerid'…" autocomplete="off">
+      </div>
+      <div class="chips" id="ep-chips"></div>
+      <div class="ep-count" id="ep-count"></div>
+      <div id="ep-list"></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- KEY RELATIONSHIPS & DESIGN DECISIONS -->
+    <section id="decisions">
+      <p class="eyebrow">Design</p>
+      <h2 class="sec" style="margin-top:6px">Key relationships &amp; design decisions</h2>
+
+      <h3>Identity as supertype / subtype</h3>
+      <p>A single human is one <code class="in">person</code> (PK <code class="in">personid</code>, unique
+        <code class="in">email</code>). The three roles are <em>separate tables in a 1:1 relationship</em> with person:
+        <code class="in">enduser</code>, <code class="in">seller</code>, <code class="in">systemadmin</code> — each has a unique FK back to
+        <code class="in">personid</code>. A person can be a buyer and a seller at once (two role rows, one identity). Moderators are
+        modelled with <code class="in">systemadmin.supervisorid</code> (self-FK: a moderator points at the super-admin who created them)
+        plus <code class="in">person_permissions</code> rows granting section access.</p>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>This is classic supertype/subtype (a.k.a. "table-per-type" inheritance). Shared columns — email, password,
+        names, refresh token — live once on <code class="in">person</code>; role-specific columns live on the subtype. The .NET role
+        resolver simply asks "is there a systemadmin row? a seller row?" to derive the JWT role, and seller verification gates that:
+        a <code class="in">seller</code> only counts as a logged-in seller when <code class="in">store_status='approved'</code> and
+        <code class="in">is_active</code>.</p></div>
+
+      <h3>The per-seller order split &amp; price snapshots</h3>
+      <p>The single most important design decision. A buyer's cart can contain items from multiple independent sellers, but each
+        seller fulfils, ships and is paid separately. So one purchase becomes:</p>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">model</span><button class="copy">Copy</button></div><pre>
+orders            (buyer, address, payment method/status, grand total, coupon_snapshot)
+ ├─ store_orders  (seller A)  subtotal/discount/shipping/total, own status
+ │   └─ store_order_items[]   price_at_purchase + product_name + product_image_url snapshot
+ └─ store_orders  (seller B)  …
+     └─ store_order_items[]</pre></div>
+      <ul class="muted">
+        <li><code class="in">orders</code> holds buyer-level facts (one <code class="in">address_id</code>, one payment, the grand total, a JSON <code class="in">coupon_snapshot</code>).</li>
+        <li><code class="in">store_orders</code> is the unit a seller sees and acts on: its own <code class="in">status</code>, <code class="in">subtotal</code>, <code class="in">discount_total</code>, <code class="in">shipping_total</code>, <code class="in">total</code>.</li>
+        <li><code class="in">store_order_items</code> <strong>snapshots</strong> the price, name and image at purchase time, so order history survives later product edits or deletions.</li>
+      </ul>
+      <div class="expert"><span class="lab">Expert note — two item tables co-exist</span>
+        <p>The legacy <code class="in">consist_of</code> (a junction of <code class="in">orders</code>×<code class="in">products</code> with
+        <code class="in">price_at_purchase</code>) still exists, but the live order path writes per-seller line items into
+        <code class="in">store_order_items</code>. The snapshot columns are deliberate denormalization for an audit/history concern —
+        the line item must remain truthful even if the product's price changes or the product is removed (hence the
+        <code class="in">RESTRICT</code> on the product FK).</p></div>
+
+      <h3>The wallet ledger &amp; idempotency</h3>
+      <p>Each seller has exactly one <code class="in">seller_wallet</code> (unique <code class="in">sellerid</code>) with two money
+        buckets: <code class="in">pending_balance</code> and <code class="in">available_balance</code>. Every movement is an append-only
+        row in <code class="in">wallet_transactions</code> (<code class="in">SALE_CREDIT</code>, <code class="in">COMMISSION_DEBIT</code>,
+        <code class="in">SHIPPING_DEBIT</code>, releases, reversals, payouts). Funds land pending on sale and release to available on
+        delivery.</p>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">constraint</span><button class="copy">Copy</button></div><pre>
+UNIQUE (wallet_id, idempotency_key)   -- wallet_transactions
+-- a webhook retry with the same key hits the constraint; the duplicate
+-- insert AND its balance change roll back together. Money is never double-counted.</pre></div>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>The <code class="in">seller.sellerwallet_balance</code> column survives from the original design as a convenience scalar, but
+        the authoritative balances are the wallet's two buckets, reconstructable by summing the ledger. Ledger rows are only ever
+        inserted, never updated — the immutable-ledger pattern. <code class="in">payout</code> rows drain the available balance and are
+        rejected when funds are insufficient.</p></div>
+
+      <h3>Custom-order negotiation with milestones</h3>
+      <p>Made-to-order work is a negotiation, not a fixed-price purchase. A buyer files a <code class="in">custom_request</code>
+        (dimensions, material, desired date, plus <code class="in">visual_inspiration</code> images, a <code class="in">voicememo</code>,
+        and a <code class="in">color_palette</code>). Sellers respond with <code class="in">offers</code> (price + description). The accepted
+        offer carries a <em>state machine of timestamps</em> — <code class="in">accepted_at</code>, <code class="in">first_paid_at</code>,
+        <code class="in">progress_uploaded_at</code>, <code class="in">ready_to_ship_at</code>, <code class="in">second_paid_at</code> — and a
+        running chat in <code class="in">offer_messages</code>. Each milestone payment is an <code class="in">offer_payments</code> row.</p>
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>Paying the final milestone bridges back into the standard pipeline: the app creates a real
+        <code class="in">orders</code> + <code class="in">store_orders</code> (with a hidden, disabled placeholder
+        <code class="in">products</code> row, because <code class="in">store_order_items</code> requires a product FK) and then runs the
+        same shipment + wallet flow. That is why custom orders and standard orders share fulfillment without duplicating it.</p></div>
+
+      <h3>Pickup warehouses as 1:many</h3>
+      <p>A seller can ship from several locations. <code class="in">store_pickup_addresses</code> was originally 1:1 with the seller; it
+        is now <strong>1:many</strong> — the unique index on <code class="in">sellerid</code> was dropped and
+        <code class="in">label</code> + <code class="in">is_default</code> were added. Fulfillment picks the default warehouse for the
+        Bosta pickup leg.</p>
+
+      <h3>Referential integrity &amp; delete behavior</h3>
+      <p>Relationships are enforced by named FK constraints. Delete behavior is chosen per relationship, visible in the mappings:
+        <code class="in">products → seller</code> is <code class="in">CASCADE</code> (deleting a seller removes their products);
+        <code class="in">store_order_items → products</code> and <code class="in">store_orders → seller</code> are
+        <code class="in">RESTRICT</code> (you cannot delete a product/seller out from under a live order); buyer-facing FKs such as
+        <code class="in">orders → enduser/address</code> are <code class="in">SET NULL</code> so order history outlives a deleted account
+        or address.</p>
+    </section>
+
+    <hr class="rule">
+
+    <!-- DATA TYPES & GOTCHAS -->
+    <section id="conventions">
+      <p class="eyebrow">Design</p>
+      <h2 class="sec" style="margin-top:6px">Data-type conventions &amp; gotchas</h2>
+      <table>
+        <thead><tr><th>Kind of data</th><th>Postgres type</th><th>Convention</th></tr></thead>
+        <tbody>
+          <tr><td>Identifiers</td><td><code class="in">integer</code> (some <code class="in">smallint</code>)</td><td>Surrogate auto-increment PKs; <code class="in">category.categoryid</code> is <code class="in">smallint</code>.</td></tr>
+          <tr><td>Money</td><td><code class="in">numeric(12,2)</code></td><td>Exact decimal — never floats. Shipping uses <code class="in">numeric(10,2)</code>, discount % uses <code class="in">numeric(5,2)</code>.</td></tr>
+          <tr><td>Timestamps (most)</td><td><code class="in">timestamptz</code></td><td><code class="in">created_at</code> etc. default to <code class="in">CURRENT_TIMESTAMP</code>.</td></tr>
+          <tr><td>Timestamps (some)</td><td><code class="in">timestamp</code> (no tz) ⚠️</td><td>See the warning below.</td></tr>
+          <tr><td>Status codes</td><td><code class="in">integer</code> or short <code class="in">varchar</code></td><td>Numeric codes translated by the app's <code class="in">StatusMaps</code>; newer tables use string statuses (<code class="in">'pending'</code>, <code class="in">'ORDER_PLACED'</code>).</td></tr>
+          <tr><td>Free text</td><td><code class="in">varchar(n)</code> / <code class="in">text</code></td><td>Bounded where length matters (names, codes), <code class="in">text</code> for descriptions.</td></tr>
+          <tr><td>Structured blobs</td><td><code class="in">jsonb</code></td><td><code class="in">orders.coupon_snapshot</code>, <code class="in">shipment_events.raw_payload</code>.</td></tr>
+          <tr><td>Flags</td><td><code class="in">boolean</code></td><td><code class="in">in_stock</code>, <code class="in">is_paid</code>, <code class="in">is_default</code>, <code class="in">is_read</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note warn"><span class="lab">⚠️ The timestamp-without-time-zone gotcha</span>
+        <p>Several tables store timestamps as <code class="in">timestamp WITHOUT time zone</code> rather than
+        <code class="in">timestamptz</code> — notably <code class="in">coupons</code> (<code class="in">created_at</code>,
+        <code class="in">expired_date</code>), <code class="in">reports</code> (<code class="in">created_at</code>,
+        <code class="in">resolved_at</code>), <code class="in">notification.created_at</code>, and
+        <code class="in">store_pickup_addresses</code>. Npgsql <strong>throws</strong> if you write a
+        <code class="in">DateTime</code> with <code class="in">Kind=Utc</code> into such a column. Writes must use
+        <code class="in">DateTimeKind.Unspecified</code> (and the read path re-specifies UTC). This bit the team repeatedly — every
+        notification create was silently 500-ing until it was fixed.</p></div>
+
+      <div class="note beginner"><span class="lab">snake_case columns, PascalCase entities</span>
+        <p>The database uses <code class="in">snake_case</code> column names (<code class="in">first_name</code>,
+        <code class="in">created_at</code>, <code class="in">store_orderid</code>). The scaffolded C# entities use
+        <code class="in">PascalCase</code> (<code class="in">FirstName</code>, <code class="in">CreatedAt</code>,
+        <code class="in">StoreOrderid</code>) with explicit <code class="in">HasColumnName(...)</code> mappings, so the two never have to
+        match by convention.</p></div>
+
+      <div class="expert"><span class="lab">Expert note — naming quirks preserved</span>
+        <p>The schema carries a few historical spellings that the scaffold faithfully preserved rather than "fix":
+        <code class="in">wichlistid</code>/<code class="in">whishlist_contain</code> (wishlist), <code class="in">tittle</code>
+        (notification title), <code class="in">matrial</code>/<code class="in">lenght</code>/<code class="in">hight</code> on
+        <code class="in">custom_request</code>. Renaming a column in a database-first project means a real migration and a code change,
+        so they were left as-is. Composite primary keys are common on junctions and weak entities
+        (<code class="in">cart_contain</code>, <code class="in">reviewing_and_rating</code>, <code class="in">product_images</code>,
+        <code class="in">color_palette</code>, <code class="in">voicememo</code>).</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ACTIVE DB VS THE ERDPLUS DESIGN -->
+    <section id="vs-erd">
+      <p class="eyebrow">Design</p>
+      <h2 class="sec" style="margin-top:6px">Active DB vs the ERDPlus design</h2>
+      <p>The team began with a normalized paper model in ERDPlus (33 entities). The database that actually shipped is the
+        <em>implemented, integration-shaped</em> schema (~45 tables). This section is an honest, table-by-table account of how the
+        design evolved — what was kept, what changed, and what reality forced the team to add.</p>
+
+      <div class="note beginner"><span class="lab">Why two are different — and that's fine</span>
+        <p>An ER diagram is a <em>design artifact</em>: it captures entities and relationships before you know exactly how payments,
+        shipping or a payment provider behave. The live schema is what survived contact with Stripe, Bosta, a multi-vendor cart and a
+        moderation workflow. Divergence is expected and healthy; the question a panel cares about is <em>whether you can explain
+        each change</em>.</p></div>
+
+      <h3>Fate of each ERDPlus entity</h3>
+      <table>
+        <thead><tr><th>ERDPlus entity</th><th>Fate in the live DB</th><th>What changed</th></tr></thead>
+        <tbody>
+          <tr><td>PERSON</td><td>Kept — <code class="in">person</code></td><td>Added <code class="in">image_url</code>, <code class="in">refresh_token</code>; <code class="in">created_at</code> became a real timestamp.</td></tr>
+          <tr><td>ENDUSER</td><td>Kept — <code class="in">enduser</code></td><td>1:1 with person + optional wishlist FK, unchanged in spirit.</td></tr>
+          <tr><td>SELLER</td><td>Expanded — <code class="in">seller</code></td><td>Gained store verification (<code class="in">store_status</code>, <code class="in">is_active</code>), <code class="in">username</code>, logo/phone/email, Bosta pickup id, <code class="in">updated_at</code>.</td></tr>
+          <tr><td>SYSTEMADMIN</td><td>Kept — <code class="in">systemadmin</code></td><td><code class="in">supervisorid</code> self-FK now distinguishes super-admins from moderators.</td></tr>
+          <tr><td>PERSON_PERMISSIONS</td><td>Kept — <code class="in">person_permissions</code></td><td>Composite PK (permission, personid); drives moderator section access.</td></tr>
+          <tr><td>CATEGORY</td><td>Kept — <code class="in">category</code></td><td><code class="in">categoryid</code> is <code class="in">smallint</code> in the live DB.</td></tr>
+          <tr><td>PRODUCT</td><td>Expanded — <code class="in">products</code></td><td>ERD had only id/name/cover; live adds price, MRP, stock, description, shipping size/bulky category, <code class="in">in_stock</code>, <code class="in">is_disabled</code>, timestamps.</td></tr>
+          <tr><td>PRODUCT_IMAGES</td><td>Kept — <code class="in">product_images</code></td><td>Added <code class="in">image_url</code> (Cloudinary CDN).</td></tr>
+          <tr><td>—</td><td>Added — <code class="in">product_variants</code>, <code class="in">variant_options</code></td><td>Variant/option model the ERD lacked entirely.</td></tr>
+          <tr><td>CART, Cart_CONTAIN</td><td>Kept — <code class="in">cart</code>, <code class="in">cart_contain</code></td><td>M:N cart↔product junction, unchanged.</td></tr>
+          <tr><td>WISHLIST, Whishlist_CONTAIN</td><td>Kept — <code class="in">wishlist</code>, <code class="in">whishlist_contain</code></td><td>Junction preserved (typo and all).</td></tr>
+          <tr><td>ORDER</td><td><b>Replaced/split</b> — <code class="in">orders</code> + <code class="in">store_orders</code> + <code class="in">store_order_items</code></td><td>The big one — see below.</td></tr>
+          <tr><td>STANDARD_ORDER / CUSTOMIZED_ORDER</td><td>Kept as thin tables</td><td>Still 1:1 subtypes of <code class="in">orders</code>, but the real per-seller money lives on <code class="in">store_orders</code> now.</td></tr>
+          <tr><td>CONSIST_OF</td><td>Kept but sidelined — <code class="in">consist_of</code></td><td>Superseded by <code class="in">store_order_items</code> for the live order path.</td></tr>
+          <tr><td>SHIPMENT</td><td><b>Replaced/expanded</b> — <code class="in">shipment</code> + <code class="in">shipment_events</code></td><td>ERD had a flat shipment with INT placeholder columns; live is per-store-order, Bosta-integrated, with a de-duplicated event timeline.</td></tr>
+          <tr><td>PAYOUT</td><td>Kept — <code class="in">payout</code></td><td>Now drains the wallet's available balance.</td></tr>
+          <tr><td>RETURNS, PROOF_AS_IMAGES</td><td>Kept — <code class="in">returns</code>, <code class="in">proof_as_images</code></td><td>Return now links to <code class="in">store_orderid</code> and carries <code class="in">refund_amount</code>.</td></tr>
+          <tr><td>CUSTOM_REQUEST</td><td>Kept — <code class="in">custom_request</code></td><td>Gained <code class="in">sellerid</code> (targeted requests), <code class="in">image_urls</code>, <code class="in">voicememo_url</code>.</td></tr>
+          <tr><td>VISUAL_INSPIRATION, VOICEMEMO, COLOR_PALETTE</td><td>Kept</td><td>Custom-request attachments, unchanged.</td></tr>
+          <tr><td>CONVERSATION, MESSAGES</td><td><b>Replaced</b> — superseded by <code class="in">offers</code> + <code class="in">offer_messages</code></td><td>Tables still exist but are unused; negotiation chat moved onto the offer.</td></tr>
+          <tr><td>COUPONS, USER_COUPONS</td><td>Kept/expanded — <code class="in">coupons</code>, <code class="in">user_coupons</code></td><td>Added <code class="in">code</code>, <code class="in">discount_percentage</code>, <code class="in">scope</code>, <code class="in">storeid</code>, usage caps, and <code class="in">coupon_product</code>.</td></tr>
+          <tr><td>REVIEWING_AND_RATING</td><td>Kept — <code class="in">reviewing_and_rating</code></td><td>Added an <code class="in">orderid</code> link so reviews are tied to a real purchase.</td></tr>
+          <tr><td>FOLLOW</td><td>Kept — <code class="in">follow</code></td><td>enduser↔seller follow junction, unchanged.</td></tr>
+          <tr><td>NOTIFICATION</td><td>Expanded — <code class="in">notification</code></td><td>Added <code class="in">type</code>, <code class="in">href</code> (deep link), longer content.</td></tr>
+          <tr><td>ADDRESSES, ADDRESSES_AND_CONTACT_PHONENUMBER</td><td>Kept/expanded — <code class="in">addresses</code>, <code class="in">addresses_and_contact_phonenumber</code></td><td>Address gained realistic city/zone/district/street fields + Bosta ids (see below).</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What the live DB added that the ERD lacked</h3>
+      <ol>
+        <li><strong>Wallet ledger.</strong> The ERD modelled seller money as a single <code class="in">SellerWallet_Balance FLOAT</code> on SELLER. The live DB adds a full <code class="in">seller_wallet</code> (pending/available buckets, bank details, currency) plus an append-only, idempotent <code class="in">wallet_transactions</code> ledger and keeps <code class="in">payout</code> — money is now auditable, not a mutable number.</li>
+        <li><strong>Full fulfillment.</strong> <code class="in">shipment</code> became per-store-order and Bosta-integrated (tracking number, AWB url, carrier, COD amount, status), and a brand-new <code class="in">shipment_events</code> table records a webhook-deduplicated timeline.</li>
+        <li><strong>Custom-order negotiation.</strong> <code class="in">offers</code>, <code class="in">offer_messages</code> and <code class="in">offer_payments</code> replace the generic CONVERSATION/MESSAGES, adding milestone timestamps and per-milestone payments.</li>
+        <li><strong>Warehouses.</strong> <code class="in">store_pickup_addresses</code> (1:many, with <code class="in">label</code> + <code class="in">is_default</code>) — sellers can ship from multiple locations.</li>
+        <li><strong>Moderators.</strong> <code class="in">person_permissions</code> + <code class="in">systemadmin.supervisorid</code> implement section-scoped moderator roles under super-admins.</li>
+        <li><strong>Bosta integration columns.</strong> <code class="in">bosta_city_id</code> / <code class="in">bosta_zone_id</code> / <code class="in">bosta_district_id</code> on <code class="in">addresses</code> (and pickup addresses), plus a <code class="in">bosta_address_mapping</code> lookup table.</li>
+        <li><strong>Reports.</strong> A real <code class="in">reports</code> table (reporter, target product/store/store-order/request, reason, admin note, status) for moderation.</li>
+        <li><strong>Variants &amp; payment metadata.</strong> <code class="in">product_variants</code>/<code class="in">variant_options</code>, and Stripe metadata on <code class="in">orders</code> (<code class="in">stripe_payment_intent_id</code>, <code class="in">psp</code>, <code class="in">transaction_ref</code>).</li>
+        <li><strong>Account-linked cart snapshot.</strong> An <code class="in">items_json text</code> column on <code class="in">cart</code> holds the buyer's active cart server-side, so it survives logout and follows the account across devices (no longer kept in the browser). Added idempotently by the app's <code class="in">SchemaMigrator</code>.</li>
+      </ol>
+
+      <h3>The headline evolutions, explained</h3>
+      <h4>1 — Payment on ORDER → per-seller STORE_ORDER split</h4>
+      <p>The ERD put every payment field directly on a single ORDER (with STANDARD_ORDER / CUSTOMIZED_ORDER subtype tables). That works
+        for a single-vendor shop, but Manzili is multi-vendor: a cart can mix sellers, and each seller must be paid, shipped and
+        statused independently. The live DB keeps <code class="in">orders</code> as the buyer-level envelope (one payment, one address)
+        and introduces <code class="in">store_orders</code> + <code class="in">store_order_items</code> for the per-seller reality. The
+        ERD's subtype tables survive as thin markers, but the substantive money moved down to the store-order.</p>
+
+      <h4>2 — A float balance → a wallet + ledger</h4>
+      <p>A single mutable <code class="in">FLOAT</code> balance cannot answer "why is this seller owed X?" and is unsafe under
+        concurrent webhooks. The live design replaces it with two explicit buckets and an immutable ledger keyed by
+        <code class="in">(wallet_id, idempotency_key)</code>, so every credit, commission, shipping deduction, release and payout is a
+        permanent, replay-safe row. (Also: money moved from <code class="in">FLOAT</code> to <code class="in">numeric(12,2)</code>.)</p>
+
+      <h4>3 — Generic chat → offer-centric negotiation</h4>
+      <p>The ERD's CONVERSATION/MESSAGES were a generic buyer↔seller chat. Real commissions needed a price, an accept event, progress
+        proof and staged payments — so the live DB hangs the chat (<code class="in">offer_messages</code>) and payments
+        (<code class="in">offer_payments</code>) directly off an <code class="in">offers</code> row that carries the milestone state
+        machine. The old chat tables remain but are unused.</p>
+
+      <h4>4 — Other shifts</h4>
+      <ul class="muted">
+        <li><strong>Warehouses</strong> went from absent to a 1:many <code class="in">store_pickup_addresses</code>.</li>
+        <li><strong>Moderators</strong> went from absent to <code class="in">person_permissions</code> + a supervisor self-FK.</li>
+        <li><strong>Bosta ids</strong> were added to addresses so shipping can resolve to a carrier's geography.</li>
+        <li>The ERD's <strong>STANDARD_ORDER / CUSTOMIZED_ORDER</strong> subtypes are retained but de-emphasised; the live system distinguishes order kind mainly through the store-order pipeline and the custom-offer bridge.</li>
+      </ul>
+
+      <div class="expert"><span class="lab">Expert note — be fair about ERD quirks</span>
+        <p>The ERDPlus export shows the usual early-design roughness, and it's worth naming them plainly rather than hiding them:
+        several columns are <code class="in">INT</code> placeholders that became real types (SHIPMENT's
+        <code class="in">Carrier/Status/Shipped_at_time/Tracking_Number</code> were all INT; ORDER's money fields were INT);
+        <code class="in">ADDRESSES.Street VARCHAR(4)</code> and <code class="in">BuildingNumber VARCHAR(6)</code> are implausibly small;
+        a couple of labels are misspelled (<code class="in">Stauts</code>, <code class="in">Canrnier</code>,
+        <code class="in">Delivered_at_tiime</code>). None of this is a knock on the design — it's a normalized <em>paper</em> model whose
+        job was to get the entities and relationships right, which it did. The live schema is the same model after it met exact types,
+        a payment provider, a courier and a moderation workflow.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- GLOSSARY -->
+    <section id="glossary">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Glossary</h2>
+      <details class="faq"><summary>Primary key (PK)</summary><div class="b">The column (or set of columns) that uniquely identifies each row in a table. Here usually a surrogate auto-increment integer like <code class="in">orderid</code>.</div></details>
+      <details class="faq"><summary>Foreign key (FK)</summary><div class="b">A column that references another table's primary key, enforcing that the referenced row exists. This is how tables link — e.g. <code class="in">products.sellerid</code> → <code class="in">seller.sellerid</code>.</div></details>
+      <details class="faq"><summary>Normalization / 3NF</summary><div class="b">Organising tables so each fact lives in one place, removing redundancy and update anomalies. Third normal form (3NF) means non-key columns depend on the key, the whole key, and nothing but the key.</div></details>
+      <details class="faq"><summary>Junction (associative) table</summary><div class="b">A table that resolves a many-to-many relationship into two one-to-many's, typically with a composite key — e.g. <code class="in">cart_contain</code> (cart × product) or <code class="in">follow</code> (enduser × seller).</div></details>
+      <details class="faq"><summary>Supertype / subtype</summary><div class="b">An inheritance pattern: a general entity (the supertype, <code class="in">person</code>) and specialised entities (the subtypes, <code class="in">enduser</code>/<code class="in">seller</code>/<code class="in">systemadmin</code>) that share its identity via a 1:1 FK.</div></details>
+      <details class="faq"><summary>Ledger</summary><div class="b">An append-only record of every transaction. Balances are derived from the ledger rather than overwritten, giving a full, auditable history — see <code class="in">wallet_transactions</code>.</div></details>
+      <details class="faq"><summary>Idempotency key</summary><div class="b">A unique token attached to an operation so that repeating it (e.g. a retried webhook) has the same effect as doing it once. Enforced here by a unique <code class="in">(wallet_id, idempotency_key)</code> index.</div></details>
+      <details class="faq"><summary>timestamptz vs timestamp</summary><div class="b"><code class="in">timestamptz</code> stores an instant in UTC and converts on read; plain <code class="in">timestamp</code> stores wall-clock time with no zone. Mixing them — and writing a UTC-kind value into a plain <code class="in">timestamp</code> — is the gotcha that bit this project.</div></details>
+      <details class="faq"><summary>ORM / scaffolding</summary><div class="b">An Object-Relational Mapper (here EF Core) maps table rows to objects so you query with code. "Scaffolding" (database-first) generates those entity classes and the DbContext from an existing schema, instead of writing classes first.</div></details>
+
+      <div class="colophon">
+        Manzili database · PostgreSQL on Supabase · schema <code class="in">manzili</code> · ~45 tables · EF Core database-first ·
+        original design in <code class="in">Relational Schema.erdplus.json</code>.
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+// ── Schema explorer data ─────────────────────────────────────────────────
+// Each table: [name, group, primaryKey, [ [col, type, key] … ], notableFKs ]
+// key: "PK", "FK", "PK·FK", or "" ; pulled from ManziliDbContext.OnModelCreating.
+const TABLES = [
+  ["person","Identity","personid",[
+    ["personid","integer","PK"],["email","varchar(100) unique",""],["password","varchar(100)",""],
+    ["first_name","varchar(50)",""],["last_name","varchar(50)",""],["image_url","varchar(500)",""],
+    ["refresh_token","varchar(500)",""],["created_at","timestamptz",""]],"—"],
+  ["enduser","Identity","enduserid",[
+    ["enduserid","integer","PK"],["personid","integer unique","FK"],["wichlistid","integer","FK"]],
+    "personid → person · wichlistid → wishlist (SET NULL)"],
+  ["seller","Identity","sellerid",[
+    ["sellerid","integer","PK"],["personid","integer unique","FK"],["username","varchar(100) unique",""],
+    ["storename","varchar(100)",""],["store_status","varchar(20) = 'pending'",""],["is_active","boolean = false",""],
+    ["sellerwallet_balance","numeric(12,2)",""],["bosta_pickup_location_id","varchar(100)",""],
+    ["logo_url","varchar(500)",""],["created_at","timestamptz",""],["updated_at","timestamp",""]],
+    "personid → person (1:1)"],
+  ["systemadmin","Identity","adminid",[
+    ["adminid","integer","PK"],["personid","integer unique","FK"],["supervisorid","integer","FK"]],
+    "personid → person · supervisorid → systemadmin (self-FK = moderator's super-admin)"],
+  ["person_permissions","Identity","(permission, personid)",[
+    ["permission","integer","PK"],["personid","integer","PK·FK"]],
+    "personid → person · grants moderator section access"],
+  ["addresses","Identity","id",[
+    ["id","integer","PK"],["personid","integer","FK"],["name","varchar(100)",""],["phone","varchar(20)",""],
+    ["city","varchar(50)",""],["zone","varchar(100)",""],["district","varchar(100)",""],["street","varchar(100)",""],
+    ["buildingnumber","varchar(20)",""],["bosta_city_id","varchar(50)",""],["bosta_zone_id","varchar(50)",""],
+    ["bosta_district_id","varchar(50)",""]],
+    "personid → person (SET NULL)"],
+  ["addresses_and_contact_phonenumber","Identity","(phonenumber, addressid)",[
+    ["phonenumber","varchar(20)","PK"],["addressid","integer","PK·FK"]],
+    "addressid → addresses"],
+
+  ["category","Catalog","categoryid",[
+    ["categoryid","smallint","PK"],["category_name","varchar(25)",""]],"—"],
+  ["products","Catalog","productid",[
+    ["productid","integer","PK"],["sellerid","integer","FK"],["categoryid","integer","FK"],
+    ["productname","varchar(100)",""],["price","numeric(12,2)",""],["mrp","numeric(12,2)",""],["stock","integer = 10",""],
+    ["in_stock","boolean = true",""],["is_disabled","boolean = false",""],["cover_url","varchar(500)",""],
+    ["shipping_size","varchar(20)",""],["shipping_bulky_category","varchar(20)",""],["created_at","timestamptz",""]],
+    "sellerid → seller (CASCADE) · categoryid → category (SET NULL)"],
+  ["product_images","Catalog","(product_imageid, productid)",[
+    ["product_imageid","integer","PK"],["productid","integer","PK·FK"],["image_url","varchar(500)",""],
+    ["upload_date","date",""]],"productid → products"],
+  ["product_variants","Catalog","variant_id",[
+    ["variant_id","integer","PK"],["productid","integer","FK"],["variant_name","varchar(100)",""]],
+    "productid → products"],
+  ["variant_options","Catalog","option_id",[
+    ["option_id","integer","PK"],["variant_id","integer","FK"],["value","varchar(100)",""],["stock","integer",""]],
+    "variant_id → product_variants"],
+
+  ["cart","Cart & wishlist","cartid",[
+    ["cartid","integer","PK"],["creatorid","integer","FK"],["items_json","text",""],["created_at","timestamptz",""]],
+    "creatorid → enduser (CASCADE) · items_json holds the active account-linked cart snapshot"],
+  ["cart_contain","Cart & wishlist","(cartid, productid)",[
+    ["cartid","integer","PK·FK"],["productid","integer","PK·FK"],["number_of_products","integer = 0",""]],
+    "cartid → cart · productid → products"],
+  ["wishlist","Cart & wishlist","wichlistid",[
+    ["wichlistid","integer","PK"],["numberofproducts","integer = 0",""]],
+    "M:N to products via whishlist_contain"],
+  ["whishlist_contain","Cart & wishlist","(wichlistid, productid)",[
+    ["wichlistid","integer","PK·FK"],["productid","integer","PK·FK"]],
+    "wichlistid → wishlist · productid → products"],
+
+  ["orders","Orders & fulfillment","orderid",[
+    ["orderid","integer","PK"],["enduserid","integer","FK"],["address_id","integer","FK"],["sellerid","integer","FK"],
+    ["shipmentid","integer","FK"],["status","integer",""],["paymentmethod","integer",""],["paymentstatus","integer",""],
+    ["totalamount","numeric(12,2)",""],["shippingcost","numeric(10,2)",""],["is_paid","boolean = false",""],
+    ["coupon_snapshot","jsonb",""],["stripe_payment_intent_id","varchar(200)",""],["transaction_ref","varchar(50)",""],
+    ["psp","varchar(50)",""],["paid_at","timestamptz",""],["created_at","timestamptz",""]],
+    "enduserid → enduser (SET NULL) · address_id → addresses (SET NULL) · shipmentid → shipment (SET NULL)"],
+  ["store_orders","Orders & fulfillment","store_orderid",[
+    ["store_orderid","integer","PK"],["orderid","integer","FK"],["sellerid","integer","FK"],
+    ["status","varchar(30) = 'ORDER_PLACED'",""],["subtotal","numeric(12,2)",""],["discount_total","numeric(12,2)",""],
+    ["shipping_total","numeric(12,2)",""],["total","numeric(12,2)",""],["payment_method","varchar(20)",""],
+    ["is_paid","boolean",""],["created_at","timestamptz",""],["updated_at","timestamp",""]],
+    "orderid → orders · sellerid → seller (RESTRICT)"],
+  ["store_order_items","Orders & fulfillment","item_id",[
+    ["item_id","integer","PK"],["store_orderid","integer","FK"],["productid","integer","FK"],
+    ["price_at_purchase","numeric(12,2)",""],["product_name","varchar(100) snapshot",""],
+    ["product_image_url","varchar(500) snapshot",""],["quantity","integer",""],["created_at","timestamptz",""]],
+    "store_orderid → store_orders · productid → products (RESTRICT)"],
+  ["standard_order","Orders & fulfillment","orderid",[
+    ["orderid","integer","PK·FK"]],"orderid → orders (1:1 subtype)"],
+  ["customized_order","Orders & fulfillment","orderid",[
+    ["orderid","integer","PK·FK"]],"orderid → orders (1:1 subtype)"],
+  ["consist_of","Orders & fulfillment","(orderid, productid)",[
+    ["orderid","integer","PK·FK"],["productid","integer","PK·FK"],["quantity","integer",""],
+    ["price_at_purchase","numeric(12,2)",""]],
+    "legacy order×product junction — superseded by store_order_items"],
+  ["shipment","Orders & fulfillment","shipmentid",[
+    ["shipmentid","integer","PK"],["store_orderid","integer unique","FK"],["shipment_status","integer",""],
+    ["status_text","varchar(30)",""],["tracking_number","varchar(50)",""],["awb_url","varchar(500)",""],
+    ["carrier","varchar(100)",""],["bosta_delivery_id","varchar(100)",""],["cod_amount","numeric(12,2)",""],
+    ["shipping_cost","numeric(10,2)",""],["shipped_at_time","timestamptz",""],["delivered_at_time","date",""]],
+    "store_orderid → store_orders (1:1, SET NULL)"],
+  ["shipment_events","Orders & fulfillment","event_id",[
+    ["event_id","integer","PK"],["shipmentid","integer","FK"],["event_type","varchar(50)",""],
+    ["payload_hash","varchar(64)",""],["raw_payload","jsonb",""],["occurred_at","timestamptz",""],
+    ["created_at","timestamptz",""]],
+    "shipmentid → shipment · unique (shipmentid, payload_hash) dedupes webhooks"],
+  ["returns","Orders & fulfillment","returnid",[
+    ["returnid","integer","PK"],["orderid","integer","FK"],["store_orderid","integer","FK"],
+    ["status","integer",""],["reason","varchar(1000)",""],["refund_amount","numeric(12,2)",""],
+    ["requestdate","timestamptz",""]],
+    "orderid → orders · store_orderid → store_orders (SET NULL)"],
+  ["proof_as_images","Orders & fulfillment","(imageid, returnid)",[
+    ["imageid","integer","PK"],["returnid","integer","PK·FK"],["evidence_url","varchar(500)",""]],
+    "returnid → returns"],
+
+  ["seller_wallet","Payments & wallet","wallet_id",[
+    ["wallet_id","integer","PK"],["sellerid","integer unique","FK"],["pending_balance","numeric(12,2)",""],
+    ["available_balance","numeric(12,2)",""],["currency","varchar(10) = 'EGP'",""],["bank_name","varchar(100)",""],
+    ["bank_account_holder","varchar(200)",""],["bank_last4","varchar(4)",""],["stripe_account_id","varchar(100)",""],
+    ["created_at","timestamptz",""],["updated_at","timestamp",""]],
+    "sellerid → seller (1:1)"],
+  ["wallet_transactions","Payments & wallet","transaction_id",[
+    ["transaction_id","integer","PK"],["wallet_id","integer","FK"],["store_orderid","integer","FK"],
+    ["type","varchar(30)",""],["bucket","varchar(20)",""],["amount","numeric(12,2)",""],
+    ["idempotency_key","varchar(200)",""],["currency","varchar(10) = 'EGP'",""],["orderid","integer",""],
+    ["shipmentid","integer",""],["created_at","timestamptz",""]],
+    "wallet_id → seller_wallet · store_orderid → store_orders (SET NULL) · unique (wallet_id, idempotency_key)"],
+  ["payout","Payments & wallet","payoutid",[
+    ["payoutid","integer","PK"],["sellerid","integer","FK"],["amount","numeric(12,2)",""],["status","integer",""],
+    ["request_at_time","timestamptz",""],["paid_at","timestamptz",""]],
+    "sellerid → seller (SET NULL)"],
+
+  ["custom_request","Custom orders","requestid",[
+    ["requestid","integer","PK"],["enduserid","integer","FK"],["sellerid","integer","FK"],["categoryid","smallint","FK"],
+    ["itemname","varchar(100)",""],["description","varchar(1000)",""],["matrial","varchar(255)",""],
+    ["lenght / width / hight","float",""],["quantity","smallint = 1",""],["desired_delivery_date","date",""],
+    ["image_urls","array",""],["voicememo_url","varchar(500)",""],["visibility","boolean = true",""],
+    ["status","integer",""],["created_at","date",""]],
+    "enduserid → enduser · sellerid → seller (SET NULL) · categoryid → category"],
+  ["offers","Custom orders","offer_id",[
+    ["offer_id","integer","PK"],["requestid","integer","FK"],["sellerid","integer","FK"],
+    ["price","numeric(12,2)",""],["description","varchar(2000)",""],["status","varchar(30) = 'pending'",""],
+    ["buyer_comment","varchar(1000)",""],["seller_comment","varchar(1000)",""],["accepted_at","timestamptz",""],
+    ["first_paid_at","timestamptz",""],["progress_uploaded_at","timestamptz",""],["ready_to_ship_at","timestamptz",""],
+    ["second_paid_at","timestamptz",""],["paid_at","timestamptz",""],["created_at","timestamptz",""]],
+    "requestid → custom_request · sellerid → seller (RESTRICT)"],
+  ["offer_messages","Custom orders","message_id",[
+    ["message_id","integer","PK"],["offer_id","integer","FK"],["author_id","integer",""],
+    ["author_type","varchar(10)",""],["text","varchar(2000)",""],["image_url","varchar(500)",""],
+    ["created_at","timestamptz",""]],
+    "offer_id → offers"],
+  ["offer_payments","Custom orders","payment_id",[
+    ["payment_id","integer","PK"],["offer_id","integer","FK"],["address_id","integer","FK"],
+    ["milestone","varchar(20)",""],["amount","numeric(12,2)",""],["payment_method","varchar(20)",""],
+    ["paid_at","timestamptz",""]],
+    "offer_id → offers · address_id → addresses (SET NULL)"],
+  ["visual_inspiration","Custom orders","(imageid, requestid)",[
+    ["imageid","integer","PK"],["requestid","integer","PK·FK"],["imageurl","varchar(500)",""]],
+    "requestid → custom_request"],
+  ["voicememo","Custom orders","(recordingid, requestid)",[
+    ["recordingid","integer","PK"],["requestid","integer","PK·FK"],["duration","—",""],["send_at","timestamptz",""]],
+    "requestid → custom_request"],
+  ["color_palette","Custom orders","(color_paletteid, requestid)",[
+    ["color_paletteid","integer","PK"],["requestid","integer","PK·FK"],["color_code","varchar(20)",""],
+    ["color_description","varchar(100)",""]],
+    "requestid → custom_request"],
+
+  ["coupons","Coupons","couponid",[
+    ["couponid","integer","PK"],["code","varchar(50) unique",""],["creatorid","integer","FK"],["storeid","integer","FK"],
+    ["discount_percentage","numeric(5,2)",""],["scope","integer",""],["status","boolean = true",""],
+    ["max_users","integer = 100",""],["used_count","integer = 0",""],["expired_date","timestamp ⚠️",""],
+    ["created_at","timestamp ⚠️",""]],
+    "creatorid → person · storeid → seller (CASCADE)"],
+  ["coupon_product","Coupons","coupon_productid",[
+    ["coupon_productid","integer","PK"],["couponid","integer","FK"],["productid","integer","FK"]],
+    "couponid → coupons · productid → products"],
+  ["user_coupons","Coupons","used_couponid",[
+    ["used_couponid","integer","PK"],["couponid","integer","FK"],["userid","integer","FK"],["orderid","integer","FK"],
+    ["used_at","timestamptz",""]],
+    "couponid → coupons · userid → enduser · orderid → orders"],
+
+  ["reviewing_and_rating","Reviews & reports","(enduserid, productid)",[
+    ["enduserid","integer","PK·FK"],["productid","integer","PK·FK"],["rating","—",""],
+    ["comment","varchar(500)",""],["orderid","integer",""],["created_at","timestamptz",""]],
+    "enduserid → enduser · productid → products"],
+  ["reports","Reviews & reports","report_id",[
+    ["report_id","integer","PK"],["reporter_id","integer","FK"],["productid","integer",""],["sellerid","integer","FK"],
+    ["store_orderid","integer",""],["custom_requestid","integer","FK"],["type","varchar(50)",""],
+    ["reason","varchar(500)",""],["description","varchar(2000)",""],["status","varchar(20) = 'PENDING'",""],
+    ["admin_note","varchar(1000)",""],["created_at","timestamp ⚠️",""],["resolved_at","timestamp ⚠️",""]],
+    "reporter_id → person · sellerid → seller · custom_requestid → custom_request (all SET NULL)"],
+
+  ["notification","Messaging","notification_id",[
+    ["notification_id","integer","PK"],["personid","integer","FK"],["tittle","varchar(100)",""],
+    ["notificationcontent","varchar(700)",""],["type","varchar(50)",""],["href","varchar(500)",""],
+    ["is_read","boolean = false",""],["created_at","timestamp ⚠️",""]],
+    "personid → person"],
+  ["conversation","Messaging","conversationid",[
+    ["conversationid","integer","PK"],["enduserid","integer","FK"],["sellerid","integer","FK"],
+    ["lastmessageat","timestamptz",""],["created_at","timestamptz",""]],
+    "enduserid → enduser · sellerid → seller · (legacy — superseded by offer_messages)"],
+  ["messages","Messaging","(messageid, conversationid)",[
+    ["messageid","integer","PK"],["conversationid","integer","PK·FK"],["messagecontent","—",""],
+    ["isread","boolean = false",""],["sent_at","timestamptz",""]],
+    "conversationid → conversation · (legacy)"],
+
+  ["follow","Misc","(enduserid, sellerid)",[
+    ["enduserid","integer","PK·FK"],["sellerid","integer","PK·FK"],["followed_at","date",""]],
+    "enduserid → enduser · sellerid → seller"],
+  ["bosta_address_mapping","Misc","mapping_id",[
+    ["mapping_id","integer","PK"],["country","varchar(10)",""],["city_id / city_name","varchar",""],
+    ["zone_id / zone_name","varchar",""],["district_id / district_name","varchar",""],["created_at","timestamp",""]],
+    "lookup table · index (country, city_name)"],
+  ["store_pickup_addresses","Misc","pickup_id",[
+    ["pickup_id","integer","PK"],["sellerid","integer","FK"],["label","varchar(120)",""],
+    ["is_default","boolean = false",""],["contact_name","varchar(100)",""],["phone","varchar(20)",""],
+    ["first_line","varchar(200)",""],["city","varchar(100)",""],["bosta_city_id","varchar(50)",""],
+    ["bosta_zone_id","varchar(50)",""],["bosta_district_id","varchar(50)",""],["created_at","timestamptz ⚠️",""],
+    ["updated_at","timestamp",""]],
+    "sellerid → seller (1:many — warehouses)"],
+];
+
+const GROUPS=["All","Identity & accounts","Catalog","Cart & wishlist","Orders & fulfillment","Payments & wallet","Custom orders","Coupons","Reviews & reports","Messaging","Misc"];
+// match the short group token stored on each table to the displayed chip label
+function chipMatches(g, tableGroup){
+  if(g==="All") return true;
+  if(g==="Identity & accounts") return tableGroup==="Identity";
+  return g===tableGroup;
+}
+let activeGroup="All",query="";
+function renderChips(){
+  const c=document.getElementById("ep-chips");
+  c.innerHTML=GROUPS.map(g=>`<span class="chip ${g===activeGroup?'active':''}" data-g="${g}">${g}</span>`).join("");
+  c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{activeGroup=ch.dataset.g;renderChips();renderList();});
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function keyCell(k){
+  if(!k) return "";
+  if(k==="PK") return '<span class="kpk">PK</span>';
+  if(k==="FK") return '<span class="kfk">FK</span>';
+  if(k==="PK·FK") return '<span class="kpk">PK</span> <span class="kfk">FK</span>';
+  return esc(k);
+}
+function colsTable(cols){
+  return `<table class="cols"><tbody>${cols.map(([cn,ct,k])=>
+    `<tr><td style="width:42px">${keyCell(k)}</td><td class="cn">${esc(cn)}</td><td class="ct">${esc(ct)}</td></tr>`).join("")}</tbody></table>`;
+}
+function renderList(){
+  const list=document.getElementById("ep-list");
+  const q=query.trim().toLowerCase();
+  const rows=TABLES.filter(([name,grp,pk,cols,fks])=>{
+    if(!chipMatches(activeGroup,grp))return false;
+    if(!q)return true;
+    const hay=(name+" "+grp+" "+pk+" "+fks+" "+cols.map(c=>c[0]+" "+c[1]).join(" ")).toLowerCase();
+    return hay.includes(q);
+  });
+  document.getElementById("ep-count").textContent=`${rows.length} table${rows.length!==1?'s':''}`;
+  list.innerHTML=rows.map(([name,grp,pk,cols,fks])=>`
+    <div class="ep">
+      <div class="ep-head">
+        <span class="ep-path">${esc(name)}</span>
+        <span class="ep-grp-badge">${esc(grp==="Identity"?"Identity & accounts":grp)}</span>
+      </div>
+      <div class="ep-body">
+        ${colsTable(cols)}
+        <div class="ep-meta">
+          <b>Primary key</b><span><code class="in">${esc(pk)}</code></span>
+          <b>Foreign keys</b><span>${fks==="—"?'<span class="muted">none</span>':esc(fks)}</span>
+        </div>
+      </div>
+    </div>`).join("")||`<div class="ep-count">No tables match.</div>`;
+  list.querySelectorAll(".ep-head").forEach(h=>h.onclick=()=>h.parentElement.classList.toggle("open"));
+}
+document.getElementById("ep-search").addEventListener("input",e=>{query=e.target.value;renderList();});
+renderChips();renderList();
+
+// theme toggle (persisted)
+const root=document.documentElement, themeBtn=document.getElementById("themeToggle");
+function applyTheme(t){root.setAttribute("data-theme",t);themeBtn.textContent=t==="dark"?"Light mode":"Dark mode";}
+let savedTheme="light"; try{savedTheme=localStorage.getItem("manzili-docs-theme")||"light";}catch(e){}
+applyTheme(savedTheme);
+themeBtn.onclick=()=>{const next=root.getAttribute("data-theme")==="dark"?"light":"dark";applyTheme(next);try{localStorage.setItem("manzili-docs-theme",next);}catch(e){}};
+
+// expert toggle
+const expBtn=document.getElementById("expertToggle");
+expBtn.onclick=()=>{const hidden=document.documentElement.classList.toggle("hide-expert");expBtn.textContent=hidden?"Show expert notes":"Hide expert notes";};
+
+// tabs
+document.querySelectorAll(".tabs").forEach(t=>{
+  t.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    t.querySelectorAll("button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    let el=t.nextElementSibling;
+    while(el&&el.classList.contains("tabpane")){el.classList.toggle("active",el.id===b.dataset.tab);el=el.nextElementSibling;}
+  });
+});
+
+// copy
+document.querySelectorAll(".code .copy").forEach(btn=>btn.onclick=()=>{
+  const pre=btn.closest(".code").querySelector("pre");
+  navigator.clipboard.writeText(pre.innerText.trim()).then(()=>{const t=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=t,1200);});
+});
+
+// lightweight highlight
+const KW={csharp:["public","private","protected","internal","sealed","abstract","class","interface","record","struct","void","async","await","return","var","new","static","readonly","using","namespace","if","else","for","foreach","while","throw","try","catch","is","not","null","true","false","string","int","bool","object","this","get","set"],sql:["SELECT","FROM","WHERE","UNIQUE","ALTER","COLUMN","TYPE","SET","INDEX","TABLE","CREATE","NOT","NULL","CASCADE","RESTRICT","ON","DELETE","UPDATE"],bash:["cd","dotnet","curl","echo","export"],json:[],text:[]};
+function escCode(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+document.querySelectorAll(".code").forEach(block=>{
+  const lang=(block.dataset.lang||"text").toLowerCase();
+  const pre=block.querySelector("pre");if(!pre)return;
+  let html=escCode(pre.textContent.replace(/^\n/,""));
+  if(lang==="csharp"||lang==="sql")html=html.replace(/(--[^\n]*|\/\/[^\n]*)/g,'<span class="tc">$1</span>');
+  if(lang==="bash"||lang==="text")html=html.replace(/(#[^\n]*)/g,'<span class="tc">$1</span>');
+  html=html.replace(/(&quot;[^&]*?&quot;)/g,'<span class="ts">$1</span>').replace(/('[^']*?')/g,'<span class="ts">$1</span>');
+  const kws=KW[lang]||[];if(kws.length){html=html.replace(new RegExp("\\b("+kws.join("|")+")\\b","g"),'<span class="tk">$1</span>');}
+  html=html.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="tn">$1</span>');
+  if(lang==="csharp")html=html.replace(/(\[[A-Za-z][\w]*(?:\([^\)]*\))?\])/g,'<span class="ta">$1</span>');
+  pre.innerHTML=html;
+});
+
+// scrollspy — highlight active nav link
+const navLinks=[...document.querySelectorAll("#nav a")];
+const sections=navLinks.map(a=>document.querySelector(a.getAttribute("href"))).filter(Boolean);
+function spy(){
+  let idx=0;
+  for(let i=0;i<sections.length;i++){ if(sections[i].getBoundingClientRect().top<=120) idx=i; }
+  navLinks.forEach(a=>a.classList.remove("active"));
+  if(navLinks[idx]) navLinks[idx].classList.add("active");
+}
+document.addEventListener("scroll",spy,{passive:true}); spy();
+</script>
+</body>
+</html>

@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manzili Frontend — Next.js Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Milligram-style sizing: 62.5% root, rem-based, generous line-height — themed to Manzili. */
+  :root{
+    --paper:#faf8f5; --surface:#fffdfb; --inset:#f4efe4; --paper-2:#fcfbf9;
+    --ink:#23303f; --navy:#1c355e; --muted:#6f7b89; --faint:#9aa4b0;
+    --line:#e8e0d2; --line-2:#efe9dd;
+    --terra:#d35400; --terra-soft:#e67e22; --sage:#5f7a5a; --rose:#9c4024;
+    --code-bg:#15233b; --code-ink:#dfe7f2;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --sans:'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --serif:'Fraunces', Georgia, 'Times New Roman', serif;
+  }
+  html[data-theme="dark"]{
+    --paper:#11151c; --surface:#161c26; --inset:#1c2330; --paper-2:#141a23;
+    --ink:#e3e7ec; --navy:#b8cdec; --muted:#98a4b3; --faint:#6a7686;
+    --line:#28313f; --line-2:#212935;
+    --terra:#ec975f; --terra-soft:#ec975f; --sage:#8fb389; --rose:#e3906e;
+    --code-bg:#0c1018; --code-ink:#dfe7f2;
+  }
+  html[data-theme="dark"] ::selection{background:#3a2f22;}
+  /* at-a-glance summary list */
+  .summary{list-style:none; padding:0; margin:24px 0;}
+  .summary li{padding:10px 0; border-bottom:1px solid var(--line-2); max-width:74ch;}
+  .summary b{color:var(--navy); font-weight:600;}
+  .summary a{font-size:1.2rem;}
+  *{box-sizing:border-box;}
+  html{font-size:62.5%; scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:1.62rem; line-height:1.72; font-weight:400; letter-spacing:.005em;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;}
+  a{color:var(--navy); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--navy) 25%, transparent);}
+  a:hover{border-bottom-color:var(--terra-soft); color:var(--terra);}
+  code{font-family:var(--mono); font-size:.86em;}
+
+  .shell{display:grid; grid-template-columns:282px 1fr; min-height:100vh;}
+  aside{position:sticky; top:0; height:100vh; overflow-y:auto; background:var(--paper-2);
+    border-right:1px solid var(--line); padding-bottom:40px;}
+  main{max-width:840px; margin:0 auto; padding:64px 56px 140px; width:100%;}
+
+  /* sidebar */
+  .brand{padding:30px 26px 22px; border-bottom:1px solid var(--line);}
+  .brand .mark{font-family:var(--serif); font-size:2.4rem; font-weight:500; color:var(--navy); letter-spacing:-.01em;}
+  .brand .mark b{color:var(--terra);}
+  .brand .tag{font-size:1.25rem; color:var(--muted); font-style:italic; font-family:var(--serif); margin-top:2px;}
+  .brand .stk{font-size:1.15rem; color:var(--faint); margin-top:10px; letter-spacing:.02em;}
+  nav{padding:18px 16px;}
+  nav .grp{font-size:1.05rem; text-transform:uppercase; letter-spacing:.14em; color:var(--faint);
+    font-weight:600; margin:20px 12px 7px;}
+  nav a{display:block; color:var(--muted); padding:5px 14px; font-size:1.42rem; border:0; border-left:2px solid transparent; line-height:1.4;}
+  nav a:hover{color:var(--navy); background:transparent;}
+  nav a.active{color:var(--navy); font-weight:600; border-left-color:var(--terra);}
+
+  /* top control */
+  .topctl{display:flex; justify-content:flex-end; margin-bottom:30px;}
+  .qbtn{background:none; border:0; border-bottom:1px dashed var(--line); color:var(--muted); cursor:pointer;
+    font-family:var(--sans); font-size:1.28rem; padding:2px 2px 3px; letter-spacing:.01em;}
+  .qbtn:hover{color:var(--terra);}
+
+  /* eyebrow + headings */
+  .eyebrow{text-transform:uppercase; letter-spacing:.18em; font-size:1.12rem; font-weight:600;
+    color:var(--terra); margin:0 0 4px;}
+  h1.title{font-family:var(--serif); font-weight:500; font-size:4.4rem; line-height:1.08; letter-spacing:-.015em;
+    margin:0 0 14px; color:var(--navy);}
+  h2.sec{font-family:var(--serif); font-weight:500; font-size:3rem; letter-spacing:-.01em; color:var(--navy);
+    margin:64px 0 4px; padding-top:12px;}
+  h3{font-family:var(--sans); font-weight:600; font-size:2rem; letter-spacing:-.01em; margin:36px 0 6px; color:var(--navy);}
+  h4{font-weight:600; font-size:1.6rem; margin:24px 0 4px; color:var(--ink);}
+  .lead{font-size:1.92rem; line-height:1.5; color:var(--ink); font-weight:300; max-width:64ch;}
+  p{max-width:70ch;}
+  .muted{color:var(--muted);}
+  hr.rule{border:0; border-top:1px solid var(--line); margin:52px 0;}
+  ul,ol{padding-left:20px;} li{margin:4px 0;}
+  ::selection{background:#f3d9c2;}
+
+  /* intro meta as a definition list, not stat cards */
+  dl.facts{display:grid; grid-template-columns:auto 1fr; gap:2px 26px; margin:26px 0; font-size:1.5rem;}
+  dl.facts dt{color:var(--faint); text-transform:uppercase; font-size:1.12rem; letter-spacing:.1em; font-weight:600; padding-top:7px;}
+  dl.facts dd{margin:0; padding:6px 0; border-bottom:1px solid var(--line-2);}
+  dl.facts dt{border-bottom:1px solid var(--line-2);}
+
+  /* understated tags */
+  .tags{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0;}
+  .tag{font-size:1.25rem; color:var(--muted); border:1px solid var(--line); border-radius:2px; padding:3px 11px;}
+  .tag b{color:var(--navy); font-weight:600;}
+
+  /* notes — thin rule, small-caps label, barely-there tint */
+  .note{border-left:2px solid var(--navy); padding:6px 0 6px 18px; margin:18px 0; max-width:72ch;}
+  .note .lab{display:block; font-size:1.12rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+    color:var(--navy); margin-bottom:2px;}
+  .note.beginner{border-color:var(--sage);} .note.beginner .lab{color:var(--sage);}
+  .note.warn{border-color:var(--terra);} .note.warn .lab{color:var(--terra);}
+  .expert{border-left:2px solid var(--rose); padding:6px 0 6px 18px; margin:18px 0; max-width:72ch;}
+  .expert .lab{display:block; font-size:1.12rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+    color:var(--rose); margin-bottom:2px;}
+  html.hide-expert .expert{display:none;}
+  .note p, .expert p{margin:0;}
+
+  /* code */
+  .code{margin:18px 0; border-radius:4px; overflow:hidden; border:1px solid #1d2d49;}
+  .code .bar{display:flex; align-items:center; justify-content:space-between; background:#101b2e;
+    padding:6px 14px; border-bottom:1px solid #233455;}
+  .code .lang{font-size:1.05rem; text-transform:uppercase; letter-spacing:.14em; color:#7d90b0; font-weight:600;}
+  .code pre{margin:0; padding:16px 18px; overflow-x:auto; background:var(--code-bg); color:var(--code-ink);
+    font-family:var(--mono); font-size:1.3rem; line-height:1.62;}
+  .copy{background:none; border:1px solid #2c3f63; color:#8fa3c4; border-radius:3px; padding:2px 10px;
+    font-size:1.05rem; cursor:pointer; font-family:var(--sans);}
+  .copy:hover{color:#fff; border-color:var(--terra-soft);}
+  .tk{color:#e3a06b;} .ts{color:#9ec79f;} .tc{color:#6f86a8; font-style:italic;}
+  .tn{color:#d8b46a;} .ty{color:#86b0e6;} .ta{color:#c98a6a;}
+  code.in{background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:1px 6px; color:var(--rose);}
+
+  /* tables — minimal, horizontal rules only */
+  table{width:100%; border-collapse:collapse; margin:18px 0; font-size:1.45rem;}
+  th,td{text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--line-2); vertical-align:top;}
+  th{color:var(--faint); font-size:1.1rem; text-transform:uppercase; letter-spacing:.1em; font-weight:600; border-bottom-color:var(--line);}
+  tbody tr:hover{background:var(--paper-2);}
+
+  /* tabs */
+  .tabs{display:flex; gap:22px; border-bottom:1px solid var(--line); margin:20px 0 0;}
+  .tabs button{background:none; border:0; border-bottom:2px solid transparent; color:var(--muted);
+    padding:8px 0; cursor:pointer; font-size:1.42rem; font-family:var(--sans); font-weight:500;}
+  .tabs button.active{color:var(--navy); border-bottom-color:var(--terra);}
+  .tabpane{display:none;} .tabpane.active{display:block;}
+
+  /* route + access markers — text, lightly tinted, not chunky badges */
+  .m{font-family:var(--mono); font-size:1.08rem; font-weight:600; letter-spacing:.04em; width:54px; display:inline-block;}
+  .m.get{color:#2f6fb0;} .m.post{color:#4a7d46;} .m.put{color:#b07d1f;} .m.patch{color:#8a5ea3;} .m.delete{color:#b14a3c;}
+  .auth{font-size:1.12rem; color:var(--muted); letter-spacing:.02em;}
+  .auth.seller{color:var(--terra);} .auth.admin{color:var(--rose);} .auth.account{color:var(--sage);}
+
+  /* route explorer */
+  .controls{margin:18px 0 4px;}
+  #ep-search{width:100%; background:var(--surface); border:1px solid var(--line); color:var(--ink);
+    padding:11px 14px; border-radius:3px; font-size:1.5rem; font-family:var(--sans);}
+  #ep-search:focus{outline:none; border-color:var(--terra-soft);}
+  .chips{display:flex; gap:18px; flex-wrap:wrap; margin:16px 0 6px;}
+  .chip{cursor:pointer; color:var(--muted); font-size:1.35rem; border-bottom:2px solid transparent; padding-bottom:2px;}
+  .chip.active{color:var(--navy); font-weight:600; border-bottom-color:var(--terra);}
+  .ep-count{color:var(--faint); font-size:1.25rem; margin:8px 0;}
+  .ep{border-bottom:1px solid var(--line-2);}
+  .ep-head{display:flex; align-items:baseline; gap:16px; padding:11px 4px; cursor:pointer;}
+  .ep-head:hover{background:var(--paper-2);}
+  .ep-path{font-family:var(--mono); font-size:1.32rem; color:var(--ink); flex:1; word-break:break-all;}
+  .ep-sum{color:var(--faint); font-size:1.25rem;}
+  .ep-body{display:none; padding:2px 4px 16px 74px;}
+  .ep.open .ep-body{display:block;}
+  .ep-meta{display:grid; grid-template-columns:auto 1fr; gap:3px 20px; font-size:1.4rem; margin-top:6px;}
+  .ep-meta b{color:var(--faint); font-weight:600; font-size:1.08rem; text-transform:uppercase; letter-spacing:.08em;}
+  @media (max-width:1000px){ .ep-body{padding-left:4px;} }
+
+  /* arch diagram */
+  .arch{width:100%; height:auto; margin:22px 0;}
+  .arch .box{fill:var(--surface); stroke:var(--line); stroke-width:1.5;}
+  .arch .box.api{stroke:#3f6da3;} .arch .box.app{stroke:var(--terra-soft);}
+  .arch .box.infra{stroke:#b8893f;} .arch .box.dom{stroke:#9c6b8a;}
+  .arch .t-title{fill:var(--navy); font-family:var(--sans); font-weight:600; font-size:13px;}
+  .arch .t-sub{fill:var(--muted); font-family:var(--sans); font-size:10.5px;}
+  .arch .arrow{stroke:#bcae98; stroke-width:1.5; fill:none; marker-end:url(#ah);}
+  .arch .lbl{fill:var(--faint); font-family:var(--sans); font-size:10px;}
+
+  details.faq{border-bottom:1px solid var(--line-2);}
+  details.faq summary{padding:13px 2px; cursor:pointer; font-weight:500; list-style:none; color:var(--navy);}
+  details.faq summary::-webkit-details-marker{display:none;}
+  details.faq summary::before{content:"+"; color:var(--terra); margin-right:12px; font-weight:600;}
+  details.faq[open] summary::before{content:"\2013";}
+  details.faq .b{padding:0 2px 14px 26px; color:var(--muted); max-width:70ch;}
+
+  .colophon{margin-top:72px; padding-top:26px; border-top:1px solid var(--line); color:var(--faint); font-size:1.28rem;}
+  kbd{background:var(--inset); border:1px solid var(--line); border-radius:3px; padding:1px 6px; font-family:var(--mono); font-size:1.15rem;}
+  @media (max-width:780px){
+    .shell{grid-template-columns:1fr;} aside{position:static; height:auto;}
+    main{padding:36px 22px 90px;} h1.title{font-size:3.4rem;} .lead{font-size:1.7rem;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <div class="mark">Manzili<b>.</b></div>
+      <div class="tag">where real craft finds its home</div>
+      <div class="stk">Next.js 16 · React 19 · Redux Toolkit · Tailwind v4</div>
+    </div>
+    <nav id="nav">
+      <div class="grp">Get oriented</div>
+      <a href="#overview">Overview</a>
+      <a href="#tldr">At a glance</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#stack">Technology stack</a>
+      <div class="grp">Architecture</div>
+      <a href="#architecture">App Router &amp; layers</a>
+      <a href="#routing">Routing &amp; route groups</a>
+      <a href="#rendering">Server vs client</a>
+      <div class="grp">Core concepts</div>
+      <a href="#client">The API client</a>
+      <a href="#state">State management</a>
+      <a href="#auth">Auth &amp; session</a>
+      <a href="#i18n">Internationalization</a>
+      <div class="grp">User flows</div>
+      <a href="#flows">Key flows</a>
+      <a href="#components">Components</a>
+      <a href="#ai">AI helpers</a>
+      <div class="grp">Reference</div>
+      <a href="#routes">Route map</a>
+      <a href="#deploy">Build &amp; deploy</a>
+      <a href="#glossary">Glossary</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topctl">
+      <button class="qbtn" id="themeToggle">Dark mode</button>
+      <span style="color:var(--faint); margin:0 14px;">·</span>
+      <button class="qbtn" id="expertToggle">Hide expert notes</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview">
+      <p class="eyebrow">Frontend documentation</p>
+      <h1 class="title">The Manzili storefront, in&nbsp;Next.js.</h1>
+      <p class="lead">The customer-facing marketplace for handmade Egyptian products — a Next.js 16 App Router
+        application on React 19 that talks to the .NET API over a single typed HTTP layer, with Redux Toolkit
+        holding the client-side state.</p>
+
+      <dl class="facts">
+        <dt>Framework</dt><dd>Next.js 16 (App Router) · React 19 · JavaScript (JSX)</dd>
+        <dt>State</dt><dd>Redux Toolkit · React-Redux · 8 feature slices</dd>
+        <dt>Styling</dt><dd>Tailwind CSS v4 · lucide-react icons · react-hot-toast</dd>
+        <dt>Backend link</dt><dd>One <code class="in">lib/api</code> client → the .NET API at <code class="in">/api/v1</code></dd>
+        <dt>Surface</dt><dd>44 page routes · 4 layouts · 3 route groups · 19 API modules</dd>
+      </dl>
+
+      <div class="note beginner"><span class="lab">New to Next.js? Read this first</span>
+        <p>This is the <em>frontend</em> — the website a buyer or seller opens in their browser. It renders the pages and
+        forms, then calls the separate <a href=".net-backend-documentation.html">.NET backend</a> for all data. Routes are
+        defined by the <em>folder structure</em> under <code class="in">app/</code> (App Router), not a route table. Unfamiliar
+        terms are in the <a href="#glossary">Glossary</a>; the rose-coloured <em>Expert notes</em> add depth and can be hidden
+        with the control at the top right.</p></div>
+
+      <div class="expert"><span class="lab">Expert note</span>
+        <p>This is a <em>pure client of the API</em>: after the migration off localStorage and dummy data, the app holds no
+        business logic and no database. Most pages are client components (<code class="in">"use client"</code>) because they read
+        Redux and the session; data is fetched on the client through <code class="in">lib/api/*</code>
+        rather than in React Server Components. Auth is <strong>httpOnly-cookie based</strong> — tokens live in cookies the browser
+        sends automatically, never in JS/<code class="in">localStorage</code>. The one server surface that remains is
+        <code class="in">app/api/ai/*</code> — thin route handlers that proxy LLM calls for the custom-order form so provider keys never
+        reach the browser.</p></div>
+    </section>
+
+    <!-- AT A GLANCE -->
+    <section id="tldr">
+      <p class="eyebrow">The two-minute version</p>
+      <h2 class="sec" style="margin-top:6px">At a glance</h2>
+      <p class="lead" style="font-size:1.74rem">Everything that matters, condensed. Each point links to the full detail.</p>
+      <ul class="summary">
+        <li><b>What it is.</b> A Next.js 16 App-Router marketplace UI on React 19 — buyer storefront, seller dashboard, and admin console — talking to the .NET API. <a href="#overview">Overview</a></li>
+        <li><b>Stack.</b> Next 16 + React 19, Redux Toolkit, Tailwind v4, react-hot-toast, lucide-react, recharts; AI route handlers in <code class="in">app/api/ai</code>. <a href="#stack">Stack</a></li>
+        <li><b>Shape.</b> File-system routing under <code class="in">app/</code> with three route groups — <code class="in">(public)</code> storefront, <code class="in">store/</code> seller dashboard, <code class="in">admin/</code> console — each with its own layout. <a href="#architecture">Architecture</a></li>
+        <li><b>One HTTP layer.</b> <code class="in">lib/api/client.js</code> prepends the API base, sends the httpOnly auth cookie with every call (<code class="in">credentials:'include'</code>), unwraps the <code class="in">{ success, data, … }</code> envelope, and retries once through the refresh-token flow on a 401. <a href="#client">API client</a></li>
+        <li><b>State.</b> Redux Toolkit slices for <code class="in">auth · cart · wishlist · address · notification · product · rating · customRequest</code>; selectors derive the role. The cart is <strong>account-linked and server-persisted</strong> (no longer stored in localStorage). <a href="#state">State</a></li>
+        <li><b>Auth.</b> JWT access + refresh tokens in <strong>httpOnly cookies</strong> (buyer/seller <code class="in">manzili_at</code>/<code class="in">manzili_rt</code>; admin a separate path-scoped pair); the session shape <code class="in">{ userId, name, email, storeId, role }</code> drives role gating — <code class="in">selectIsSeller</code> needs an approved store's <code class="in">storeId</code>. <a href="#auth">Auth</a></li>
+        <li><b>i18n.</b> A custom dictionary (<code class="in">en.js</code> + <code class="in">ar.js</code>) behind a <code class="in">t()</code> helper; the brand is <span dir="rtl">منزلي</span> and the UI deliberately stays <strong>LTR even in Arabic</strong>. <a href="#i18n">i18n</a></li>
+        <li><b>Flows.</b> Browse → product → cart → Stripe checkout; custom-order request → offer negotiation → milestone payments; orders with Bosta tracking + returns; seller &amp; admin dashboards. <a href="#flows">Key flows</a></li>
+        <li><b>Checkout is safe.</b> No card data ever touches this app — the API mints a Stripe Checkout session and the browser redirects to Stripe's hosted page. <a href="#flows">Checkout</a></li>
+        <li><b>Run it.</b> <code class="in">cd frontend/Manzili &amp;&amp; npm install &amp;&amp; npm run dev</code> on <code class="in">:3000</code>; set <code class="in">NEXT_PUBLIC_API_BASE_URL</code>. <a href="#quickstart">Quick start</a></li>
+        <li><b>Ship it.</b> <code class="in">npm run build</code>; deploy to Vercel; configure the <code class="in">NEXT_PUBLIC_*</code> env vars. <a href="#deploy">Build &amp; deploy</a></li>
+        <li><b>Explore it.</b> A searchable <a href="#routes">Route map</a> lists every page grouped Public / Account / Seller / Admin. <a href="#routes">Route map</a></li>
+      </ul>
+    </section>
+
+    <!-- QUICK START -->
+    <section id="quickstart">
+      <h2 class="sec">Quick start</h2>
+      <p>You need <strong>Node.js</strong> and the .NET backend running (see the <a href=".net-backend-documentation.html">backend doc</a>).
+        Run the frontend from <code class="in">frontend/Manzili</code> — <em>not</em> the repository root.</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div><pre>
+cd frontend/Manzili
+npm install
+npm run dev                 # Next.js dev server on http://localhost:3000
+
+# build / serve the production bundle
+npm run build
+npm start</pre></div>
+      <p class="muted">Point the app at the API with a <code class="in">.env.local</code> file. Only variables prefixed
+        <code class="in">NEXT_PUBLIC_</code> are exposed to the browser:</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">.env.local</span><button class="copy">Copy</button></div><pre>
+# Base URL of the .NET API (defaults to the local dev backend if unset)
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5080/api/v1
+
+# Optional server-side keys for the custom-order AI helper (app/api/ai/*)
+ZAI_API_KEY=...
+GEMINI_API_KEY=...
+GROQ_API_KEY=...</pre></div>
+      <div class="note warn"><span class="lab">CORS</span>
+        <p>The browser calls the API directly, so the backend must allow this origin. The .NET <code class="in">Manzili:CorsOrigin</code>
+        setting already permits <code class="in">http://localhost:3000</code> and <code class="in">:3001</code> in development. A new
+        deployed origin must be added there or requests will be blocked by the browser.</p></div>
+    </section>
+
+    <!-- STACK -->
+    <section id="stack">
+      <h2 class="sec">Technology stack</h2>
+      <table>
+        <thead><tr><th>Concern</th><th>Choice</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Framework</td><td>Next.js 16 (App Router)</td><td>File-system routing under <code class="in">app/</code>; built with the Webpack compiler (<code class="in">--webpack</code>).</td></tr>
+          <tr><td>UI library</td><td>React 19</td><td>Function components + hooks; new JSX transform.</td></tr>
+          <tr><td>State</td><td>Redux Toolkit + React-Redux</td><td><code class="in">configureStore</code>, slices, and async thunks.</td></tr>
+          <tr><td>Styling</td><td>Tailwind CSS v4</td><td>Utility classes via the <code class="in">@tailwindcss/postcss</code> plugin.</td></tr>
+          <tr><td>Icons</td><td>lucide-react</td><td>Tree-shaken SVG icon set.</td></tr>
+          <tr><td>Toasts</td><td>react-hot-toast</td><td>One <code class="in">&lt;Toaster/&gt;</code> mounted in the root layout.</td></tr>
+          <tr><td>Charts</td><td>recharts</td><td>Seller dashboard order/earnings chart.</td></tr>
+          <tr><td>Dates</td><td>date-fns</td><td>Order / tracking timestamp formatting.</td></tr>
+          <tr><td>AI helpers</td><td>z.ai · Gemini · Groq</td><td>Server route handlers in <code class="in">app/api/ai</code> for the custom-order form (prompt synthesis, image captions, review questions).</td></tr>
+        </tbody>
+      </table>
+      <div class="expert"><span class="lab">Expert note — what's deliberately absent</span>
+        <p>No data-fetching library (React Query/SWR), no form library, no component kit, and no <code class="in">prisma</code>/<code class="in">stripe</code>
+        packages — those were removed when business logic moved to the backend. Data fetching is hand-rolled in <code class="in">lib/api/*</code>
+        and cached only by component state; Stripe is reached purely by redirecting to a hosted Checkout URL the API returns, so no Stripe SDK
+        ships to the browser.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ARCHITECTURE -->
+    <section id="architecture">
+      <p class="eyebrow">Architecture</p>
+      <h2 class="sec" style="margin-top:6px">Pages, state, and one API layer</h2>
+      <p>Three concerns, cleanly separated: the App Router renders <strong>pages</strong>, Redux holds <strong>UI state</strong>,
+        and a single <strong>HTTP layer</strong> is the only thing that talks to the backend.</p>
+
+      <svg class="arch" viewBox="0 0 760 300" role="img" aria-label="Frontend architecture diagram">
+        <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 Z" fill="#bcae98"/></marker></defs>
+        <rect class="box api" x="20" y="28" width="200" height="100" rx="6"/>
+        <text class="t-title" x="36" y="56">app/ — App Router</text>
+        <text class="t-sub" x="36" y="76">route groups + layouts</text>
+        <text class="t-sub" x="36" y="92">pages (mostly "use client")</text>
+        <text class="t-sub" x="36" y="108">components/</text>
+        <rect class="box app" x="20" y="172" width="200" height="98" rx="6"/>
+        <text class="t-title" x="36" y="200">lib/features — Redux</text>
+        <text class="t-sub" x="36" y="220">8 slices + thunks</text>
+        <text class="t-sub" x="36" y="236">selectors derive role</text>
+        <text class="t-sub" x="36" y="252">cart is server-linked</text>
+        <rect class="box infra" x="300" y="100" width="190" height="100" rx="6"/>
+        <text class="t-title" x="316" y="128">lib/api — HTTP layer</text>
+        <text class="t-sub" x="316" y="148">client.js (fetch wrapper)</text>
+        <text class="t-sub" x="316" y="164">cookie · 401→refresh</text>
+        <text class="t-sub" x="316" y="180">envelope unwrap · 19 modules</text>
+        <rect class="box dom" x="566" y="116" width="174" height="70" rx="6"/>
+        <text class="t-title" x="582" y="144">.NET API</text>
+        <text class="t-sub" x="582" y="164">/api/v1 · JSON envelope</text>
+        <path class="arrow" d="M220,78 C260,78 270,135 300,135"/>
+        <path class="arrow" d="M220,212 C260,212 270,175 300,175"/>
+        <path class="arrow" d="M490,150 L566,150"/>
+        <text class="lbl" x="238" y="100">calls</text>
+        <text class="lbl" x="238" y="200">thunks call</text>
+        <text class="lbl" x="502" y="142">HTTPS</text>
+      </svg>
+
+      <h4>app/ — the App Router</h4>
+      <p class="muted">Folders define routes; <code class="in">page.jsx</code> is a page, <code class="in">layout.jsx</code> wraps a subtree.
+        Three <em>route groups</em> partition the app, each with its own chrome. Most pages opt into the client with
+        <code class="in">"use client"</code> so they can use Redux and the browser-stored token.</p>
+      <h4>components/</h4>
+      <p class="muted">Reusable UI — <code class="in">Navbar</code>, <code class="in">Hero</code>, <code class="in">ProductCard</code>,
+        <code class="in">OrderSummary</code>, <code class="in">TrackingTimeline</code>, plus the <code class="in">store/</code> and
+        <code class="in">admin/</code> layout/sidebar shells.</p>
+      <h4>lib/features/ — Redux slices</h4>
+      <p class="muted">One slice per concern, each owning its state, reducers, and async thunks (the thunks call <code class="in">lib/api</code>).
+        Selectors live alongside the slice so every consumer derives state the same way.</p>
+      <h4>lib/api/ — the HTTP layer</h4>
+      <p class="muted">The <em>only</em> code that touches the network. <code class="in">client.js</code> is the shared fetch wrapper; one
+        module per backend area (<code class="in">products</code>, <code class="in">orders</code>, <code class="in">custom</code>,
+        <code class="in">seller</code>, <code class="in">admin</code>, …) adapts the API's DTOs into the shapes the UI expects.</p>
+
+      <div class="expert"><span class="lab">Expert note — the adapter seam</span>
+        <p>Every API module exports small <code class="in">adapt*()</code> functions that map a backend DTO to a UI object (e.g.
+        <code class="in">adaptProductCard</code>, <code class="in">adaptOrder</code>, <code class="in">adaptNotification</code> turning
+        <code class="in">isRead → read</code>). This anti-corruption seam means a field rename on the backend is absorbed in one place
+        rather than rippling through components — and it's why the UI survived the whole Node→.NET port unchanged.</p></div>
+    </section>
+
+    <section id="routing">
+      <h3>Routing &amp; route groups</h3>
+      <p>A folder named in parentheses — like <code class="in">(public)</code> — is a <em>route group</em>: it organises files and lets a
+        subtree share a layout <strong>without adding a URL segment</strong>. Manzili uses three.</p>
+      <table>
+        <thead><tr><th>Group</th><th>URL prefix</th><th>Layout</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">app/(public)</code></td><td><em>(none)</em> — <code class="in">/</code>, <code class="in">/shop</code>, …</td><td>Navbar + Footer</td><td>The buyer storefront and account pages.</td></tr>
+          <tr><td><code class="in">app/store</code></td><td><code class="in">/store/*</code></td><td><code class="in">StoreLayout</code> + sidebar</td><td>The seller dashboard (gated on an approved store).</td></tr>
+          <tr><td><code class="in">app/admin</code></td><td><code class="in">/admin/*</code></td><td><code class="in">AdminLayout</code> + sidebar</td><td>The platform admin / moderator console.</td></tr>
+        </tbody>
+      </table>
+      <p>Dynamic segments use square brackets: <code class="in">app/(public)/product/[productId]</code> →
+        <code class="in">/product/42</code>, <code class="in">app/(public)/shop/[username]</code> → a store's public page,
+        <code class="in">app/(public)/custom/request-view/[id]</code> → one custom request. The full list is in the
+        <a href="#routes">Route map</a>.</p>
+      <div class="code" data-lang="text"><div class="bar"><span class="lang">tree — app/</span><button class="copy">Copy</button></div><pre>
+app/
+├─ layout.jsx               root: &lt;html lang="en" dir="ltr"&gt;, StoreProvider, LocaleProvider, Toaster
+├─ StoreProvider.js         creates the Redux store, preloads the session
+├─ (public)/                route group — no URL segment
+│  ├─ layout.jsx            Navbar + Footer
+│  ├─ page.jsx              home (Hero, BestSelling, LatestProducts…)
+│  ├─ shop/ · product/[productId]/ · cart/ · cart/success/
+│  ├─ login/ · register/ · profile/ · orders/ · returns/ · wishlist/
+│  ├─ custom/ · custom/custom-form/ · custom/request-view/[id]/ · custom/negotiation/[id]/
+│  └─ about/ · faq/ · contact/ · privacy-policy/ · create-store/
+├─ store/                   seller dashboard (StoreLayout gate)
+│  ├─ page.jsx · add-product/ · manage-product/ · orders/ · returns/
+│  └─ custom-order/ · coupons/ · wallet/ · warehouses/ · settings/
+├─ admin/                   admin console (AdminLayout gate)
+│  ├─ login/ · page.jsx · orders/ · products/ · stores/ · approve/
+│  └─ reports/ · coupons/ · moderators/ · conversations/ · requests/
+└─ api/ai/                  server route handlers — LLM proxy for the custom form</pre></div>
+    </section>
+
+    <section id="rendering">
+      <h3>Server vs client components</h3>
+      <div class="note beginner"><span class="lab">What's the difference?</span>
+        <p>In the App Router every component is a <em>Server Component</em> by default — it renders once on the server and ships only HTML, with
+        no JavaScript and no access to the browser. Adding <code class="in">"use client"</code> at the top makes it a <em>Client Component</em>:
+        it runs in the browser, so it can use <code class="in">useState</code>, event handlers, Redux, and <code class="in">localStorage</code>.</p></div>
+      <p>Because Manzili is an interactive, session-driven app, <strong>most pages are client components</strong>. They need the Redux store,
+        the cookie-backed session, and effects that fetch through <code class="in">lib/api</code> after mount. The few server
+        pieces are the <strong>root layout's metadata</strong> and the <strong><code class="in">app/api/ai</code> route handlers</strong>, which run
+        server-side so API keys stay off the client.</p>
+      <div class="expert"><span class="lab">Expert note — the provider boundary</span>
+        <p>The root <code class="in">layout.jsx</code> is a Server Component (it exports <code class="in">metadata</code>), but it renders
+        <code class="in">&lt;StoreProvider&gt;</code> and <code class="in">&lt;LocaleProvider&gt;</code>, both <code class="in">"use client"</code>. That's the
+        standard pattern: keep the layout on the server for metadata and fonts, then drop into client context providers for everything below.
+        <code class="in">&lt;html&gt;</code> carries <code class="in">suppressHydrationWarning</code> because the locale effect can adjust
+        <code class="in">documentElement.lang</code> after hydration.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- API CLIENT -->
+    <section id="client">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">The API client</h2>
+      <p><code class="in">lib/api/client.js</code> is the single chokepoint for every backend call. It prepends the base URL, sends the
+        httpOnly auth cookie with the request, unwraps the envelope, and recovers from an expired access token transparently.</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — base URL + cookie-based auth</span><button class="copy">Copy</button></div><pre>
+const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5080/api/v1').replace(/\/$/, '');
+
+async function rawFetch(path, { method = 'GET', body, headers = {}, auth = true } = {}) {
+  const finalHeaders = { ...headers };
+  // FormData (image uploads) is sent as-is; everything else is JSON.
+  if (body != null &amp;&amp; !(body instanceof FormData)) {
+    finalHeaders['Content-Type'] = 'application/json';
+    body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
+  // No Authorization header: the JWT rides an httpOnly cookie (manzili_at) the
+  // browser attaches automatically. credentials:'include' sends it cross-origin.
+  return fetch(`${BASE_URL}${path}`, { method, headers: finalHeaders, body, credentials: 'include' });
+}</pre></div>
+      <h4>401 → refresh → retry</h4>
+      <p>On a <code class="in">401</code> the client runs the refresh-token flow <em>once</em>, then replays the original request. The refresh
+        cookie is sent automatically; a shared <code class="in">refreshPromise</code> de-duplicates concurrent refreshes so a burst of 401s triggers
+        a single token exchange. If refresh fails, the session is cleared (effectively a logout).</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — the retry path</span><button class="copy">Copy</button></div><pre>
+export async function apiFetch(path, options = {}) {
+  const { retry = true, auth = true } = options;
+  let res = await rawFetch(path, options);
+
+  if (res.status === 401 &amp;&amp; retry &amp;&amp; auth) {
+    const refreshed = await tryRefresh();      // POST /auth/refresh (cookie), single-flight
+    if (refreshed) res = await rawFetch(path, options);   // replay once
+  }
+
+  const text = await res.text();
+  const json = text ? JSON.parse(text) : null;
+  if (!res.ok || json?.success === false) {
+    const err = json?.error || {};
+    if (res.status === 401) clearSession();    // give up → logout
+    throw new ApiError(err.message || `Request failed (${res.status})`,
+      { code: err.code || `HTTP_${res.status}`, status: res.status, details: err.details });
+  }
+  return json ?? { success: true, data: null }; // full envelope back to the caller
+}</pre></div>
+      <h4>Verb helpers &amp; anonymous calls</h4>
+      <p>Thin wrappers return the <em>full envelope</em>; callers read <code class="in">.data</code> and any top-level meta. Public endpoints
+        opt out of the token with <code class="in">{ auth:false }</code>.</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS</span><button class="copy">Copy</button></div><pre>
+export const apiGet    = (p, o) => apiFetch(p, { ...o, method: 'GET' });
+export const apiPost   = (p, b, o) => apiFetch(p, { ...o, method: 'POST',   body: b });
+export const apiPut    = (p, b, o) => apiFetch(p, { ...o, method: 'PUT',    body: b });
+export const apiPatch  = (p, b, o) => apiFetch(p, { ...o, method: 'PATCH',  body: b });
+export const apiDelete = (p, o) => apiFetch(p, { ...o, method: 'DELETE' });
+
+// anonymous (no Authorization header):
+await apiPost('/auth/login', { email, password }, { auth: false });
+await apiPost('/contact',    payload,             { auth: false });</pre></div>
+      <div class="expert"><span class="lab">Expert note — typed errors &amp; the envelope contract</span>
+        <p>Failures throw a single <code class="in">ApiError</code> carrying <code class="in">{ message, code, status, details }</code> lifted
+        straight from the backend's <code class="in">error</code> object, so a component can branch on <code class="in">err.code</code> or render
+        <code class="in">err.details</code> field errors without parsing strings. The success path returns the envelope verbatim — meta like
+        <code class="in">total</code>/<code class="in">page</code> sits at the <em>top level</em> next to <code class="in">data</code>, exactly
+        matching the backend's <a href=".net-backend-documentation.html#envelope">response envelope</a>.</p></div>
+    </section>
+
+    <!-- STATE -->
+    <section id="state">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">State management</h2>
+      <p>Global UI state lives in a Redux Toolkit store assembled in <code class="in">lib/store.js</code> and provided by
+        <code class="in">app/StoreProvider.js</code>. Eight slices, each owning one concern.</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — lib/store.js</span><button class="copy">Copy</button></div><pre>
+export const makeStore = (preloadedState) => configureStore({
+  reducer: {
+    auth,          // session: { userId, name, email, storeId, role } | null
+    cart,          // { total, cartItems: { "prodId::Color=Red|Size=M": {…} } }
+    product,       // catalog list + fetch status
+    address,       // saved delivery addresses
+    rating,        // product reviews
+    customRequest, // the buyer's custom-order requests
+    wishlist,      // { total, wishlistItems: { [productId]: true } }
+    notification,  // { list: [...] }
+  },
+  preloadedState,
+});</pre></div>
+      <table>
+        <thead><tr><th>Slice</th><th>Holds</th><th>Notable thunks (call <code class="in">lib/api</code>)</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">auth</code></td><td>The session object (or <code class="in">null</code>).</td><td>—  (set via <code class="in">setSession</code>; role selectors below)</td></tr>
+          <tr><td><code class="in">cart</code></td><td>Items keyed by product + variant.</td><td><code class="in">hydrateCart</code>, <code class="in">syncCart</code>, <code class="in">mergeGuestCart</code> (account-linked, server-persisted)</td></tr>
+          <tr><td><code class="in">wishlist</code></td><td>A set of product ids + count.</td><td><code class="in">hydrateWishlist</code>, <code class="in">toggleWishlistRemote</code> (optimistic)</td></tr>
+          <tr><td><code class="in">address</code></td><td>Saved delivery addresses.</td><td><code class="in">hydrateAddresses</code>, <code class="in">createAddressRemote</code>, <code class="in">deleteAddressRemote</code></td></tr>
+          <tr><td><code class="in">notification</code></td><td>Notifications (newest first).</td><td><code class="in">hydrateNotifications</code>, <code class="in">markNotificationReadRemote</code></td></tr>
+          <tr><td><code class="in">product</code></td><td>Catalog list + status.</td><td><code class="in">fetchProducts</code></td></tr>
+          <tr><td><code class="in">rating</code> · <code class="in">customRequest</code></td><td>Reviews · the buyer's requests.</td><td>mutations done in pages via <code class="in">lib/api</code></td></tr>
+        </tbody>
+      </table>
+      <h4>Selectors derive the role</h4>
+      <p>Rather than store a role flag that could drift, the role is <em>computed</em> from the session in <code class="in">authSlice.js</code>:</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — authSlice selectors</span><button class="copy">Copy</button></div><pre>
+export const selectIsLoggedIn = (s) => Boolean(s.auth.session?.userId);
+export const selectIsAdmin    = (s) => s.auth.session?.role === 'admin';
+export const selectIsSeller   = (s) =>
+  Boolean(s.auth.session?.userId &amp;&amp; s.auth.session?.storeId) &amp;&amp;
+  s.auth.session?.role !== 'admin';      // seller ⇔ has an approved store's storeId</pre></div>
+      <h4>Persistence — nothing sensitive in the browser</h4>
+      <p>The session is carried by httpOnly cookies, so it is <em>not</em> stored in <code class="in">localStorage</code>; on boot the app
+        resolves who you are by calling the API (<code class="in">GET /auth/me</code>). The <strong>cart is account-linked and persisted
+        server-side</strong> — loaded from the API on login and synced back, so it survives logout and follows the account across devices.
+        Addresses, notifications, wishlist, and the catalog are likewise <em>hydrated from the API</em> after mount, so the browser never holds
+        stale server data. The product catalog is fetched once at app bootstrap, so home / cart / wishlist are never empty before a visit to
+        <code class="in">/shop</code>. (A guest's in-session cart is merged into the account on sign-in.)</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — app/StoreProvider.js (abridged)</span><button class="copy">Copy</button></div><pre>
+export default function StoreProvider({ children }) {
+  const storeRef = useRef();
+  if (!storeRef.current) storeRef.current = makeStore();
+  useEffect(() => {
+    const store = storeRef.current;
+    store.dispatch(fetchProducts());           // load the catalog once at bootstrap
+    // cookie-backed session: ask the API who we are, then hydrate the server cart
+    store.dispatch(resolveSession()).then(() => store.dispatch(hydrateCart()));
+  }, []);
+  return &lt;Provider store={storeRef.current}&gt;{children}&lt;/Provider&gt;;
+}</pre></div>
+      <div class="expert"><span class="lab">Expert note — store per request, single-flight hydration</span>
+        <p><code class="in">makeStore()</code> is a factory (not a module-level singleton) so each browser session gets a fresh store and SSR never
+        leaks state between requests; the ref guard ensures it's created once per mount. The session is resolved from the cookie via the API rather
+        than read synchronously from storage. Hydration thunks are dispatched by the components that need the data (e.g.
+        <code class="in">NotificationBell</code> dispatches <code class="in">hydrateNotifications</code>) and are gated on
+        <code class="in">selectIsLoggedIn</code>, so a guest never fires authenticated requests.</p></div>
+    </section>
+
+    <!-- AUTH -->
+    <section id="auth">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Auth &amp; session</h2>
+      <p>Login and register call the API; the server sets the auth tokens as httpOnly cookies, and the response body carries the user so the
+        app can map it onto its session shape. A separate admin portal posts to a different endpoint and gets its own cookie pair.</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — lib/api/auth.js</span><button class="copy">Copy</button></div><pre>
+function toSession(user) {                       // backend user → app session
+  const storeId = user.storeId ? String(user.storeId) : null;
+  return { userId: String(user.id), name: user.name || '', email: user.email || '',
+           storeId, role: user.role || (storeId ? 'seller' : 'buyer') };
+}
+
+export async function apiLogin({ email, password }) {
+  // the server sets manzili_at + manzili_rt as httpOnly cookies on the response
+  const res = await apiPost('/auth/login', { email, password }, { auth: false });
+  return toSession(res.data.user);
+}
+export async function apiAdminLogin({ username, password }) {        // distinct portal
+  // sets the SEPARATE admin cookie pair (manzili_admin_at/_rt), scoped to /api/v1/admin
+  const res = await apiPost('/admin/auth/login', { username, password }, { auth: false });
+  return toSession(res.data.user);               // role === 'admin'
+}
+export async function apiLogout()      { await apiPost('/auth/logout');       } // clears the cookies server-side
+export async function apiAdminLogout() { await apiPost('/admin/auth/logout'); }</pre></div>
+      <h4>Token storage — httpOnly cookies</h4>
+      <p>The access and refresh tokens are <strong>httpOnly cookies set by the API</strong>, never touched by JavaScript and never in
+        <code class="in">localStorage</code> — so page scripts can't read them and XSS can't exfiltrate them. The browser attaches them
+        automatically (<code class="in">credentials:'include'</code>), and the app learns the session by calling
+        <code class="in">GET /auth/me</code> rather than reading a token.</p>
+      <div class="note warn"><span class="lab">Admin and buyer/seller sessions are isolated</span>
+        <p>Buyer/seller cookies (<code class="in">manzili_at</code>/<code class="in">manzili_rt</code>) are scoped to path <code class="in">/</code>;
+        the admin portal uses a separate pair (<code class="in">manzili_admin_at</code>/<code class="in">manzili_admin_rt</code>)
+        <strong>path-scoped to <code class="in">/api/v1/admin</code></strong>. The two sessions can coexist in one browser, and logging into the
+        admin console no longer clobbers a signed-in buyer or seller (this fixed a real bug).</p></div>
+      <h4>Role gating</h4>
+      <ul class="muted">
+        <li><strong>Seller dashboard</strong> (<code class="in">app/store/*</code>): <code class="in">StoreLayout</code> checks
+          <code class="in">session.userId</code> + <code class="in">session.storeId</code> and otherwise shows a sign-in prompt. Crucially,
+          the backend only grants a <code class="in">storeId</code> when the store is <em>approved and active</em> — so a pending applicant logs
+          in as a buyer and must re-login (or token-refresh) once approved.</li>
+        <li><strong>Admin console</strong> (<code class="in">app/admin/*</code>): <code class="in">AdminLayout</code> gates on
+          <code class="in">selectIsAdmin</code>, redirects to <code class="in">/admin/login</code> if not, and loads
+          <code class="in">GET /admin/me</code> to get <code class="in">{ isSuperAdmin, permissions[] }</code>; <code class="in">AdminSidebar</code>
+          filters links by permission and moderators are bounced off sections they don't hold.</li>
+      </ul>
+      <div class="note warn"><span class="lab">Two separate logins</span>
+        <p>Buyers/sellers use <code class="in">/login</code> (email + password → <code class="in">/auth/login</code>); admins use
+        <code class="in">/admin/login</code> (username + password → <code class="in">/admin/auth/login</code>). The admin endpoint only succeeds
+        for accounts backed by a systemadmin row, returning a session with <code class="in">role:"admin"</code>.</p></div>
+    </section>
+
+    <!-- I18N -->
+    <section id="i18n">
+      <p class="eyebrow">Core concept</p>
+      <h2 class="sec" style="margin-top:6px">Internationalization</h2>
+      <p>i18n is hand-rolled — no library. Two dictionaries (<code class="in">lib/i18n/dictionaries/en.js</code> and
+        <code class="in">ar.js</code>) sit behind a <code class="in">LocaleContext</code> exposing a <code class="in">t()</code> translate
+        function with dotted-key lookup, English fallback, and <code class="in">{param}</code> interpolation.</p>
+      <div class="code" data-lang="javascript"><div class="bar"><span class="lang">JS — lib/i18n/LocaleContext.jsx</span><button class="copy">Copy</button></div><pre>
+const t = useCallback((key, params = {}) => {
+  const dict = dictionaries[locale] || en;
+  let value = getDeepValue(dict, key) ?? getDeepValue(en, key);   // fallback to English
+  if (value == null) return key;
+  return String(value).replace(/\{(\w+)\}/g, (_, p) =&gt;
+    params[p] !== undefined ? String(params[p]) : `{${p}}`);       // {name} interpolation
+}, [locale]);
+
+// usage in a component:
+const t = useTranslate();
+&lt;h1&gt;{t('hero.headline')}&lt;/h1&gt;</pre></div>
+      <p>The chosen locale persists to <code class="in">localStorage</code> under <code class="in">manzili_locale</code>; the brand renders as
+        <span dir="rtl">منزلي</span> in Arabic.</p>
+      <div class="note"><span class="lab">Deliberate: the UI stays LTR even in Arabic</span>
+        <p>Switching to Arabic translates the copy but <strong>does not flip the layout to RTL</strong> — <code class="in">setLocale</code>
+        always sets <code class="in">documentElement.dir = "ltr"</code>, and the root <code class="in">&lt;html&gt;</code> is hard-coded
+        <code class="in">dir="ltr"</code>. This is an intentional design decision (verified: <code class="in">documentElement.dir === 'ltr'</code>
+        in Arabic), keeping the visual layout identical across languages.</p></div>
+      <div class="expert"><span class="lab">Expert note — live vs dead keys</span>
+        <p>Only keys read by <em>client</em> components are live. Some content pages (privacy-policy, about) are written as plain server/JSX content,
+        so their <code class="in">privacyPolicy</code>/<code class="in">about</code> dictionary keys are effectively dead; the FAQ keys are live. The
+        Arabic overhaul standardised the brand to <span dir="rtl">منزلي</span> everywhere and fixed two duplicate/typo keys in
+        <code class="in">ar.js</code>.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- FLOWS -->
+    <section id="flows">
+      <p class="eyebrow">User flows</p>
+      <h2 class="sec" style="margin-top:6px">Key user flows</h2>
+      <p>The five journeys that define the product. Switch tabs to walk each one.</p>
+      <div class="tabs" data-tabs="flow">
+        <button class="active" data-tab="flow-shop">Shop &amp; checkout</button>
+        <button data-tab="flow-custom">Custom orders</button>
+        <button data-tab="flow-orders">Orders &amp; returns</button>
+        <button data-tab="flow-seller">Seller</button>
+        <button data-tab="flow-admin">Admin</button>
+      </div>
+
+      <div class="tabpane active" id="flow-shop">
+        <h4>Browse → product → cart → Stripe checkout</h4>
+        <ol class="muted">
+          <li><strong>Browse / search.</strong> <code class="in">/shop</code> lists products via <code class="in">fetchProducts</code> (the <code class="in">product</code> slice); <code class="in">ShopFilters</code> drive category/sort; full-text search hits <code class="in">GET /search</code>.</li>
+          <li><strong>Product.</strong> <code class="in">/product/[productId]</code> renders <code class="in">ProductDetails</code> — gallery, variant picker, per-variant stock, ratings, a wishlist heart and a <code class="in">ReportButton</code>. "Add to cart" dispatches <code class="in">addToCart</code>; "Customize this item" stashes a seed and routes to the custom form.</li>
+          <li><strong>Cart.</strong> <code class="in">/cart</code> shows the account-linked cart keyed by product+variant; <code class="in">OrderSummary</code> calls <code class="in">quoteCheckout</code> (<code class="in">POST /checkout/quote</code>) so the displayed breakdown — subtotal − discount + 35% Bosta share + Stripe fee — equals what the card will be charged, and lets the buyer pick/add an address and apply a coupon.</li>
+          <li><strong>Checkout.</strong> <code class="in">createCheckoutSession</code> (<code class="in">POST /checkout</code>) returns a hosted Stripe URL; the browser redirects there. No card data ever touches this app.</li>
+          <li><strong>Success.</strong> Stripe redirects back to <code class="in">/cart/success</code> (and the orders page) with <code class="in">?session_id=</code>; the app calls <code class="in">confirmCheckout</code> (<code class="in">POST /checkout/confirm</code>), which is idempotent and finalizes fulfillment even if the webhook never reached the dev machine.</li>
+        </ol>
+      </div>
+
+      <div class="tabpane" id="flow-custom">
+        <h4>Custom-order request → negotiation/offers → milestone payments</h4>
+        <ol class="muted">
+          <li><strong>Request.</strong> <code class="in">/custom/custom-form</code> collects item, category, description, materials, reference photos; the AI helpers (<a href="#ai">below</a>) suggest a prompt and review questions. A private request can target one vendor via a picker backed by <code class="in">GET /stores/search?q=&amp;limit=</code> (approved, active stores matched by store name or @username, straight from the seller table). Submitting calls <code class="in">createRequest</code> (<code class="in">POST /custom/requests</code>); drafts autosave to <code class="in">localStorage</code> per user.</li>
+          <li><strong>Offers / chat.</strong> <code class="in">/custom/request-view/[id]</code> and <code class="in">/custom/negotiation/[id]</code> show offers (<code class="in">fetchOffers</code>) and an offer chat (<code class="in">fetchOfferMessages</code> / <code class="in">sendOfferMessage</code>). The buyer accepts/declines via <code class="in">transitionOffer</code> (<code class="in">PATCH /custom/offers/{id}</code>).</li>
+          <li><strong>Milestone payments.</strong> Offers over the split threshold pay in milestones. <code class="in">createOfferCheckout</code> (<code class="in">POST /custom/offers/{id}/checkout</code>) opens a Stripe portal for a milestone; the request view confirms on the <code class="in">?session_id=</code> return; <code class="in">payOfferMilestone</code> remains a direct fallback. Paying the final milestone creates the real order on the backend.</li>
+        </ol>
+      </div>
+
+      <div class="tabpane" id="flow-orders">
+        <h4>Orders, Bosta tracking, returns</h4>
+        <ol class="muted">
+          <li><strong>Orders.</strong> <code class="in">/orders</code> lists the buyer's orders (<code class="in">fetchOrders</code>) and, on a <code class="in">?session_id=</code> return, confirms a just-paid Stripe checkout. The DTO includes a per-vendor <code class="in">storeOrders[]</code> breakdown (each with <code class="in">storeName</code>, items incl. <code class="in">imageUrl</code>, its delivery total and shipment/tracking) plus the delivery <code class="in">address</code>, so the page renders one rich card <strong>per vendor</strong> with item thumbnails, per-vendor delivery and a status timeline. Online-payment orders only appear once <strong>paid</strong> — unpaid/abandoned and canceled orders are filtered out (COD shows immediately).</li>
+          <li><strong>Tracking.</strong> Each store-order carries a <code class="in">shipment { trackingNumber, carrier, status, events[] }</code> object; <code class="in">TrackingTimeline</code> renders it as a vertical Bosta timeline (or a compact inline row in tables).</li>
+          <li><strong>Returns.</strong> <code class="in">/returns</code> and the orders page let a buyer request a return via <code class="in">requestReturn</code> (<code class="in">POST /orders/{orderId}/return</code>); the backend books a reverse Bosta delivery and the timeline gains a <em>return requested</em> event.</li>
+        </ol>
+      </div>
+
+      <div class="tabpane" id="flow-seller">
+        <h4>Seller dashboard</h4>
+        <p class="muted">Under <code class="in">/store/*</code>, gated by <code class="in">StoreLayout</code> on an approved store. Pages: dashboard
+          (<code class="in">fetchDashboard</code> + a recharts orders chart), add/manage products (<code class="in">create/update/deleteSellerProduct</code>,
+          images via <code class="in">POST /upload</code>), orders (status transitions via <code class="in">updateOrderStatus</code>), returns, custom
+          orders, coupons, wallet (balances, ledger, payout request, bank details), warehouses (multiple pickup locations with a default), and store
+          settings. The seller orders list shows only real (paid or COD) orders — unpaid/abandoned online attempts and canceled orders are filtered out.
+          The store username is fixed at creation and read-only in settings. Applicants who aren't yet approved see their verification status from
+          <code class="in">GET /stores/my-application</code> on <code class="in">/create-store</code>.</p>
+      </div>
+
+      <div class="tabpane" id="flow-admin">
+        <h4>Admin console</h4>
+        <p class="muted">Under <code class="in">/admin/*</code>, gated by <code class="in">AdminLayout</code>. <code class="in">/admin/login</code> →
+          dashboard stats; <code class="in">approve</code>/<code class="in">stores</code> approve or toggle stores (<code class="in">storeAction</code>),
+          <code class="in">products</code> disable products, <code class="in">orders</code> + <code class="in">requests</code> are read-only lists,
+          <code class="in">reports</code> resolve user reports (<code class="in">reportAction</code>), <code class="in">coupons</code> manage global coupons,
+          <code class="in">moderators</code> (super-admin only) toggle per-section permissions, and <code class="in">conversations</code> is a read-only view
+          of custom-order negotiation chats.</p>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section id="components">
+      <h3>Components worth knowing</h3>
+      <table>
+        <thead><tr><th>Component</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">Navbar</code></td><td>Logo, search, cart badge, language toggle, login/signup, and — when logged in — the user's <strong>profile picture</strong>. The <strong>notifications bell and wishlist link render only when logged in</strong> (<code class="in">selectIsLoggedIn</code>); logout clears the session + wishlist.</td></tr>
+          <tr><td><code class="in">Hero</code></td><td>Editorial split-screen home hero: eyebrow + headline (second sentence in a tan gradient), two CTAs (Explore Ready-to-Buy → <code class="in">/shop</code>, Commission a Custom Piece → <code class="in">/custom</code>), a trust row, and an overlapping artisan photo collage.</td></tr>
+          <tr><td><code class="in">TrackingTimeline</code></td><td>Renders the Bosta <code class="in">shipment</code> object as a full vertical timeline or a compact inline row. Pure presentational — used on buyer orders, seller orders/returns, and buyer returns.</td></tr>
+          <tr><td><code class="in">ReportButton</code></td><td>A flag-and-modal that posts a typed report (non-handmade product, seller misconduct, …) via <code class="in">POST /reports</code> (auth required).</td></tr>
+          <tr><td><code class="in">OrderSummary</code></td><td>The checkout summary — coupon validation, address select/create, the <code class="in">quoteCheckout</code> money breakdown, and either <code class="in">createOrder</code> or the Stripe <code class="in">createCheckoutSession</code> redirect.</td></tr>
+          <tr><td><code class="in">AddressModal</code> / <code class="in">StoreAddressFields</code></td><td>Bosta-driven location pickers (city → zone → district + street details). The modal creates a buyer address; the shared field set is reused by seller settings, warehouses, and store application.</td></tr>
+          <tr><td><code class="in">NotificationBell</code></td><td>Bell + unread badge; hydrates <code class="in">GET /notifications</code> on mount (logged-in only), marks one/all read with optimistic updates.</td></tr>
+          <tr><td><code class="in">ProductCard</code> / <code class="in">ProductDetails</code></td><td>The catalog card (thumbnail, wishlist heart, rating, price) and the full product page (gallery, variant picker, add-to-cart, customize, report).</td></tr>
+          <tr><td><code class="in">AdminLayout</code>/<code class="in">AdminSidebar</code> · <code class="in">StoreLayout</code>/<code class="in">StoreSidebar</code></td><td>The two dashboard shells — gate access, load identity, and render a permission-filtered (admin) or full (seller) sidebar.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- AI HELPERS -->
+    <section id="ai">
+      <h3>AI helpers (<code class="in">app/api/ai</code>)</h3>
+      <p>Three Next.js <em>route handlers</em> run server-side to assist the custom-order form. They keep LLM provider keys off the browser and each
+        fall back across providers so the form still works if one is down.</p>
+      <table>
+        <thead><tr><th>Route</th><th>Purpose</th><th>Provider chain</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">POST /api/ai/synth-prompt</code></td><td>Turn the request fields into a concise image-generation prompt.</td><td>z.ai (GLM-4.7-flash) → Gemini 2.5 Flash → Groq Llama-3.1-8b</td></tr>
+          <tr><td><code class="in">POST /api/ai/describe-image</code></td><td>Caption a reference photo in context (vision).</td><td>z.ai (GLM vision) → Gemini 2.5 Flash</td></tr>
+          <tr><td><code class="in">POST /api/ai/review</code></td><td>Suggest 3–5 clarifying questions before sending an offer.</td><td>z.ai → Gemini → Groq</td></tr>
+        </tbody>
+      </table>
+      <div class="expert"><span class="lab">Expert note — why these stay server-side</span>
+        <p>These are the only remaining server endpoints in the frontend; everything else was deleted in the migration (all <code class="in">app/api/*</code>
+        business routes, the Prisma mock, and <code class="in">lib/server/*</code>). They live here rather than in the .NET backend because they're a
+        presentation-only convenience for the form, and a route handler is the right place to hold the <code class="in">ZAI_API_KEY</code> /
+        <code class="in">GEMINI_API_KEY</code> / <code class="in">GROQ_API_KEY</code> secrets without exposing them to the client.</p></div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ROUTE MAP -->
+    <section id="routes">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Route map</h2>
+      <p>Every page in the app. Filter by group or search; click a row for detail.</p>
+      <div class="controls">
+        <input id="ep-search" type="search" placeholder="Search — e.g. 'cart', 'wallet', 'admin'…" autocomplete="off">
+      </div>
+      <div class="chips" id="ep-chips"></div>
+      <div class="ep-count" id="ep-count"></div>
+      <div id="ep-list"></div>
+    </section>
+
+    <!-- BUILD & DEPLOY -->
+    <section id="deploy">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Build &amp; deploy</h2>
+      <p>The app is a standard Next.js build, best deployed to <strong>Vercel</strong>. Production is configured entirely through environment
+        variables — the public ones must be set at build time because they're inlined into the client bundle.</p>
+      <div class="code" data-lang="bash"><div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div><pre>
+cd frontend/Manzili
+npm install
+npm run build               # next build --webpack → .next/
+npm start                   # serve the production bundle (or deploy to Vercel)</pre></div>
+      <table>
+        <thead><tr><th>Variable</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="in">NEXT_PUBLIC_API_BASE_URL</code></td><td>Base URL of the .NET API (e.g. <code class="in">https://api.example.com/api/v1</code>). Inlined at build time.</td></tr>
+          <tr><td><code class="in">ZAI_API_KEY</code> / <code class="in">GEMINI_API_KEY</code> / <code class="in">GROQ_API_KEY</code></td><td>Server-only keys for the <code class="in">app/api/ai</code> route handlers (no <code class="in">NEXT_PUBLIC_</code> prefix).</td></tr>
+        </tbody>
+      </table>
+      <div class="note warn"><span class="lab">Don't forget CORS &amp; HTTPS</span>
+        <p>The deployed frontend origin must be added to the backend's <code class="in">Manzili:CorsOrigin</code> list, and the API base URL should
+        be HTTPS in production so the browser doesn't block mixed content.</p></div>
+      <div class="expert"><span class="lab">Expert note — image optimization &amp; dev tuning</span>
+        <p><code class="in">next.config.mjs</code> sets <code class="in">images.unoptimized = true</code> (images come from Cloudinary/remote URLs, so the
+        Next image optimizer is bypassed) and tunes dev <code class="in">watchOptions</code>/<code class="in">onDemandEntries</code> to reduce RAM and
+        disk churn on large working trees. Builds use the Webpack compiler explicitly via the <code class="in">--webpack</code> flag.</p></div>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section id="glossary">
+      <p class="eyebrow">Reference</p>
+      <h2 class="sec" style="margin-top:6px">Glossary</h2>
+      <details class="faq"><summary>App Router</summary><div class="b">Next.js's routing system where folders under <code class="in">app/</code> define routes; <code class="in">page.jsx</code> is a page and <code class="in">layout.jsx</code> wraps a subtree.</div></details>
+      <details class="faq"><summary>Route group</summary><div class="b">A folder named in parentheses (e.g. <code class="in">(public)</code>) that shares a layout but adds <em>no</em> URL segment.</div></details>
+      <details class="faq"><summary>Server / Client Component</summary><div class="b">Server Components render on the server and ship no JS by default; adding <code class="in">"use client"</code> makes a component run in the browser with state, effects, and DOM access.</div></details>
+      <details class="faq"><summary>Hydration</summary><div class="b">React attaching event handlers and state to the server-rendered HTML in the browser, making a static page interactive.</div></details>
+      <details class="faq"><summary>Hydration warning</summary><div class="b">A mismatch between server HTML and the first client render. Suppressed on <code class="in">&lt;html&gt;</code> here because the locale effect can change <code class="in">lang</code> after mount.</div></details>
+      <details class="faq"><summary>Redux slice</summary><div class="b">A self-contained piece of the store — its state plus reducers — created with RTK's <code class="in">createSlice</code>.</div></details>
+      <details class="faq"><summary>Selector</summary><div class="b">A function that reads (and derives) a value from the store, e.g. <code class="in">selectIsSeller</code>. Keeps derivation logic in one place.</div></details>
+      <details class="faq"><summary>Thunk</summary><div class="b">An async action creator (RTK's <code class="in">createAsyncThunk</code>) — here, the functions that call <code class="in">lib/api</code> and update a slice, e.g. <code class="in">hydrateWishlist</code>.</div></details>
+      <details class="faq"><summary>JWT / refresh token</summary><div class="b">A short-lived access token plus a longer-lived refresh token exchanged for a new pair when the access token expires. Here both ride <code class="in">httpOnly</code> cookies the browser sends automatically — not a Bearer header.</div></details>
+      <details class="faq"><summary>Response envelope</summary><div class="b">The backend's uniform JSON shape <code class="in">{ success, data, …meta }</code> that the API client unwraps for every call.</div></details>
+      <details class="faq"><summary>SSR / CSR</summary><div class="b">Server-Side Rendering produces HTML on the server; Client-Side Rendering builds the UI in the browser. Manzili is mostly CSR behind client components.</div></details>
+      <details class="faq"><summary>Route handler</summary><div class="b">A server-side endpoint defined by a <code class="in">route.js</code> file under <code class="in">app/api/*</code> — here, the AI proxy routes.</div></details>
+
+      <div class="colophon">
+        Manzili frontend · Next.js 16 · React 19 · talks to the .NET API at <code class="in">/api/v1</code> · envelope
+        <code class="in">{ success, data, … }</code> · see also the <a href=".net-backend-documentation.html">backend documentation</a>.
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const EP = [
+  // [section/path, group, kind, summary]
+  ["/", "Public", "Page", "Home — Hero, categories, best-selling and latest products."],
+  ["/shop", "Public", "Page", "Catalog with category filters, sort, and pagination."],
+  ["/shop/[username]", "Public", "Dynamic", "A seller's public storefront page."],
+  ["/product/[productId]", "Public", "Dynamic", "Product detail: gallery, variants, ratings, add-to-cart."],
+  ["/cart", "Public", "Page", "The cart + OrderSummary (quote, coupon, address, checkout)."],
+  ["/cart/success", "Public", "Page", "Stripe return; confirms the checkout via ?session_id=."],
+  ["/custom", "Public", "Page", "Custom-orders landing / browse."],
+  ["/custom/custom-form", "Public", "Page", "Create a custom request (AI prompt + review helpers)."],
+  ["/custom/request-view/[id]", "Public", "Dynamic", "A custom request with its offers + milestone payments."],
+  ["/custom/negotiation/[id]", "Public", "Dynamic", "Offer negotiation chat for a request."],
+  ["/collaboration/[id]", "Public", "Dynamic", "Collaboration view for a custom request."],
+  ["/about", "Public", "Page", "About Manzili (content page)."],
+  ["/faq", "Public", "Page", "Frequently asked questions (accordion)."],
+  ["/contact", "Public", "Page", "Contact form → POST /contact."],
+  ["/privacy-policy", "Public", "Page", "Privacy policy + fee/returns content."],
+  ["/pricing", "Public", "Page", "Pricing / fees overview."],
+  ["/loading", "Public", "Page", "Standalone loading screen."],
+  ["/login", "Account", "Page", "Buyer/seller login → /auth/login."],
+  ["/register", "Account", "Page", "Create a buyer account → /auth/register."],
+  ["/profile", "Account", "Page", "Profile + saved addresses."],
+  ["/wishlist", "Account", "Page", "The buyer's wishlist."],
+  ["/orders", "Account", "Page", "Order history + Bosta tracking; confirms Stripe return."],
+  ["/returns", "Account", "Page", "Request and view returns."],
+  ["/create-store", "Account", "Page", "Apply to sell; shows verification status."],
+  ["/store", "Seller", "Page", "Seller dashboard — stats + orders/earnings chart."],
+  ["/store/add-product", "Seller", "Page", "Create a product (image upload via /upload)."],
+  ["/store/manage-product", "Seller", "Page", "Edit / soft-delete the seller's products."],
+  ["/store/orders", "Seller", "Page", "Store-orders with status transitions + tracking."],
+  ["/store/returns", "Seller", "Page", "Return requests for the seller."],
+  ["/store/custom-order", "Seller", "Page", "Custom requests visible to the seller."],
+  ["/store/coupons", "Seller", "Page", "Create / list / delete store coupons."],
+  ["/store/wallet", "Seller", "Page", "Balances, ledger, payout request, bank details."],
+  ["/store/warehouses", "Seller", "Page", "Multiple pickup locations with a default."],
+  ["/store/settings", "Seller", "Page", "Store profile + address settings."],
+  ["/admin/login", "Admin", "Page", "Admin login → /admin/auth/login (admins only)."],
+  ["/admin", "Admin", "Page", "Admin dashboard — platform-wide stats."],
+  ["/admin/orders", "Admin", "Page", "All orders (read-only)."],
+  ["/admin/products", "Admin", "Page", "All products; disable a product."],
+  ["/admin/stores", "Admin", "Page", "All stores; approve / toggle."],
+  ["/admin/approve", "Admin", "Page", "Approve pending store applications."],
+  ["/admin/reports", "Admin", "Page", "User reports; resolve / dismiss."],
+  ["/admin/coupons", "Admin", "Page", "Global coupon management."],
+  ["/admin/moderators", "Admin", "Page", "Per-section permissions (super-admin only)."],
+  ["/admin/conversations", "Admin", "Page", "Read-only view of custom-order chats."],
+  ["/admin/requests", "Admin", "Page", "All custom requests (read-only)."],
+];
+const GROUPS=["All","Public","Account","Seller","Admin"];
+function groupOf(row){ return row[1]; }
+let activeGroup="All",query="";
+function renderChips(){
+  const c=document.getElementById("ep-chips");
+  c.innerHTML=GROUPS.map(g=>`<span class="chip ${g===activeGroup?'active':''}" data-g="${g}">${g}</span>`).join("");
+  c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{activeGroup=ch.dataset.g;renderChips();renderList();});
+}
+function accessOf(group){
+  if(group==="Public")return"none";
+  if(group==="Account")return"any signed-in user";
+  if(group==="Seller")return"seller (approved store)";
+  if(group==="Admin")return"admin / moderator";
+  return"";
+}
+function renderList(){
+  const list=document.getElementById("ep-list");
+  const q=query.trim().toLowerCase();
+  const rows=EP.filter(([p,g,k,s])=>{
+    if(activeGroup!=="All"&&g!==activeGroup)return false;
+    if(!q)return true;
+    return (p+" "+g+" "+k+" "+s).toLowerCase().includes(q);
+  });
+  document.getElementById("ep-count").textContent=`${rows.length} route${rows.length!==1?'s':''}`;
+  list.innerHTML=rows.map(([p,g,k,s])=>`
+    <div class="ep">
+      <div class="ep-head">
+        <span class="m get">${k}</span>
+        <span class="ep-path">${p}</span>
+        <span class="auth ${g.toLowerCase()}">${g}</span>
+      </div>
+      <div class="ep-body">
+        <p style="margin:8px 0 0">${s}</p>
+        <div class="ep-meta">
+          <b>Group</b><span>${g}</span>
+          <b>Access</b><span>${accessOf(g)}</span>
+          <b>Path</b><span><code class="in">${p}</code></span>
+        </div>
+      </div>
+    </div>`).join("")||`<div class="ep-count">No routes match.</div>`;
+  list.querySelectorAll(".ep-head").forEach(h=>h.onclick=()=>h.parentElement.classList.toggle("open"));
+}
+document.getElementById("ep-search").addEventListener("input",e=>{query=e.target.value;renderList();});
+renderChips();renderList();
+
+// theme toggle (persisted)
+const root=document.documentElement, themeBtn=document.getElementById("themeToggle");
+function applyTheme(t){root.setAttribute("data-theme",t);themeBtn.textContent=t==="dark"?"Light mode":"Dark mode";}
+let savedTheme="light"; try{savedTheme=localStorage.getItem("manzili-docs-theme")||"light";}catch(e){}
+applyTheme(savedTheme);
+themeBtn.onclick=()=>{const next=root.getAttribute("data-theme")==="dark"?"light":"dark";applyTheme(next);try{localStorage.setItem("manzili-docs-theme",next);}catch(e){}};
+
+// expert toggle
+const expBtn=document.getElementById("expertToggle");
+expBtn.onclick=()=>{const hidden=document.documentElement.classList.toggle("hide-expert");expBtn.textContent=hidden?"Show expert notes":"Hide expert notes";};
+
+// tabs
+document.querySelectorAll(".tabs").forEach(t=>{
+  t.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    t.querySelectorAll("button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    let el=t.nextElementSibling;
+    while(el&&el.classList.contains("tabpane")){el.classList.toggle("active",el.id===b.dataset.tab);el=el.nextElementSibling;}
+  });
+});
+
+// copy
+document.querySelectorAll(".code .copy").forEach(btn=>btn.onclick=()=>{
+  const pre=btn.closest(".code").querySelector("pre");
+  navigator.clipboard.writeText(pre.innerText.trim()).then(()=>{const t=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=t,1200);});
+});
+
+// lightweight highlight
+const KW={javascript:["const","let","var","function","return","async","await","export","import","from","if","else","for","while","new","class","extends","try","catch","throw","typeof","instanceof","null","undefined","true","false","this","default","of","in"],bash:["cd","npm","node","next","export"],json:[],text:[]};
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+document.querySelectorAll(".code").forEach(block=>{
+  const lang=(block.dataset.lang||"text").toLowerCase();
+  const pre=block.querySelector("pre");if(!pre)return;
+  let html=esc(pre.textContent.replace(/^\n/,""));
+  if(lang==="javascript")html=html.replace(/(\/\/[^\n]*)/g,'<span class="tc">$1</span>');
+  if(lang==="bash"||lang==="text")html=html.replace(/(#[^\n]*)/g,'<span class="tc">$1</span>');
+  html=html.replace(/(&quot;[^&]*?&quot;)/g,'<span class="ts">$1</span>').replace(/('[^']*?')/g,'<span class="ts">$1</span>').replace(/(`[^`]*?`)/g,'<span class="ts">$1</span>');
+  const kws=KW[lang]||[];if(kws.length){html=html.replace(new RegExp("\\b("+kws.join("|")+")\\b","g"),'<span class="tk">$1</span>');}
+  html=html.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="tn">$1</span>');
+  pre.innerHTML=html;
+});
+
+// scrollspy
+const navLinks=[...document.querySelectorAll("#nav a")];
+const sections=navLinks.map(a=>document.querySelector(a.getAttribute("href"))).filter(Boolean);
+const spy=()=>{const y=window.scrollY+130;let cur=sections[0];for(const s of sections){if(s.offsetTop<=y)cur=s;}navLinks.forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#"+cur.id));};
+window.addEventListener("scroll",spy,{passive:true});spy();
+</script>
+</body>
+</html>
